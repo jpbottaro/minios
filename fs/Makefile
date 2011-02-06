@@ -1,5 +1,5 @@
 ODIR=$(CURDIR)/obj
-_OBJ=fs.o inode.o super.o
+_OBJ=fs.o inode.o super.o file.o
 OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
 
 CC=gcc

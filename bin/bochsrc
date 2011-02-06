@@ -388,8 +388,8 @@ floppy_bootsig_check: disabled=0
 #   log: ./bochs.out
 #   log: /dev/tty
 #=======================================================================
-#log: /dev/null
-log: bochsout.txt
+log: /dev/null
+#log: bochsout.txt
 
 #=======================================================================
 # LOGPREFIX:
@@ -497,7 +497,7 @@ debugger_log: -
 #   parport2: enabled=1, file="/dev/lp0"
 #   parport1: enabled=0
 #=======================================================================
-parport1: enabled=0, file="parport.out"
+parport1: enabled=0
 
 #=======================================================================
 # SB16:

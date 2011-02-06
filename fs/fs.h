@@ -9,6 +9,7 @@
 #include <minikernel/fs.h>
 #include "super.h"
 #include "inode.h"
+#include "file.h"
 
 #define ERROR -1
 

@@ -1,7 +1,6 @@
 #include "fs.h"
 #include <unistd.h> /* get constants for sys calls */
 #include <fcntl.h>  /* get constants for sys calls */
-#include <minikernel/sched.h> /* process table (needed for process fd's) */
 #include <minikernel/misc.h>
 
 struct inode_s *root;
@@ -71,8 +70,7 @@ int sys_open(const char *filename, int flags, int mode)
     struct inode_s *ino, *par;
     ino_t ino_num;
     
-    switch (find_inode(get_inode(ps[current_process].curr_dir), filename,
-                                 &ino, &par)) {
+    switch (find_inode(get_inode(current_dir()), filename, &ino, &par)) {
         case ERR_BADPATH:
             return ERROR;
         case ERR_NOTEXIST:
@@ -101,14 +99,14 @@ int sys_lseek(unsigned int fd, off_t offset, int whence)
     struct inode_s *ino;
     switch (whence) {
         case SEEK_SET:
-            ps[current_process].files[fd].pos = offset;
+            set_file_pos(fd, offset);
             break;
         case SEEK_CUR:
-            ps[current_process].files[fd].pos += offset;
+            set_file_pos(fd, file_pos(fd) + offset);
             break;
         case SEEK_END:
-            ino = get_inode(ps[current_process].files[fd].ino);
-            ps[current_process].files[fd].pos = ino->i_size + offset;
+            ino = get_inode(file_inode(fd));
+            set_file_pos(fd, ino->i_size + offset);
             break;
         default:
             return ERROR;
@@ -119,8 +117,8 @@ int sys_lseek(unsigned int fd, off_t offset, int whence)
 /* read 'n' bytes from a file a put them on buf */
 int sys_read(unsigned int fd, char *buf, unsigned int n)
 {
-    struct inode_s *ino = get_inode(ps[current_process].files[fd].ino);
-    unsigned int pos = ps[current_process].files[fd].pos;
+    struct inode_s *ino = get_inode(file_inode(fd));
+    unsigned int pos = file_pos(fd);
     block_t blocknr;
     char *block;
 
