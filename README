@@ -1,0 +1,31 @@
+Mini-Kernel 0.01
+----------------
+
+Carpetas
+========
+
+- apps: algunas aplicaciones para utilizar en el entorno de Mini-Kernel 0.01
+- bin: elementos para compilar/testear kernel
+- doc: documentacion del trabajo
+- fs: codigo del file system
+- include: algunos archivos .h utiles de otros proyectos
+- kernel: el codigo del kernel con funcionalidad super-basica (incluye mmu,
+  interrupciones y hasta el scheduler)
+- lib: funciones varias de uso en general (ej mystrncpy, mystrncmp, etc)
+
+
+Compilacion - Uso
+=================
+
+La carpeta bin contiene los elementos para compilar/testear el kernel
+
+make            - crea kernel.bin y imagen de diskette para bootear en bochs
+make kernel.bin - crea kernel.bin
+make clean      - limpia el ambiente
+
+El archivo 'fsimage' corresponde a una imagen de un Minix FS, que es el 
+utilizado por el kernel al bootear. Tener en cuenta que esta imagen no
+es modificada por el kernel, los cambios a la misma se pierden cuando se
+apaga bochs. Para editar la imagen, montarla con:
+
+mount -o loop -t minix fsimage CARPETA

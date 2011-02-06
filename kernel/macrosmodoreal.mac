@@ -1,0 +1,66 @@
+;
+;	IMPRIMIR_MODO_REAL
+;
+;	Imprime un string en la seccion especificada de la memoria de Video.
+;	Solo funciona en modo Real.
+;
+;	Parámetros:
+;			%1		Mensaje
+;			%2		Longitud
+; 			%3		Color
+; 			%4		FILA Si es 0xFFFF, no aumento lineas
+; 			%5		COLUMNA
+; 
+;
+%ifndef __MACROS_REAL__
+%define __MACROS_REAL__
+
+jmp	noejecutoesto
+contadorlineas:	dw 0x0000
+noejecutoesto:
+
+%macro IMPRIMIR_MODO_REAL 5
+	pusha
+	push 	es
+	mov		ax, 0xB800			;segmento de video
+	mov		es, ax
+	%if %4 <> dx
+	mov		dx, %4
+	%endif
+	cmp 	dx, 0xFFFF
+	je		%%sigo
+	add		WORD [contadorlineas], 0x0001
+	%%sigo:
+	mov		ax, [contadorlineas]
+	mov		bx, 80
+	mul		bx
+	mov		bx, ax  
+	%if %5 <> dx
+	mov 	dx, %5	;offset
+	%endif
+	
+	add		bx, dx
+	shl		bx, 1
+	;xchg	bx, bx ; bochs debugger
+	%if %1 <> di
+	mov 	di, %1			;di = puntero al mensaje
+	%endif
+	%if %2 <> cx
+	mov 	cx, %2		;cx = contador (longitud del mensaje)
+	%endif
+	%if %3 <> ah
+	mov 	ah, %3			;ah = color. 0x1A azul de fondo, verde brillante para el caracter
+	%endif
+		%%ciclo_cadena:
+		mov 	al, [di]			;al = caracter.
+		mov 	[es:bx], ax			;escribo en pantalla
+		add 	bx, 2				
+		inc 	di
+		loop 	%%ciclo_cadena
+	
+	pop		es
+	popa
+%endmacro
+
+
+%endif

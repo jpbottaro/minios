@@ -1,0 +1,139 @@
+;
+;	IMPRIMIR_TEXTO
+;
+;	Imprime un string en la seccion especificada de la memoria de Video.
+;	Solo funciona en modo Protegido.
+;
+;	Parámetros:
+;			%1		Mensaje
+;			%2		Longitud
+; 			%3		Color
+; 			%4		FILA
+; 			%5		COLUMNA
+; 
+;
+%ifndef __MACROS_PROTEGIDO__
+%define __MACROS_PROTEGIDO__
+
+jmp	noejecutoesto
+contadorlineas:	dw 0x0000
+noejecutoesto:
+
+%macro IMPRIMIR_TEXTO 5
+	pushad
+	%if %1 <> edi
+	mov 	edi, %1			;edi = puntero al mensaje
+	%endif
+	%if %4 <> eax
+	mov		eax, %4
+	%endif
+	mov		ebx, 80
+	mul		ebx
+	mov		ebx, eax			; ebx = linea * 80
+	      
+	%if %5 <> edx
+	mov 	edx, %5	;offset
+	%endif
+	
+	add		ebx, edx
+	shl		ebx, 1
+	add 	ebx, 0xB8000		; me paro en la memoria de video
+	;xchg	bx, bx ; bochs debugger
+
+	%if %2 <> ecx
+	mov 	ecx, %2		;ecx = contador (longitud del mensaje)
+	%endif
+	%if %3 <> ah
+	mov 	ah, %3			;ah = color.
+	%endif
+		%%ciclo_cadena:
+		mov 	byte al, [edi]			;al = caracter.
+		mov 	word [ebx], ax			;escribo en pantalla
+		add 	ebx, 2				
+		inc 	edi
+		loop 	%%ciclo_cadena
+	
+	popad
+%endmacro
+
+;
+;	BYTE_TO_HEX
+;
+;	Transforma un numero de 8 bits en un string en hexadecimal.  
+;		1er parametro: numero en registro o inmediato
+;		2do parametro: direccion de memoria a donde poner el numero.
+;			Tiene que tener 2 digitos.
+;
+%macro BYTE_TO_HEX 2
+					;1er parametro: entero a mostrar, en registro
+					;2o parametro: donde meto el numero, espacio 2  bytes. NO EAX
+	pushad
+	xor ah, ah
+
+	
+	%if %1 <> al
+	mov byte al, %1			;primer parametro en eax
+	%endif
+	%if %2 <> edx
+		mov edx, %2
+	%endif
+	
+	mov byte bl, 0x10		;divisor, 16
+	
+	div bl					;divido
+	cmp ah, 0x0A
+	jae %%.letrauno
+	add byte ah, 0x30		;le sumo el offset ascii
+	jmp %%.sigueuno
+	%%.letrauno:
+	add byte ah, 0x37		;le sumo el offset ascii
+	%%.sigueuno:
+	mov byte [edx + 1], ah	;lo muevo a la posicion correcta
+	cmp al, 0x0A
+	jae %%.letrados
+	add byte al, 0x30		;le sumo el offset ascii
+	jmp %%.siguedos
+	%%.letrados:
+	add byte al, 0x37		;le sumo el offset ascii
+	%%.siguedos:
+	mov byte [edx], al		;lo muevo a la posicion correcta
+	popad
+
+%endmacro
+
+;
+;	DWORD_TO_HEX
+;
+;	Transforma un numero de 32 bits en un string en hexadecimal.  
+;		1er parametro: numero
+;		2do parametro: direccion de memoria a donde poner el numero.
+;			Tiene que tener 8 digitos.
+;
+%macro DWORD_TO_HEX 2
+					;1er parametro: entero a mostrar
+					;2o parametro: donde meto el numero, espacio 2  bytes. No EAX
+	pushad
+	%if %1 <> eax
+	mov eax, %1			;primer parametro en eax
+	%endif
+	%if %2 <> ebx
+	mov ebx, %2
+	%endif
+	add ebx, 6
+	BYTE_TO_HEX al, ebx
+	sub ebx, 2
+	shr eax, 8
+	BYTE_TO_HEX al, ebx
+	sub ebx, 2
+	shr eax, 8
+	BYTE_TO_HEX al, ebx
+	sub ebx, 2
+	shr eax, 8
+	BYTE_TO_HEX al, ebx
+	
+	popad
+
+%endmacro
+
+
+%endif
