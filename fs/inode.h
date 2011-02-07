@@ -32,9 +32,8 @@ struct dir_entry_s {
     char name[MAX_NAME];
 };
 
-ino_t               empty_inode();
-block_t             empty_block();
-struct dir_entry_s *empty_dir_entry(struct inode_s *dir);
+ino_t   empty_inode();
+block_t empty_block();
 
 int rm_inode(ino_t ino_num);
 int rm_block(block_t block_num);
@@ -44,20 +43,20 @@ void           *get_block(zone_t num);
 
 block_t read_map(struct inode_s *ino, unsigned int pos);
 
-int find_inode(struct inode_s *dir, const char *user_path,
-               /* out */
-               struct inode_s **res, struct inode_s **last_dir);
+ino_t find_inode(struct inode_s *dir, const char *user_path, int flag);
 
-#define I_TYPE          0170000
-#define I_FILE          0100000
-#define I_DIRECTORY     0040000
-#define I_SPECIAL       0020000
-#define IS_FILE(mode)   (((mode) & I_TYPE) == I_FILE)
-#define IS_DIR(mode)    (((mode) & I_TYPE) == I_DIRECTORY)
-#define IS_CHAR(mode)   (((mode) & I_TYPE) == I_SPECIAL)
+/* flags for find_inode */
+#define FS_SEARCH_GET    0x0001
+#define FS_SEARCH_ADD    0x0002
+#define FS_SEARCH_REMOVE 0x0003
 
-/* errors (in our Quick n Dirty OS (?), the less the better) */
-#define ERR_BADPATH     0x0001
-#define ERR_NOTEXIST    0x0002
+/* constants for attribute i_mode in inode struct */
+#define I_TYPE           0170000
+#define I_FILE           0100000
+#define I_DIRECTORY      0040000
+#define I_SPECIAL        0020000
+#define IS_FILE(mode)    (((mode) & I_TYPE) == I_FILE)
+#define IS_DIR(mode)     (((mode) & I_TYPE) == I_DIRECTORY)
+#define IS_CHAR(mode)    (((mode) & I_TYPE) == I_SPECIAL)
 
 #endif /* __INODE_H__ */

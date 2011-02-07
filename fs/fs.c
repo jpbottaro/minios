@@ -6,8 +6,7 @@
 struct inode_s *root;
 char *fs_offset;
 
-ino_t creat_file(const char *filename, struct inode_s *par);
-const char *parse_filename(const char *filename);
+void fill_inode(struct inode_s *ino);
 int get_fd(ino_t ino_num, unsigned int pos);
 int release_fd(int fd);
 
@@ -20,37 +19,10 @@ int fs_init(char *fs_start)
     return 0;
 }
 
-const char *parse_filename(const char *filename)
-{
-    const char *begin, *end;
-
-    begin = end = filename;
-    while (*end != '\0') {
-        if (*end == '/')
-            begin = end + 1;
-        end++;
-    }
-
-    return begin;
-}
-
-/* create file named after the last component of 'filename' in directory 'par' */
-ino_t creat_file(const char *filename, struct inode_s *par)
+/* fill inode information */
+void fill_inode(struct inode_s *ino)
 {
     int i;
-    /* get an empty inode */
-    int ino_num = empty_inode();
-    struct inode_s *ino = get_inode(ino_num);
-    /* get an empty directory entry to save our file */
-    struct dir_entry_s *dentry = empty_dir_entry(par);
-    /* get last component of the filename */
-    const char *name = parse_filename(filename);
-
-    /* fill dir entry */
-    dentry->num = ino_num;
-    mystrncpy(name, dentry->name, MAX_NAME);
-
-    /* fill new inode */
     ino->i_mode   = 0; /* XXX MODIFICARRRRRR */
     ino->i_nlinks = 1;
     ino->i_uid    = 0;
@@ -60,26 +32,25 @@ ino_t creat_file(const char *filename, struct inode_s *par)
     ino->i_mtime  = 0; /* Ver si vale la pena agregar tiempo */
     ino->i_ctime  = 0;
     for(i = 0; i < NR_ZONES; i++) ino->i_zone[i] = 0;
-
-    return ino_num;
 }
 
 /* open file and return fd; to make our life easier, always open RW */
 int sys_open(const char *filename, int flags, int mode)
 {
-    struct inode_s *ino, *par;
+    int flag;
     ino_t ino_num;
-    
-    switch (find_inode(get_inode(current_dir()), filename, &ino, &par)) {
-        case ERR_BADPATH:
-            return ERROR;
-        case ERR_NOTEXIST:
-            if (!(flags & O_CREAT))
-                return ERROR;
-            ino_num = creat_file(filename, par);
-        default:
-            break;
-    }
+    struct inode_s *ino, *dir;
+
+    flag = (flags & O_CREAT) ? FS_SEARCH_ADD : FS_SEARCH_GET;
+    dir = get_inode(current_dir());
+
+    if ( (ino_num = find_inode(dir, filename, flag)) == NO_INODE)
+        return ERROR;
+
+    ino = get_inode(ino_num);
+
+    if (flag & O_CREAT)
+        fill_inode(ino);
 
     if (flags & O_TRUNC)
         ino->i_size = 0;
@@ -94,6 +65,7 @@ int sys_close(unsigned int fd)
     return release_fd(fd);
 }
 
+/* move the pointer of a file to a different position in it */
 int sys_lseek(unsigned int fd, off_t offset, int whence)
 {
     struct inode_s *ino;
@@ -153,6 +125,7 @@ int sys_read(unsigned int fd, char *buf, unsigned int n)
     return 0;
 }
 
+/* write 'n' bytes from 'buf' in the file referenced by 'fd' */
 int sys_write(unsigned int fd, char *buf, unsigned int n)
 {
     /* XXX HACERRR */

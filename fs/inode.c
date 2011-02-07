@@ -1,67 +1,62 @@
 #include "fs.h"
 #include <minikernel/misc.h>
 
-char *parse_path(char *path);
-struct inode_s *search_inode(struct inode_s *dir, char *path);
+
+ino_t search_inode(struct inode_s *dir, char *path, int flag);
 struct inode_s *prev_dir(struct inode_s *dir);
+char *parse_path(char *path);
 
 /* find the target inode based on the 'user_path' and the current directory 'dir';
- * return its pointer in res, and the directory it is containd in 'last_dir'
+ * return its pointer in 'res'
+ *
+ * depending on the parameter 'flag', it removes the file/dir, creates the inode
+ * in the directory, or it just gets it if it exists
  */
-int find_inode(struct inode_s *dir, const char *user_path,
-               /* out */
-               struct inode_s **res, struct inode_s **last_dir)
+ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
 {
     struct inode_s *r;
-    char *begin, *end, path[MAX_PATH + 1];
+    char *begin, *end, path[MAX_PATH];
+    ino_t ino_num;
 
-    *res = *last_dir = 0;
-
-    /* copy path and check if it is too long */
-    if (mystrncpy(user_path, path, MAX_PATH) < 0)
-        return ERR_BADPATH;
+    ino_num = NO_INODE;
     
+    /* start at root if path starts with slash */
     if (*path == '/') {
+        ino_num = 1;
         r = root;
     } else {
-        /* check if dir was removed */
-        if (dir->i_nlinks == NO_LINK)
-            return ERR_BADPATH;
+        /* check if dir was removed or is not a directory */
+        if (!IS_DIR(dir->i_mode) || dir->i_nlinks == NO_LINK)
+            return NO_INODE;
         r = dir;
     }
 
-    begin = end = path;
+    /* copy path and check if it is too long */
+    if (mystrncpy(user_path, path, MAX_PATH) < 0)
+        return NO_INODE;
+
+    /* search the last directory of the path */
+    begin = path;
 	while (*begin == '/') begin++;
-    while (*begin != '\0') {
+    end = parse_path(begin);
+    while (*end != '\0') {
         /* only follow path if component is in fact a directory */
         if (!IS_DIR(r->i_mode))
-            return ERR_BADPATH;
-
-        /* parse next path component */
-        end = parse_path(begin);
-
-        /* if end is 0, save last dir */
-        if (*end == '\0') *last_dir = r;
+            return NO_INODE;
 
         /* advance to the next component of the path */
-        if ( (r = search_inode(r, begin)) == 0) {
-            if (*end == '\0')
-                return ERR_NOTEXIST;
-            else
-                return ERR_BADPATH;
-        }
+        if ( (ino_num = search_inode(r, begin, FS_SEARCH_GET)) == NO_INODE)
+            return NO_INODE;
+        r = get_inode(ino_num);
+
+        /* parse next path component */
         begin = end;
+        end = parse_path(begin);
     }
-    *res = r;
 
-    /* check if last_dir was not set (only reasons can be that path had nothing
-     * or that the last component was '.'), in that case we force the search
-     */
-    if (r == dir || *last_dir == r)
-        *last_dir = prev_dir(r);
-
-    return 0;
+    return search_inode(r, begin, flag);
 }
+
 /* parse next path component, omitting heading slashes '/' */
 char *parse_path(char *path)
 {
@@ -76,67 +71,55 @@ char *parse_path(char *path)
     return path;
 }
 
-/* get the inode of parent directory */
-struct inode_s *prev_dir(struct inode_s *dir)
-{
-    /* only non-root directories */
-    if (dir == root || !IS_DIR(dir->i_mode)) return 0;
-
-    /* get first directory block */
-    struct dir_entry_s *block = (struct dir_entry_s *) get_block(dir->i_zone[0]);
-
-    /* go to the second entry (skip '.' and land in '..') */
-    block++;
-
-    return get_inode(block->num);
-}
-
 /* search an inode in a directory based on its name, return a pointer to it
  * if it is found, or 0 otherwise
- * OBS: for the sake of simplicity, we only implemented directories with
- *      1 direct block (that is around 32 files/subdirectories max in it)
  */
-struct inode_s *search_inode(struct inode_s *dir, char *name)
+ino_t search_inode(struct inode_s *dir, char *name, int flag)
 {
+    struct dir_entry_s *dentry;
+    struct dir_entry_s *end;
+    struct dir_entry_s *empty;
+    unsigned int pos;
+
     if (*name == '\0')
-        return 0;
+        return NO_INODE;
 
     if (dir == 0)
-        return 0;
+        return NO_INODE;
 
-    /* get the block with the files/subdirectories */
-    struct dir_entry_s *dentry = (struct dir_entry_s *) get_block(dir->i_zone[0]);
-    struct dir_entry_s *end = dentry + NR_DIR_ENTRIES;
+    empty = 0;
+    for (pos = 0; pos < dir->i_size; pos += BLOCK_SIZE) {
+        /* get the block with the files/subdirectories */
+        dentry = (struct dir_entry_s *) get_block(read_map(dir, pos));
+        end = dentry + NR_DIR_ENTRIES;
 
-    /* cycle through the dir entries and search for the required name */
-    for (; dentry < end; dentry++)
-        if (dentry->num != 0 && mystrncmp(name, dentry->name, MAX_NAME) == 0)
-            break;
+        /* cycle through the dir entries and search for the required name */
+        for (; dentry < end; dentry++) {
+            if (!empty && dentry->num == 0)
+                empty = dentry;
+            if (dentry->num != 0 && mystrncmp(name, dentry->name, MAX_NAME) == 0) {
+                switch (flag) {
+                    case FS_SEARCH_REMOVE:
+                        rm_inode(dentry->num);
+                        dentry->num = 0;
+                        return OK;
+                    case FS_SEARCH_GET:
+                    case FS_SEARCH_ADD:
+                        return dentry->num;
+                }
+            }
+        }
+    }
 
-    /* this means we found it */
-    if (dentry < end)
-        return get_inode(dentry->num);
+    /* if we didnt find the file, and our flag asks to create it... */
+    if (flag == FS_SEARCH_ADD) {
+        ino_t ino_num = empty_inode();        
+        empty->num = ino_num;
+        mystrncpy(name, empty->name, MAX_NAME);
+        return ino_num;
+    }
 
-    return 0;
-}
-
-/* find first empty entry in a directory; similar to search_dir
- * OBS: for the sake of simplicity, we only implemented directories with
- *      1 direct block (that is around 32 files/subdirectories max in it)
- */
-struct dir_entry_s *empty_dir_entry(struct inode_s *dir)
-{
-    if (dir == 0)
-        return 0;
-
-    struct dir_entry_s *dentry = (struct dir_entry_s *) get_block(dir->i_zone[0]);
-    struct dir_entry_s *end = dentry + NR_DIR_ENTRIES;
-
-    for (; dentry < end; dentry++)
-        if (dentry->num == 0)
-            return dentry;
-
-    return 0;
+    return NO_INODE;
 }
 
 /* get the pointer of an inode based on its number */

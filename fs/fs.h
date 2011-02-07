@@ -11,6 +11,7 @@
 #include "inode.h"
 #include "file.h"
 
-#define ERROR -1
+#define OK 1
+#define ERROR 0
 
 #endif /* __FS_H__ */
