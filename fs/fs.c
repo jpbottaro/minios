@@ -3,12 +3,14 @@
 #include <fcntl.h>  /* get constants for sys calls */
 #include <minikernel/misc.h>
 
+#define FS_READ  0
+#define FS_WRITE 1
+
 struct inode_s *root;
 char *fs_offset;
 
-void fill_inode(struct inode_s *ino);
-int get_fd(ino_t ino_num, unsigned int pos);
-int release_fd(int fd);
+static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag);
+static void fill_inode(struct inode_s *ino);
 
 /* initialize fs, needs to be ALL mapped in memory, fs_start being first byte */
 int fs_init(char *fs_start)
@@ -20,10 +22,11 @@ int fs_init(char *fs_start)
 }
 
 /* fill inode information */
-void fill_inode(struct inode_s *ino)
+/* XXX MODIFICARRRRRR */
+static void fill_inode(struct inode_s *ino)
 {
     int i;
-    ino->i_mode   = 0; /* XXX MODIFICARRRRRR */
+    ino->i_mode   = 0;
     ino->i_nlinks = 1;
     ino->i_uid    = 0;
     ino->i_gid    = 0;
@@ -86,50 +89,58 @@ int sys_lseek(unsigned int fd, off_t offset, int whence)
     return 0;
 }
 
-/* read 'n' bytes from a file a put them on buf */
-int sys_read(unsigned int fd, char *buf, unsigned int n)
+static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag)
 {
     struct inode_s *ino = get_inode(file_inode(fd));
     unsigned int pos = file_pos(fd);
+    unsigned int size, off;
     block_t blocknr;
     char *block;
+        
+    /* check limit of file in read operation */
+    if (flag == FS_READ)
+        n = MIN(n, ino->i_size - pos);
 
-    if (pos % BLOCK_SIZE != 0) {
-        unsigned int off, size;
-
+    /* if performance is the objective, the first block could be separated so
+     * that we dont have to do '%' every cicle and therefore remove 'off'
+     * altogether; I prefer clean code in these project */
+    while (n > 0) {
         if ( (blocknr = read_map(ino, pos)) == NO_BLOCK)
             return ERROR;
-        block = get_block(blocknr);
+        block = (char *) get_block(blocknr);
+
         off = pos % BLOCK_SIZE;
-        size = MIN(BLOCK_SIZE - off, n);
-        mymemcpy(block + off, buf, size);
+        size = MIN(n, BLOCK_SIZE - off);
+
+        if (flag == FS_READ)
+            mymemcpy(block + off, buf, size);
+        else
+            mymemcpy(buf, block + off, size);
+
         n -= size;
         pos += size;
         buf += size;
     }
 
-    for (; n > BLOCK_SIZE; n -= BLOCK_SIZE, pos += BLOCK_SIZE, buf += BLOCK_SIZE) {
-        if ( (blocknr = read_map(ino, pos)) == NO_BLOCK)
-            return ERROR;
-        block = get_block(blocknr);
-        mymemcpy(block, buf, BLOCK_SIZE);
-    }
+    /* check how much did we read/write */
+    n = pos - file_pos(fd);
 
-    if (n != 0) {
-        if ( (blocknr = read_map(ino, pos)) == NO_BLOCK)
-            return ERROR;
-        block = get_block(blocknr);
-        mymemcpy(block, buf, n);
-    }
+    /* set new filepos */
+    set_file_pos(fd, pos);
 
-    return 0;
+    return n;
+}
+
+/* read 'n' bytes from a file a put them on buf */
+int sys_read(unsigned int fd, char *buf, unsigned int n)
+{
+    return fs_readwrite(fd, buf, n, FS_READ);
 }
 
 /* write 'n' bytes from 'buf' in the file referenced by 'fd' */
 int sys_write(unsigned int fd, char *buf, unsigned int n)
 {
-    /* XXX HACERRR */
-    return 0;
+    return fs_readwrite(fd, buf, n, FS_WRITE);
 }
 
 /* this one should close all open fds and write changes etc. but, as you

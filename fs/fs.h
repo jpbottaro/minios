@@ -11,7 +11,13 @@
 #include "inode.h"
 #include "file.h"
 
-#define OK 1
-#define ERROR 0
+#define FS_READ  0
+#define FS_WRITE 1
+
+#define OK 0
+#define ERROR -1
+
+int get_fd(ino_t ino_num, unsigned int pos);
+int release_fd(int fd);
 
 #endif /* __FS_H__ */
