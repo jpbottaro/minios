@@ -1,7 +1,7 @@
 #ifndef __SUPER_H__
 #define __SUPER_H__
 
-/* Taken from minix v3 */
+/* superblock struct taken from minix v3 */
 
 #include <sys/types.h>
 

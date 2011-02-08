@@ -1,10 +1,8 @@
 #include "fs.h"
 #include <minikernel/misc.h>
 
-
-ino_t search_inode(struct inode_s *dir, char *path, int flag);
-struct inode_s *prev_dir(struct inode_s *dir);
-char *parse_path(char *path);
+static ino_t search_inode(struct inode_s *dir, char *path, int flag);
+static char *parse_path(char *path);
 
 /* find the target inode based on the 'user_path' and the current directory 'dir';
  * return its pointer in 'res'
@@ -58,7 +56,7 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
 }
 
 /* parse next path component, omitting heading slashes '/' */
-char *parse_path(char *path)
+static char *parse_path(char *path)
 {
     while (*path != '\0' && *path != '/')
         path++;
@@ -74,7 +72,7 @@ char *parse_path(char *path)
 /* search an inode in a directory based on its name, return a pointer to it
  * if it is found, or 0 otherwise
  */
-ino_t search_inode(struct inode_s *dir, char *name, int flag)
+static ino_t search_inode(struct inode_s *dir, char *name, int flag)
 {
     struct dir_entry_s *dentry;
     struct dir_entry_s *end;

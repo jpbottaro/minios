@@ -5,11 +5,11 @@
  * external sources
  */
 
-void set_file_inode(unsigned int fd, ino_t ino);
-ino_t    file_inode(unsigned int fd);
+ino_t     file_inode(unsigned int fd);
+void  set_file_inode(unsigned int fd, ino_t ino);
     
-void     set_file_pos(unsigned int fd, unsigned int pos);
-unsigned int file_pos(unsigned int fd);
+unsigned int     file_pos(unsigned int fd);
+void         set_file_pos(unsigned int fd, unsigned int pos);
 
 ino_t current_dir();
 

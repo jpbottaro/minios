@@ -42,7 +42,6 @@ struct inode_s *get_inode(ino_t num);
 void           *get_block(zone_t num);
 
 block_t read_map(struct inode_s *ino, unsigned int pos);
-
 ino_t find_inode(struct inode_s *dir, const char *user_path, int flag);
 
 /* flags for find_inode */
