@@ -2,12 +2,16 @@
 #define _FS_H
 
 #include <sys/types.h>
+#include <sys/queue.h>
 
 #define MAX_FILES   10
 
 struct file_s {
+    unsigned int fd;
     unsigned int ino;
     unsigned int pos;
+
+    LIST_ENTRY(file_s) unused;
 };
 
 int fs_init(char *fs_start);
@@ -18,7 +22,6 @@ int sys_read(unsigned int fd, char *buf, unsigned int n);
 int sys_write(unsigned int fd, char *buf, unsigned int n);
 int fs_end();
 
-extern char *fs_offset;
-extern struct inode_s *root;
+void init_fds(unsigned int id);
 
 #endif /* _FS_H */

@@ -11,13 +11,10 @@
 #include "inode.h"
 #include "file.h"
 
-#define FS_READ  0
-#define FS_WRITE 1
-
 #define OK 0
 #define ERROR -1
 
-int get_fd(ino_t ino_num, unsigned int pos);
-int release_fd(int fd);
+extern char *fs_offset;
+extern struct inode_s *root;
 
 #endif /* __FS_H__ */

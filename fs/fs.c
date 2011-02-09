@@ -6,8 +6,8 @@
 #define FS_READ  0
 #define FS_WRITE 1
 
-struct inode_s *root;
 char *fs_offset;
+struct inode_s *root;
 
 static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag);
 static void fill_inode(struct inode_s *ino);
@@ -16,8 +16,8 @@ static void fill_inode(struct inode_s *ino);
 int fs_init(char *fs_start)
 {
     fs_offset = fs_start;
-    read_super();
     root = (struct inode_s *) (fs_offset + INODE_OFFSET);
+    read_super();
     return 0;
 }
 
@@ -32,7 +32,7 @@ static void fill_inode(struct inode_s *ino)
     ino->i_gid    = 0;
     ino->i_size   = 0;
     ino->i_atime  = 0;
-    ino->i_mtime  = 0; /* Ver si vale la pena agregar tiempo */
+    ino->i_mtime  = 0;
     ino->i_ctime  = 0;
     for(i = 0; i < NR_ZONES; i++) ino->i_zone[i] = 0;
 }
@@ -143,21 +143,9 @@ int sys_write(unsigned int fd, char *buf, unsigned int n)
     return fs_readwrite(fd, buf, n, FS_WRITE);
 }
 
-/* this one should close all open fds and write changes etc. but, as you
- * probably know already ;), no real need for that */
+/* this one should close all open fds and write buffered changes etc. but,
+ * as you probably know already ;), no real need for that */
 int fs_end()
 {
     return 0;
-}
-
-int get_fd(ino_t ino_num, unsigned int pos)
-{
-    /* XXX HACER */
-    return -1;
-}
-
-int release_fd(int fd)
-{
-    /* XXX HACER */
-    return -1;
 }
