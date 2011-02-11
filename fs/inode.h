@@ -32,12 +32,6 @@ struct dir_entry_s {
     char name[MAX_NAME];
 };
 
-ino_t   empty_inode();
-block_t empty_block();
-
-int rm_inode(ino_t ino_num);
-int rm_block(block_t block_num);
-
 struct inode_s *get_inode(ino_t num);
 void           *get_block(zone_t num);
 

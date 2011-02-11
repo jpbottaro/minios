@@ -153,32 +153,6 @@ void *get_block(zone_t num)
     return (void *) p;
 }
 
-/* return an unused inode (and mark it as used) */
-ino_t empty_inode()
-{
-    /* XXX HACERRRRRRRR */
-    return NO_INODE;
-}
-
-/* return an unused inode (and mark it as used) */
-block_t empty_block()
-{
-    /* XXX HACERRRRRRRR */
-    return NO_BLOCK;
-}
-
-int rm_inode(ino_t ino_num)
-{
-    /* XXX HACERRRRRRRR */
-    return -1;
-}
-
-int rm_block(block_t block_num)
-{
-    /* XXX HACERRRRRRRR */
-    return -1;
-}
-
 /* given file inode and position, find in what block that position lies and
  * return it; stripped down version from minixv3, assuming 1-block zones */
 block_t read_map(struct inode_s *ino, unsigned int pos)

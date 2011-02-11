@@ -22,17 +22,32 @@ struct superblock_s {
 extern struct superblock_s *sb;
 
 int read_super();
-/* FUNCIONES PARA MODIFICAR BITMAP */
+
+ino_t   empty_inode();
+block_t empty_block();
+
+void rm_inode(ino_t ino_num);
+void rm_block(block_t block_num);
 
 #define BLOCK_SIZE     1024
 #define IMAP_BLOCKS    (sb->s_imap_blocks)
 #define ZMAP_BLOCKS    (sb->s_zmap_blocks)
 
+#define SUPER_OFFSET   (1024)
+#define IMAP_OFFSET    (2048)
+#define ZMAP_OFFSET    (IMAP_OFFSET + IMAP_BLOCKS * BLOCK_SIZE)
+#define INODE_OFFSET   (ZMAP_OFFSET + ZMAP_BLOCKS * BLOCK_SIZE)
+
 #define INODE_SIZE     (sizeof(struct inode_s))
 #define INODE_MAX      (sb->s_ninodes)
-#define INODE_OFFSET   (2048 + (IMAP_BLOCKS + ZMAP_BLOCKS) * BLOCK_SIZE)
+#define BLOCK_MAX      (sb->s_zones)
 
 #define DIRENTRY_SIZE  (sizeof(struct dir_entry_s))
 #define NR_DIR_ENTRIES (BLOCK_SIZE / DIRENTRY_SIZE)
+
+#define IMAP 0
+#define ZMAP 1
+
+#define BITCHUNK_BITS  (sizeof(bitchunk_t) * 8)
 
 #endif /* __SUPER_H__ */
