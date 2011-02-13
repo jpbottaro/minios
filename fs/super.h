@@ -42,8 +42,12 @@ void rm_block(block_t block_num);
 #define INODE_MAX      (sb->s_ninodes)
 #define BLOCK_MAX      (sb->s_zones)
 
+#define DIRECT_ZONES   7
+
 #define DIRENTRY_SIZE  (sizeof(struct dir_entry_s))
 #define NR_DIR_ENTRIES (BLOCK_SIZE / DIRENTRY_SIZE)
+#define DIRSIZE_MAX    (BLOCK_SIZE * DIRECT_ZONES)
+
 
 #define IMAP 0
 #define ZMAP 1

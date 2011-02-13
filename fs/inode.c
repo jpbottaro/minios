@@ -100,6 +100,7 @@ static ino_t search_inode(struct inode_s *dir, char *name, int flag)
                     case FS_SEARCH_REMOVE:
                         rm_inode(dentry->num);
                         dentry->num = 0;
+                        dir->i_size -= DIRENTRY_SIZE;
                         return OK;
                     case FS_SEARCH_GET:
                     case FS_SEARCH_ADD:
@@ -110,10 +111,12 @@ static ino_t search_inode(struct inode_s *dir, char *name, int flag)
     }
 
     /* if we didnt find the file, and our flag asks to create it... */
-    if (flag == FS_SEARCH_ADD) {
-        ino_t ino_num = empty_inode();        
+    if (flag == FS_SEARCH_ADD && empty) {
+        ino_t ino_num;
+        if ( (ino_num = empty_inode()) == NO_INODE) return NO_INODE;
         empty->num = ino_num;
         mystrncpy(name, empty->name, MAX_NAME);
+        dir->i_size += DIRENTRY_SIZE;
         return ino_num;
     }
 
@@ -154,9 +157,17 @@ void *get_block(zone_t num)
 }
 
 /* given file inode and position, find in what block that position lies and
- * return it; stripped down version from minixv3, assuming 1-block zones */
+ * return it; we assume 1 block zones
+ */
+/* XXX I could improve this to support indirect blocks if its necessary */
 block_t read_map(struct inode_s *ino, unsigned int pos)
 {
-    /* XXX HACERRRRRRRR */
+    unsigned int block;
+
+    block = pos / BLOCK_SIZE;
+
+    if (block < DIRECT_ZONES)
+        return ino->i_zone[block];
+
     return NO_BLOCK;
 }
