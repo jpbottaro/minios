@@ -2,6 +2,7 @@
 #include <unistd.h> /* get constants for sys calls */
 #include <fcntl.h>  /* get constants for sys calls */
 #include <minikernel/misc.h>
+#include <minikernel/sched.h> /* get uid and gid of process */
 
 #define FS_READ  0
 #define FS_WRITE 1
@@ -10,7 +11,7 @@ char *fs_offset;
 struct inode_s *root;
 
 static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag);
-static void fill_inode(struct inode_s *ino);
+static void fill_inode(struct inode_s *ino, int mode);
 
 /* initialize fs, needs to be ALL mapped in memory, fs_start being first byte */
 int fs_init(char *fs_start)
@@ -22,14 +23,14 @@ int fs_init(char *fs_start)
 }
 
 /* fill inode information */
-/* XXX MODIFICARRRRRR */
-static void fill_inode(struct inode_s *ino)
+/* FIXME MODIFICARRRRRR */
+static void fill_inode(struct inode_s *ino, int mode)
 {
     int i;
-    ino->i_mode   = 0;
+    ino->i_mode   = mode;
     ino->i_nlinks = 1;
-    ino->i_uid    = 0;
-    ino->i_gid    = 0;
+    ino->i_uid    = current_uid();
+    ino->i_gid    = current_gid();
     ino->i_size   = 0;
     ino->i_atime  = 0;
     ino->i_mtime  = 0;
@@ -53,7 +54,7 @@ int sys_open(const char *filename, int flags, int mode)
     ino = get_inode(ino_num);
 
     if (flag & O_CREAT)
-        fill_inode(ino);
+        fill_inode(ino, mode);
 
     if (flags & O_TRUNC)
         ino->i_size = 0;
@@ -62,7 +63,8 @@ int sys_open(const char *filename, int flags, int mode)
 }
 
 /* close file; since our fs resides in memory and we dont have to write changes
- * anywhere, we just release fd */
+ * anywhere, we just release fd
+ */
 int sys_close(unsigned int fd)
 {
     return release_fd(fd);
@@ -103,7 +105,8 @@ static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag)
 
     /* if performance is the objective, the first block could be separated so
      * that we dont have to do '%' every cicle and therefore remove 'off'
-     * altogether; I prefer clean code in these project */
+     * altogether; I prefer small n clean code in these project
+     */
     while (n > 0) {
         if ( (blocknr = read_map(ino, pos)) == NO_BLOCK)
             return ERROR;
@@ -144,7 +147,8 @@ int sys_write(unsigned int fd, char *buf, unsigned int n)
 }
 
 /* this one should close all open fds and write buffered changes etc. but,
- * as you probably know already ;), no real need for that */
+ * as you probably know already ;), no real need for that
+ */
 int fs_end()
 {
     return 0;

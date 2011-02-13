@@ -24,6 +24,10 @@ struct process_state_s {
     /* process id */
     unsigned int pid;
 
+    /* process owner's uid and gid */
+    unsigned int uid;
+    unsigned int gid;
+
     /* fs data */
     struct file_s files[MAX_FILES];
     unsigned int curr_dir;
@@ -31,5 +35,8 @@ struct process_state_s {
 
 extern struct process_state_s ps[MAX_PROCESSES];
 extern unsigned int current_process;
+
+unsigned int current_uid();
+unsigned int current_gid();
 
 #endif /* _SCHED_H */
