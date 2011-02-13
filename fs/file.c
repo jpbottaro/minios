@@ -4,6 +4,8 @@
 
 struct unused_fd_t unused_fd;
 
+/* init fds for a process */
+/* XXX see what to do with special files stdin/out/err */
 void init_fds(unsigned int id)
 {
     int i;
@@ -26,6 +28,7 @@ void init_fds(unsigned int id)
     }
 }
 
+/* get a new fd */
 int get_fd(ino_t ino_num, unsigned int pos)
 {
     struct file_s *file = LIST_FIRST(&unused_fd);
@@ -40,6 +43,7 @@ int get_fd(ino_t ino_num, unsigned int pos)
     return ERROR;
 }
 
+/* release a fd */
 int release_fd(int fd)
 {
     struct file_s *file = &ps[current_process].files[fd];

@@ -15,7 +15,7 @@ int read_super()
 }
 
 /* allocate bit in map (algo. idea taken heavily from minix) */
-/* XXX HIGHGLY UNTESTED AND PROBABLY DOES NOT WORK, CHECK */
+/* FIXME HIGHGLY UNTESTED AND PROBABLY DOES NOT WORK, CHECK */
 ino_t alloc_bit(int map)
 {
     ino_t map_bits, b;
@@ -76,7 +76,7 @@ block_t empty_block()
 }
 
 /* free bit in map (algo. idea taken heavily from minix) */
-/* XXX HIGHGLY UNTESTED AND PROBABLY DOES NOT WORK, CHECK */
+/* FIXME HIGHGLY UNTESTED AND PROBABLY DOES NOT WORK, CHECK */
 void free_bit(int map, unsigned int num)
 {
     bitchunk_t *wptr, mask;
