@@ -1,1 +1,68 @@
-COMPLETAR
+\subsection{Kernel}
+
+El kernel o nucleo con el que contamos es muy limitado, únicamente se encarga de
+inicializar un sistema x86, setea ciertas estructuras necesarias para iniciar la
+ejecución de aplicaciones, y finaliza su ejecución.
+
+Las partes más importantes y desarrolladas de este kernel son el scheduler y la
+atención de algunas interrupciones de usuario que conforman la interfaz del
+núcleo con el resto del sistema.
+
+Esta interfaz esta basada en el estandar de POSIX y implementa llamadas como
+open/close/read/write etc., y de esta manera provee a las aplicaciones de
+herramientas para crear nuevos procesos, leer y modificar archivos, terminar
+la ejecución y demás. Estas rutinas estan implementadas en distintos lugares
+del kernel, ya que cada una toca un sistema distinto. Por ejemplo open/close
+se encuentran implementadas en el FS, mientras que la familia execve están en
+el scheduler.
+
+En cuanto a la implementación del scheduler, éste provee mecanismos para agregar
+y remover procesos de la lista de ejecución, y se encarga de alternar los mismos
+en el procesador para generar la ilución de multiprogramación. El algoritmo que
+elegí para desarrollarlo fue el round-robin, que tiene como ventajas su simpleza
+y escases de problemas graves como starvation.
+
+Además, el nucleo cuenta con manejo simple del teclado y video para poder
+interactuar con las aplicaciones en el sistema.
+
+Por supuesto el sistema no cuenta con una biblioteca estandar de C
+(implementaciones de la misma como glibc hacen \_extensivo\_ uso de todas las
+llamadas de sistema disponibles en POSIX y todos sus flags/agregados/etc, por lo
+que es imposible soportarla). Por lo tanto las aplicaciones apuntadas a este SO
+deverán interactuar directamente con el nucleo mediante las llamadas al sistema.
+
+\subsection{Minix FS}
+
+La parte más importante del trabajo consiste en analizar e implementar el
+sistema de archivos. Es importante aclarar que la imagen del sistema de archivos
+se cargará completa en memoria al inicio del sistema, la razón siendo
+simplemente que no buscamos estudiar ni desarrollar el manejo de disco, mucho
+menos implementar toda la lógica de un disco IDE/ATA/SATA en un driver  que puede
+ocupar todo un libro.
+
+Utilizando este camino, logramos no solo evitarnos problemas con disco y
+drivers, sino que todos los cambios y modificaciones a la imagen no necesitan
+ser pasadas por una cache, simplemente interactuamos con la imagen completa en
+la memoria. Esto es lo que se logra en los SO modernos al utilizar un ramdisk
+(aunque los fs en general desconocen esto y interactuan con el ramdisk como si
+fuera un disco comun).
+
+Con respecto a las rutinas de manejo de MinixFS, implementaré todo lo necesario
+para interactuar normalmente con un sistema de archivos en un SO POSIX, es decir
+open/close/read/write/lseek, incluyendo las flags mas importantes de cada uno
+(por ejemplo O\_CREAT/O\_APPEND/O\_TRUNC en open).
+
+\subsection{Consola y utilidades varias}
+
+Todo el desarrollo descripto hasta ahora genera un SO primitivo que bootea la
+computadora y provee funciones para manipularla. Para poder verlo en acción
+introduzco algunas aplicaciones que manejan el sistema mediante llamadas al
+sistema.
+
+La aplicación más importante es la consola, es la única aplicación que es
+llamada directamente desde el kernel, y es lo que marca la finalización del
+booteo y el inicio de las aplicaciones de usuario. La consola permitirá recorrer
+el sistema de archivos y a su vez lanzar otras aplicaciones.
+
+También se proveen una batería de programas como ls, rm, cat, etc. que simulan a
+los programas con los mismos nombres que se encuentran en sistemas *nix.

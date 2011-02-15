@@ -1,1 +1,32 @@
-COMPLETAR
+Los sistemas operativos han evolucionado mucho desde los primeros momentos en
+que fueron concevidos. Fue esta evolución y crecimiento que hizo necesario
+modularizar y separar los componentes principales que lo conforman. Uno de los
+componentes más importantes de los sistemas operativos modernos es el denominado
+Sistema de Archivos (o más conocido como File System o FS), que es el encargado
+de simular todo el paradigma de archivos en el que basamos la computación.
+Distintos modelos se han creado con el paso de los años para manipular el
+directorio de archivos, con ejemplos como FAT/FAT32/NTFS en el mundo Microsoft,
+ext2/ext3/ext4/xfs etc. en el mundo *nix/Linux.
+
+En esta ocasión me propongo a estudiar, analizar e implementar a grandes razgos
+un sistema de archivos simple denominado MinixFS, creado por Dr. Andrew S.
+Tanenbaum para su sistema operativo educacional Minix. La razón por la que elijo
+este FS es que en el transcurso de la materia ya se estudio el sistema FAT, que
+es considerado muy viejo y, si bien es muy simple de implementar, las ideas que
+utiliza fueron ya deprecadas hace mucho tiempo. La diferecia con MinixFS es que
+éste utiliza inodos, una idea que se explicará con detenimiento más adelante,
+que hasta el dia de hoy sigue siendo la base de la mayoría de los FS modernos.
+
+Para basar la implementación del sistema de archivos utilizaré una
+implementación muy arcaica de un núcleo, desarrollado durante el transcurso del
+cuatrimestre, que inicializa la computadora y contiene manipulación muy básica
+de scheduler/interrupciones/mmu como para realizar algunas operaciones en la
+misma. En cuanto a la interfaz del SO con el resto de las aplicaciones, se
+utilizará un modelo similar al de Linux (es decir utilizaremos el formato POSIX
+con llamadas a sistema por interrupción 0x80)
+
+Por último, toda este desarrollo no puede ser apreciado si no se cuenta con
+algunas aplicaciones para utilizarlo y manipularlo, por lo que se introduciran
+además algunos programas como una consola y una serie de utilidades comunes (ls,
+rm, touch, cat) para interactuar con el SO y el FS para testear y probar su
+funcionalidad.
