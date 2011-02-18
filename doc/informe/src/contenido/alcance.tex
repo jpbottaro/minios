@@ -52,6 +52,14 @@ para interactuar normalmente con un sistema de archivos en un SO POSIX, es decir
 open/close/read/write/lseek, incluyendo las flags mas importantes de cada uno
 (por ejemplo O\_CREAT/O\_APPEND/O\_TRUNC en open).
 
+Por último, hay 3 versiones de MinixFS, en este caso implementamos la versión 2.
+Si bien comenzamos con su última versión, nos dimos cuenta que no existe mucho
+soporte para la misma en linux (en especial mkfs.minix no sabe crear imagenes
+versión 3) por lo que decidí adaptar las partes afectadas y remitirme a la
+versión 2. De todas maneras la diferencia entre ambas es muy pequeña, solo se
+aumenta el tamaño de algunos campos para soportar mayores discos, y se agregan
+algunas utilidades no muy útiles para el trabajo.
+
 \subsection{Consola y utilidades varias}
 
 Todo el desarrollo descripto hasta ahora genera un SO primitivo que bootea la
