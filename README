@@ -8,7 +8,7 @@ Carpetas
 - bin: elementos para compilar/testear kernel
 - doc: documentacion del trabajo
 - fs: codigo del file system
-- include: algunos archivos .h utiles de otros proyectos
+- include: algunos archivos .h utiles
 - kernel: el codigo del kernel con funcionalidad super-basica (incluye mmu,
   interrupciones y hasta el scheduler)
 - lib: funciones varias de uso en general (ej mystrncpy, mystrncmp, etc)
