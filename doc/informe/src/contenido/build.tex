@@ -25,14 +25,14 @@ En resumen, organizé el codigo en los siguientes directorios:
 
 - fs: codigo del file system
 
-- include: algunos archivos .h utiles de otros proyectos
+- include: algunos archivos .h utiles
 
-- kernel: el codigo del kernel con funcionalidad super-basica (incluye mmu,
+- kernel: el codigo del kernel con funcionalidad super-básica (incluye mmu,
 interrupciones y hasta el scheduler)
 
 - lib: funciones varias de uso en general (ej mystrncpy, mystrncmp, etc)
 
-Cada directorio con algo para compilar contiene su propio makefile que se
+Cada directorio con algo código contiene su propio makefile que se
 encarga de compilar y armar todo lo que le corresponde. Luego en la carpeta
 'bin' se encuentra el makefile central que se encarga de llamar a todos los
 makefiles de las subcarpetas y linkear el kernel, finalizando con el armado del
