@@ -3,3 +3,116 @@ ya fue explicado, elegí implementar el sistema de archivos MinixFS V2. A
 continuación daré una explicación a grandes razgos de todos las características
 de este FS (la mayor parte de este explicación esta basada en el libro de
 Tanenbaum REFERENCIAAA, capítulo 5)
+
+Comenzaré contando un poco la organización y distribución de la información en
+minix, el superblock y manejo de blockes, poniendo la mayor atención en la idea
+de inodos. A partir de ahora llamaré a el sistema de archivos MinixFS v2 como
+mfs.
+
+Doy por sabido que el lector maneja conceptos básicos de computación a bajo
+nivel, por ejemplo saber que es un bloque o un mapa de bits.
+
+\subsection{Organización en MinixFS}
+
+Todos los sistemas de archivos modernos presentan una idea de organización de la
+información, acompañada con la forma en que se guardan en el disco las
+estructuras y datos necesarios para mantener esta idea. En el caso de mfs se
+cuentan con una serie de estructuras que dan atributos y parametros del mismo,
+seguido por el espacio vacio donde se guardan los datos en sí. La estructura
+esta compuesta por: Boot Sector, Super Block, Inode Map, Zone Map, Inodes y Empty
+Blocks. Esta distribución se puede apreciar en la siguiente imagen:
+
+\begin{center}
+\includegraphics[scale=0.5]{../img/layout.png}
+\end{center}
+
+El Boot Sector o bs es un bloque de tamaño fijo (1024 bytes) que se encuentra
+obligatoriamente al comienzo de la imagen de mfs. El uso de este bloque es una
+convensión en la computación para comenzar el booteo del sistema, es el punto de
+partida de la ejecución luego de que la BIOS termina la inicialización. Es por
+esto que este bloque no es de mayor importancia para nosotros, simplemente hay
+que tenerlo en cuenta a la hora de calcular offsets para el resto de los
+bloques.
+
+El Super Block o sb, que al igual que el bs ocupa exactamente un bloque de
+tamaño fijo (1024 bytes). Mfs, al igual que todo el resto de los sistemas de
+archivos, tiene una serie de atributos que pueden variar dependiendo
+de las necesidades del administrador del sistema (por ejemplo el tamaño de los
+bloques). Todos estos valores se encuentran en el sb, incluyendo información
+necesaria como la cantidad de bloques o inodos, el tamaño máximo de un archivo,
+etc. Se verá con más detenimiento es la sección correspondiente.
+
+El Inode Map o im y Zone Map o zm. Estos dos mapas de bits son usados por mfs
+para marcar cuales de las posiciones de memoria reservadas para inodos y para
+datos estan usadas, im para inodos y zm para datos. En MinixFS se
+hace una distinción entre Zone o zona y Block o bloque, donde una zona es un
+conjunto de bloques (una potencia de dos, por ejemplo cada zona puede tener 4
+bloques). La razón por la que utilizaron esta diferenciación será explicada más
+adelante, pero para el trabajo que estamos haciendo esta diferencia fue evitada
+asegurandose de que las zonas contengan un solo bloque.
+
+La parte siguiente es la más importante del sistema, y corresponde al espacio de
+memoria reservado para los inodos. En la sección correspondiente se explicará su
+funcionamiento, pero anticipando, todo archivo esta descripto por un inodo
+(aunque puede ser más de uno) que da algunas características del mismo, y una
+forma de ubicar los bloques con sus datos.
+
+Por último se encuentra la parte más grande de la imagen mfs que corresponde a
+todos los bloques restantes, libres para guardar información. Por lo general
+conforman el contenido de los archivos en varios bloques distribuidos por el
+espacio libre, aunque en algunos casos particulares tienen información de mfs
+(ver el funcionamiento de los directorios).
+
+\subsection{Super Block}
+
+El Supero Block o sb contiene toda la información sobre las características de
+una imagen mfs en un bloque de tamaño 1024 bytes. En la siguiente imagen vemos
+la distribución de la información en el bloque:
+
+\begin{center}
+\includegraphics[scale=0.7]{../img/superblock.png}
+\end{center}
+
+La mayoría de los campos son suficientemente descriptivos como para explicarlos,
+basta con afirmar que los únicos que no utilizamos son "FS sub-version" que no
+juega ningun papel en la versión 2 de mfs, y "$Log_2 (block/zone)$" ya que no
+hacemos distinciones entre zonas y bloques (este valore debe ser 0).
+
+Todo el código de manejo del sb se encuentra en los archivos super.c y super.h.
+
+La primera función que debe ser llamada antes de poder interactuar con el sb es
+read\_super(), que se encarga de leer el Super Block. En nuestro caso nos basta
+únicamente con apuntar al inicio del sb en la memoria, ya que como explicamos
+anteriormente toda la imagen mfs ya esta cargada en memoria. La estructura
+superblock\_s representa al sb con los tamaños exactos como aparece en la
+imagen, por lo que un puntero de este tipo nos ahorra toda necesidad de tener
+que reservar espacio para la estructura y copiar los datos en la misma.
+
+Luego la manera de interactuar con el sb es mediante defines. Una serie de
+definiciones en el super.h acceden a la estructura superblock\_s para devolver
+los datos. Una forma más "correcta" de hacer esto hubiese sido utilizar getters
+y setters, asegurandonos en cada uno que el puntero al sb ya se hubiese
+inicializado. La razón por la que no elegí este método es que read\_super() es
+un método obligatorio para cualquier implementación de mfs y en caso de error la
+implementación no podría seguir, por lo que es seguro asumir que no existe este
+error y obviarlo. De esta manera nos ahorramos el overhead de las llamadas a los
+getters y setters y trabajamos directamente con los punteros. Un ejemplo es:
+
+\begin{verbatim}
+#define IMAP_BLOCKS (sb->s_imap_blocks)
+\end{verbatim}
+
+Con 'sb' el putero a estructura superblock\_s. Este define recupera la cantidad
+de bloques que ocupa el mapa de inodos.
+
+\subsection{Inode y Zone Maps}
+
+COMPLETAR
+
+\subsection{Inodes}
+
+COMPLETAR
+
+\subsection{System Calls del FS}
+
+COMPLETAR
