@@ -20,19 +20,17 @@ ino_t alloc_bit(int map)
 {
     ino_t map_bits, b;
     bitchunk_t *start, *wptr, *wlim;
-    unsigned int bit_blocks, i;
+    unsigned int i;
 
     if (map == IMAP) {
         start = (bitchunk_t *) (fs_offset + IMAP_OFFSET);
         wptr = imap_origin;
         map_bits = INODE_MAX;
-        bit_blocks = IMAP_BLOCKS;
         wlim = (bitchunk_t *) (fs_offset + ZMAP_OFFSET);
     } else {
         start = (bitchunk_t *) (fs_offset + ZMAP_OFFSET);
         wptr = zmap_origin;
         map_bits = BLOCK_MAX;
-        bit_blocks = ZMAP_BLOCKS;
         wlim = (bitchunk_t *) (fs_offset + INODE_OFFSET);
     }
 
@@ -94,6 +92,11 @@ void free_bit(int map, unsigned int num)
     wptr += words;
     /* if (!(*wptr & mask)) panic(); ver si poner panic */
     *wptr &= ~mask;
+    
+    if (map == IMAP && imap_origin > wptr)
+        imap_origin = wptr;
+    else if (map == ZMAP && zmap_origin > wptr)
+        zmap_origin = wptr;
 }
 
 /* mark inode as unused in bitmap */
