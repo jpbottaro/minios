@@ -78,7 +78,8 @@ basta con afirmar que los únicos que no utilizamos son "FS sub-version" que no
 juega ningun papel en la versión 2 de mfs, y "$Log_2 (block/zone)$" ya que no
 hacemos distinciones entre zonas y bloques (este valore debe ser 0).
 
-Todo el código de manejo del sb se encuentra en los archivos super.c y super.h.
+Todo el código de manejo del sb se encuentra en los archivos fs/super.c y
+fs/super.h.
 
 La primera función que debe ser llamada antes de poder interactuar con el sb es
 read\_super(), que se encarga de leer el Super Block. En nuestro caso nos basta
@@ -107,7 +108,34 @@ de bloques que ocupa el mapa de inodos.
 
 \subsection{Inode y Zone Maps}
 
-COMPLETAR
+El mapa de inodos se encarga de mantener un registro de cuales de los espacios
+reservados para inodos se encuentran ocupados. El mapa de zonas provee la misma
+funcionalidad pero a nivel de bloques. Ambos son bitmaps en los cuales cada
+posición posible de guardar un inodo/bloque está representado por un bit, 0 si
+se encuentra libre y 1 en caso contrario.
+
+El código para el manejo de estos mapas se encuentra también en los archivos
+fs/super.c y fs/super.h.
+
+En el caso del mapa de inodos hay 2 funciones lo manejan: rm\_inode() y
+empty\_inode(). La primera se encarga de liberar la posición del inodo
+asigandole un 0 al bit correspondiente. La segunda devuelve una posición libre
+para crear un nuevo inodo. Logra esto manteniendo siempre un puntero a la última
+posición libre del bitmap, y luego recorriendo el mapa hasta encontrar un bit
+vacío.
+
+Para el mapa de bloques existen 2 funciones similares: rm\_block() y
+empty\_block(). Estas funciones se comportan de manera similar a las de inodos,
+por lo que en realidad ambas son wrappers que llaman a un par de funciones
+genericas free\_bit() y alloc\_bit() que son las que realizan el trabajo
+descripto.
+
+La función alloc\_bit() que encuentra un bit vacío en el bitmap es parecida a
+una en el código de minix con el mismo nombre. Ambas usan una técnica simple
+para rastrear ese 0 en el mapa. Recorren el bitmap de a palabras, y las comparan
+con la palabra de todos 1's, logrando leer de a 32 bits por repetición del
+ciclo. Al encontrar una palabra que es distinta a la completa por 1 solo hace
+falta hubicar el 0 que sabemos existe.
 
 \subsection{Inodes}
 
