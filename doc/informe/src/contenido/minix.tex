@@ -139,7 +139,131 @@ falta hubicar el 0 que sabemos existe.
 
 \subsection{Inodes}
 
-COMPLETAR
+La parte más interesante de un sistema de archivos tipo Unix como lo es mfs es
+la idea de inodos. Básicamente todo archivo (y como archivo contemplamos también
+a directorios/pipes/links/etc.) es representado por un inodo. Un inodo esta
+compuesto por una serie de campos que definen el archivo, y luego referencias a
+los bloques en donde se encuentran sus datos, en el caso de tenerlos.
+
+La función principal de un inodo es referenciar todos los bloques que conforman
+un archivo. Lo bueno de este método es que al abrir y leer un archivo, solo es
+necesario mirar a su inodo, éste tiene toda la información necesaria para
+leerlo. Esto es una mejora substancial comparado con sistemas del tipo FAT, que
+requieren de una tabla aparte con la información de todos los archivos. En este
+último caso una tabla de este estilo sería enorme para los tamaños de los discos
+en la actualidad, y ocuparia varios Mbyes en memoria constantemente. En cambio
+con inodos solo es necesario mantener en memoria aquellos que se encuentran
+actualmente en uso, aprovechando mejor los recursos.
+
+A continuación se muestra un gráfico con la estructura general de un inodo en
+mfs (similar a los inodos en ext2 o cualquier otro fs tipo unix):
+
+\begin{center}
+\includegraphics[scale=0.5]{../img/inode.png}
+\end{center}
+
+Esta imagen (al igual que el resto de las utilizadas en esta sección MinixFS)
+fue tomada del libro de Tanembaum REFERENCIA, y contiene descripciones de los
+campos que conforman el inodo: 'mode' que nos da el tipo de archivo y sus
+atributos de lectura/escritura/ejecución; 'links' nos dice cuantos directorios
+contienen al archivo (es decir cuantos 'hard links' existen); 'uid/gid' el dueño
+y su grupo; 'size' el tamaño; 'access/mod/status time' tiempos varios; 'zone
+0-6' los punteros a los primeros 7 bloques del archivo.
+
+Paramos aquí para comentar una característica de los inodos. Para poder contar
+con archivos suficientemente grandes, se implemento la idea de bloques
+indirectos/doble indirectos/triple indirectos. En caso de que la
+información del archivo supere el espacio que proveen los primeros 7 bloques
+referenciados en el inodo, se pasa al bloque de indirectos, que consta de un
+bloque completo con punteros a otros bloques donde sigue el archivo. En caso de
+que éste último no alcanze, se repite la idea y se utiliza el doble indirecto,
+que apunta a un bloque con punteros a otros bloques, que a su vez contienen
+punteros a bloques con la información. Para entender mejor el funcionamiento ver
+el siguiente gráfico:
+
+\begin{center}
+\includegraphics[scale=0.5]{../img/inode_links.png}
+\end{center}
+
+De esta manera se logra expandir el limite del tamaño de un archivo los
+suficiente como para que no sea un problema. En el caso de mfs los bloques
+triple indirectos no son utilizados, pero el espacio en el inodo existe por si
+fueran a ser necesarios en el futuro.
+
+Veamos ahora como se implementan en nuestro sistema. El código de manejo de
+inodos se encuentra en los archivos fs/inode.c y fs/inode.h, con partes menores
+en fs/fs.c.
+
+La función más interesante en el manejo de inodos es find\_inode(), que dado un
+directorio de inicio y un path tipo unix (ej. jp/orga2/informe.pdf), encuentra y
+devuelve el inodo buscado en caso de existir (en nuestro ejemplo sería el inodo
+correspondiente al archivo informe.pdf). La implementación permite que se pueda
+borrar el archivo en cuestion, se cree, o simplemente que se devuelva. Por
+ejemplo, para conseguir el inodo correspondiente al archivo '/home/jp/hola.txt',
+bastaría con llamar a la la función find\_inode(NULL, "/home/jp/hola.txt",
+FS\_SEARCH\_GET).
+
+Luego de decidir por donde empezar la busqueda (si el path empieza con '/'
+empezamos en el root directory), esta función se encarga de ir componente por
+componente navegando los directorios del path y avanzando hasta el último
+subdirectorio. Logra esto utilizando la función search\_inode(), que dado un
+directorio y un nombre de archivo, devuelve el numero inodo correspondiente, en
+caso de que exista.
+
+Analicemos más de cerca esta última función. Comienza recorriendo un
+directorio entrada por entrada buscando aquella que coincide con el nombre de
+archivo/carpeta buscado. Hace uso de varias funciones auxiliares que
+detallaremos a continuación. El siguiente extracto de código de search\_inode()
+muestra el loop principal:
+
+\begin{verbatim}
+for (pos = 0; pos < dir->i_size; pos += BLOCK_SIZE) {
+    /* get the block with the files/subdirectories */
+    dentry = (struct dir_entry_s *) get_block(read_map(dir, pos));
+    end = dentry + NR_DIR_ENTRIES;
+
+    /* cycle through the dir entries and search for the required name */
+    for (; dentry < end; dentry++) {
+        if (!empty && dentry->num == 0)
+            empty = dentry;
+        if (dentry->num != 0 && mystrncmp(name, dentry->name, MAX_NAME) == 0) {
+            switch (flag) {
+                case FS_SEARCH_REMOVE:
+                    rm_inode(dentry->num);
+                    dentry->num = 0;
+                    dir->i_size -= DIRENTRY_SIZE;
+                    return OK;
+                case FS_SEARCH_GET:
+                case FS_SEARCH_ADD:
+                    return dentry->num;
+            }
+        }
+    }
+}
+\end{verbatim}
+
+Luego termina resolviendo el caso en que no se encontró el archivo, pero la flag
+indica que se cree.
+
+La manera en que el código recorre las entradas del directorio es mediante la
+función read\_map(), que dado una posición de un archivo/carpeta, devuelve el
+bloque en que se encuentra (es decir, resuelve bloques
+directos/indirectos/etc.); get\_block() simplemente devuelve
+un puntero al inicio del bloque pedido. Así vamos bloque por bloque recorriendo
+todas las entradas del directorio, comparando una por una con la función
+mystrncmp (una imitación de strncmp de la biblioteca estandar, recordar que no
+contamos con ninguna de estas funciones). En caso de encontrarla, la acción
+depende de que la flag con la que fue llamada la función, si se desea
+borrar/agregar/devolver el número de inodo.
+
+Es importante aclarar que hay una diferencia clave con la manera en que está
+implementado mfs en minix. Funciones como get\_block() requieren llamar al
+disco, recobrar el bloque en cuestión y guardarlo en memoria para poder
+utilizarlo. En cambio nosotros simplemente apuntamos a la posición de dicho
+bloque, ya que todo se encuentra pre-cargado. Lo mismo sucede con los inodos y
+la función get\_inode(), en la implementación real del fs se mantiene una cache
+de inodos que contiene todos aquellos que se están utilizando en ese momento,
+lo cual no es necesario en nuestro caso por el mismo motivo.
 
 \subsection{System Calls del FS}
 
