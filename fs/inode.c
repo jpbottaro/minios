@@ -78,6 +78,7 @@ static ino_t search_inode(struct inode_s *dir, char *name, int flag)
     struct dir_entry_s *end;
     struct dir_entry_s *empty;
     unsigned int pos;
+    ino_t tmp;
 
     if (*name == '\0')
         return NO_INODE;
@@ -99,9 +100,10 @@ static ino_t search_inode(struct inode_s *dir, char *name, int flag)
                 switch (flag) {
                     case FS_SEARCH_REMOVE:
                         rm_inode(dentry->num);
+                        tmp = dentry->num;
                         dentry->num = 0;
                         dir->i_size -= DIRENTRY_SIZE;
-                        return OK;
+                        return tmp;
                     case FS_SEARCH_GET:
                     case FS_SEARCH_ADD:
                         return dentry->num;

@@ -19,7 +19,7 @@ int fs_init(char *fs_start)
     fs_offset = fs_start;
     root = (struct inode_s *) (fs_offset + INODE_OFFSET);
     read_super();
-    return 0;
+    return OK;
 }
 
 /* fill inode information */
@@ -88,7 +88,7 @@ int sys_lseek(unsigned int fd, off_t offset, int whence)
         default:
             return ERROR;
     }
-    return 0;
+    return OK;
 }
 
 static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag)
@@ -146,10 +146,22 @@ int sys_write(unsigned int fd, char *buf, unsigned int n)
     return fs_readwrite(fd, buf, n, FS_WRITE);
 }
 
+/* remove file/dir from fs */
+int sys_unlink(const char *pathname)
+{
+    struct inode_s *dir;
+
+    dir = get_inode(current_dir());
+
+    if (find_inode(dir, pathname, FS_SEARCH_REMOVE) == NO_INODE)
+        return ERROR;
+    return OK;
+}
+
 /* this one should close all open fds and write buffered changes etc. but,
  * as you probably know already ;), no real need for that
  */
 int fs_end()
 {
-    return 0;
+    return OK;
 }
