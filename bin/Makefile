@@ -22,7 +22,7 @@ $(ODIR)/%.o: $(SRC)/%.c
 $(ODIR)/%.o: $(SRC)/%.asm
 	$(NASM) $(NASMFLAGS) -o $@ $^
 
-kernel.bin:
+kernel:
 	@echo Building kernel
 	@$(MAKE) -C ../kernel
 	@echo Building file system
@@ -30,7 +30,7 @@ kernel.bin:
 	@echo Building lib
 	@$(MAKE) -C ../lib
 	@echo Linking kernel.bin
-	@cat $(DEPEND) 2>/dev/null | xargs $(LD) $(LDFLAGS) -o $@ $^
+	@cat $(DEPEND) 2>/dev/null | xargs $(LD) $(LDFLAGS) -o kernel.bin
 	@echo Adding fsimage to kernel.bin
 	@mv kernel.bin kernel.bin.tmp
 	@dd if=/dev/zero bs=1 count=$(KERNELMEM) of=kernel.bin status=noxfer \
@@ -41,7 +41,7 @@ kernel.bin:
 											  status=noxfer >/dev/null 2>&1
 	@rm kernel.bin.tmp
 
-image: kernel.bin
+image: kernel
 	@echo 'Copying kernel.bin in the diskette image'
 	@$(MCOPY) -o -i $(DISKIMG) kernel.bin ::/ 
 

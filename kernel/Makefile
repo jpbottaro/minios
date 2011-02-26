@@ -20,7 +20,7 @@ $(ODIR)/%.o: %.asm
 
 all: $(OBJ)
 	@mkdir -p $(ODIR)
-	@echo $(OBJ) >> $(ODIR)/depend
+	@echo $(OBJ) > $(ODIR)/depend
 
 clean:
 	rm -rf $(ODIR)
