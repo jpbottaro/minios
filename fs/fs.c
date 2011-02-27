@@ -162,11 +162,35 @@ int sys_chdir(const char *path)
 {
     ino_t ino;
 
-    if ( (ino = find_inode(NULL, path, FS_SEARCH_GET)) == NO_INODE)
+    if ( (ino = find_inode(current_dir(), path, FS_SEARCH_GET)) == NO_INODE)
         return ERROR;
 
     set_current_dir(ino);
     return OK;
+}
+
+int sys_rename(const char *oldpath, const char *newpath)
+{
+    /* COMPLETAR */
+    return ERROR;
+}
+
+int sys_mkdir(const char *pathname, mode_t mode)
+{
+    /* COMPLETAR */
+    return ERROR;
+}
+
+int sys_rmdir(const char *pathname)
+{
+    /* COMPLETAR */
+    return ERROR;
+}
+
+int sys_getdents(unsigned int fd, struct dirent *dirp, unsigned int n);
+{
+    /* COMPLETAR */
+    return ERROR;
 }
 
 /* this one should close all open fds and write buffered changes etc. but,
