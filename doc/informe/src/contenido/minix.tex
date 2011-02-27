@@ -265,4 +265,50 @@ lo cual no es necesario en nuestro caso por el mismo motivo.
 
 \subsection{System Calls del FS}
 
-COMPLETAR
+Los sistemas tipo unix utilizan la idea de descriptor de archivo o 'fd' para
+identificar archivos abiertos. Cuando un programa quiere abrir un archivo, se le
+es entregado este fd, que no es más que un número identificador. Luego basta
+utilizar este número para realizar cualquier acción sobre el archivo
+(leer/escribir/etc.).
+
+Las funciones de manipulación de fds se encuentran en los archivos fs/file.c y
+fs/file.h. Cada proceso en su tabla contiene un arreglo con los fds y
+sus respectivos inodos. Mediante las funciones get\_fd() y release\_fd(), uno
+reserva y devuelve fds según las necesidades del proceso.
+
+La implementación de estas funciones hace uso de el archivo sys/queue.h, una
+implementación estándar de listas para los sistemas unix. Declarando un par de
+punteros en el arreglo de fds, simulamos una lista tipo fifo con la que nos
+aseguramos que pedir y devolver fds sea siempre $O(1)$. En el caso de get\_fd()
+tenemos:
+
+\begin{verbatim}
+int get_fd(ino_t ino_num, unsigned int pos)
+{
+    struct file_s *file = LIST_FIRST(&unused_fd);
+
+    if (file != NULL) {
+        LIST_REMOVE(file, unused);
+        file->ino = ino_num;
+        file->pos = pos;
+        return file->fd;
+    }
+
+    return ERROR;
+}
+\end{verbatim}
+
+De esta manera podemos utilizar la idea de listas sin tener que agregar
+complicaciones al código, y más que nada no tenemos que introducir memoria
+dinámica, ya que los arreglos que simulan la lista son estáticos y por ende
+fijos.
+
+Con el manejo de fds completo, comienza el código que rearma todo lo ya
+explicado para implementar las llamadas al sistema. Para cada system call unix,
+la función que la recibe tiene el prefijo "sys\_" (por ejemplo, la función
+sys\_open() atiende la llamada open()). Se implementaron las llamadas open(),
+close(), write(), read(), lseek(), unlink() y rename() para manejo de archivos,
+chdir(), mkdir(), rmdir() y getdents() para manejo de carpetas.
+
+Las implementación de estas funciones se encuentra en los archivos fs/fs.c y
+fs/fs.h.
