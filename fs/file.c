@@ -82,3 +82,8 @@ ino_t current_dir()
 {
     return ps[current_process].curr_dir;
 }
+
+void set_current_dir(ino_t ino)
+{
+    ps[current_process].curr_dir = ino;
+}

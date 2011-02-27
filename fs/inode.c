@@ -19,7 +19,7 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
     ino_num = NO_INODE;
     
     /* start at root if path starts with slash */
-    if (*path == '/') {
+    if (dir == NULL || *path == '/') {
         ino_num = 1;
         r = root;
     } else {

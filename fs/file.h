@@ -11,6 +11,7 @@ int get_fd(ino_t ino_num, unsigned int pos);
 int release_fd(int fd);
 
 ino_t current_dir();
+void set_current_dir(ino_t ino);
 
 ino_t     file_inode(unsigned int fd);
 void  set_file_inode(unsigned int fd, ino_t ino);

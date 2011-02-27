@@ -158,6 +158,17 @@ int sys_unlink(const char *pathname)
     return OK;
 }
 
+int sys_chdir(const char *path)
+{
+    ino_t ino;
+
+    if ( (ino = find_inode(NULL, path, FS_SEARCH_GET)) == NO_INODE)
+        return ERROR;
+
+    set_current_dir(ino);
+    return OK;
+}
+
 /* this one should close all open fds and write buffered changes etc. but,
  * as you probably know already ;), no real need for that
  */
