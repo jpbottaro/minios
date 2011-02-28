@@ -115,20 +115,24 @@ struct dir_entry_s *search_inode(struct inode_s *dir, const char *name)
     for (pos = 0; pos < dir->i_size; pos += BLOCK_SIZE) {
         /* get the block with the files/subdirectories */
         dentry = (struct dir_entry_s *) get_block(read_map(dir, pos));
-        end = dentry + NR_DIR_ENTRIES;
+        end = dentry + (dir->i_size - pos) % NR_DIR_ENTRIES;
 
         /* cycle through the dir entries and search for the required name */
         for (; dentry < end; dentry++) {
-            if (empty == NULL && dentry->num == 0)
+            if (name != NULL && empty == NULL && dentry->num == 0)
                 empty = dentry;
-            /* this if's are a little ugly, but at least they are descriptive */
+
+            /* pretty ugly but well... */
             if (dentry->num != 0) {
-                if (name == NULL && mystrncmp(".",  dentry->name, 2) != 0 &&
-                                    mystrncmp("..", dentry->name, 3) != 0)
+                if (name == NULL) {
+                    if (mystrncmp(".",  dentry->name, 2) != 0 &&
+                        mystrncmp("..", dentry->name, 3) != 0)
+                        return dentry;
+                } else if (mystrncmp(name, dentry->name, MAX_NAME) == 0) {
                     return dentry;
-                else if (mystrncmp(name, dentry->name, MAX_NAME) == 0)
-                    return dentry;
+                }
             }
+
         }
     }
 
