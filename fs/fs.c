@@ -192,19 +192,19 @@ void last_component(const char *path, char *last)
     last[i] = '\0';
 }
 
-/* rename oldpath to newpath (not directories) */
+/* rename oldpath to newpath */
 int sys_rename(const char *oldpath, const char *newpath)
 {
-    ino_t ino;
-    struct inode_s *last_dir;
+    ino_t ino_num, parent_num;
+    struct inode_s *dir, *last_dir, *ino;
     struct dir_entry_s *dentry;
     char name[MAX_NAME];
 
+    dir = get_inode(current_dir());
     /* get last directory of path */
-    if ( (ino = find_inode(get_inode(current_dir()), newpath, FS_SEARCH_LASTDIR))
-                                                                        == NO_INODE)
+    if ( (parent_num = find_inode(dir, newpath, FS_SEARCH_LASTDIR)) == NO_INODE)
         return ERROR;
-    last_dir = get_inode(ino);
+    last_dir = get_inode(parent_num);
 
     /* get last component of path */
     last_component(newpath, name);
@@ -214,18 +214,25 @@ int sys_rename(const char *oldpath, const char *newpath)
         return ERROR;
 
     /* error if file is actually a dir */
-    if (IS_DIR(get_inode(dentry->num)->i_mode))
+    if (dentry->num != 0 && IS_DIR(get_inode(dentry->num)->i_mode))
         return ERROR;
 
     /* remove entry from the old directory */
-    if ( (ino = find_inode(get_inode(current_dir()), oldpath, FS_SEARCH_REMOVE))
-                                                                        == NO_INODE)
+    if ( (ino_num = find_inode(dir, oldpath, FS_SEARCH_REMOVE)) == NO_INODE)
         return ERROR;
 
     /* fill entry in new directory */
-    dentry->num = ino;
+    dentry->num = ino_num;
     mystrncpy(dentry->name, name, MAX_NAME);
     last_dir->i_size += DIRENTRY_SIZE;
+
+    /* check if oldpath was a dir, and update '..' in that case */
+    ino = get_inode(ino_num);
+    if (IS_DIR(ino->i_mode)) {
+        dentry = search_inode(ino, "..");
+        dentry->num = parent_num;
+        last_dir->nlinks++;
+    }
 
     return OK;
 }

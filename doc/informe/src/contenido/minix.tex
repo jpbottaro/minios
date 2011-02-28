@@ -337,10 +337,25 @@ de la biblioteca estándar).
 
 El resto de las llamadas de archivo son simples, open() y close() solo manejan
 fds con las funciones antes descriptas; unlink() llama a find\_inode() pidiendo
-que se borre el archivo; rename() busca ambos paths y intercambia la entrada;
-lseek() modifica el puntero al archivo en la lista de fds.
+que se borre el archivo; lseek() modifica el puntero al archivo en la lista de 
+fds.
 
-Por el lado de manejo de directorios, rmdir() remueve un directorio asegurandose
-primero que este vacío; chdir() cambia el directorio actual (el inodo del
-directorio actual se guarda en la tabla del proceso); mkdir() crea un directorio
-mediante find\_inode(). 
+En un principio las funciones search\_inode() y find\_inode eran muy simples,
+uno le daba un path y devolvian el inodo correspondiente. Al encontrarme con
+tener que implementar las llamadas de sistema de directorios me di cuenta que
+este método no iba a funcionar, y tenía dos opciones: o bien crear nuevas
+funciones de manejo de inodos para directorios, o cambiar estas 2 y reordenar el
+código. El problema de la primer opción es que mucho código se duplica, lo que
+ensucia la implementación y por lo tanto no lo consideré. Luego tomé el segundo
+camino, cambie la signatura de las funciones para que search\_inode() devuelva
+la entrada misma en el directorio.
+
+Utilizando esta modificación, rmdir() remueve un directorio asegurandose
+primero que este vacío. Esto requiere de conseguir el inodo del padre y del
+hijo, checker que este vacío y limpiar la entrada en el padre.
+
+La llamada mkdir() no solo requiere crear el nuevo inodo de directorio, sino que
+también hay que colocar los links a '.' y '..'.
+
+Por último, chdir() cambia el directorio actual (el inodo del directorio actual
+se guarda en la tabla del proceso)
