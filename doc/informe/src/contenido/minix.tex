@@ -214,7 +214,7 @@ Analicemos más de cerca esta última función. Comienza recorriendo un
 directorio entrada por entrada buscando aquella que coincide con el nombre de
 archivo/carpeta buscado. Hace uso de varias funciones auxiliares que
 detallaremos a continuación. El siguiente extracto de código de search\_inode()
-muestra el loop principal (simplificado):
+muestra el loop principal:
 
 \begin{verbatim}
 for (pos = 0; pos < dir->i_size; pos += BLOCK_SIZE) {
@@ -224,24 +224,15 @@ for (pos = 0; pos < dir->i_size; pos += BLOCK_SIZE) {
 
     /* cycle through the dir entries and search for the required name */
     for (; dentry < end; dentry++) {
-        if (dentry->num != 0 && mystrncmp(name, dentry->name, MAX_NAME) == 0) {
-            switch (flag) {
-                case FS_SEARCH_REMOVE:
-                    rm_inode(dentry->num);
-                    dentry->num = 0;
-                    dir->i_size -= DIRENTRY_SIZE;
-                    return OK;
-                case FS_SEARCH_GET:
-                case FS_SEARCH_ADD:
-                    return dentry->num;
-            }
-        }
+        if (empty == NULL && dentry->num == 0)
+            empty = dentry;
+        if (dentry->num != 0 && mystrncmp(name, dentry->name, MAX_NAME) == 0)
+            return dentry;
     }
 }
-\end{verbatim}
 
-Luego termina resolviendo el caso en que no se encontró el archivo, pero la flag
-indica que se cree.
+return empty;
+\end{verbatim}
 
 La manera en que el código recorre las entradas del directorio es mediante la
 función read\_map(), que dado una posición de un archivo/carpeta, devuelve el
@@ -250,9 +241,10 @@ directos/indirectos/etc.); get\_block() simplemente devuelve
 un puntero al inicio del bloque pedido. Así vamos bloque por bloque recorriendo
 todas las entradas del directorio, comparando una por una con la función
 mystrncmp (una imitación de strncmp de la biblioteca estandar, recordar que no
-contamos con ninguna de estas funciones). En caso de encontrarla, la acción
-depende de que la flag con la que fue llamada la función, si se desea
-borrar/agregar/devolver el número de inodo.
+contamos con ninguna de estas funciones). En el caso de que no se encuentre la
+entrada que se buscaba, search\_inode() devuelve una entrada vacía. Esto es muy
+util para implementar llamadas como rename(), pudiendo agregar un archivo a un
+directorio.
 
 Es importante aclarar que hay una diferencia clave con la manera en que está
 implementado mfs en minix. Funciones como get\_block() requieren llamar al
@@ -311,4 +303,44 @@ close(), write(), read(), lseek(), unlink() y rename() para manejo de archivos,
 chdir(), mkdir(), rmdir() y getdents() para manejo de carpetas.
 
 Las implementación de estas funciones se encuentra en los archivos fs/fs.c y
-fs/fs.h.
+fs/fs.h. Veamos como se hicieron algunas de estas funciones.
+
+En el caso de read() y write(), comenzaron siendo funciones distintas, pero
+rápidamente me di cuenta que el código entre ellas era muy similar, por lo que
+decidí separarlo en la función fs\_readwrite(). Esta se encarga de leer o
+escribir un archivo, dependiendo de la flag que se le provee.
+
+\begin{verbatim}
+while (n > 0) {
+    if ( (blocknr = read_map(ino, pos)) == NO_BLOCK)
+        return ERROR;
+    block = (char *) get_block(blocknr);
+
+    off = pos % BLOCK_SIZE;
+    size = MIN(n, BLOCK_SIZE - off);
+
+    if (flag == FS_WRITE)
+        mymemcpy(block + off, buf, size);
+    else
+        mymemcpy(buf, block + off, size);
+
+    n -= size;
+    pos += size;
+    buf += size;
+}
+\end{verbatim}
+
+El loop principal de fs\_readwrite() va navegando los bloques del archivo con
+read\_map() y, dependiendo si se busca leer o escribir, utiliza la función
+mymemcpy para realizar el trabajo (que es un clon de la función de mismo nombre
+de la biblioteca estándar).
+
+El resto de las llamadas de archivo son simples, open() y close() solo manejan
+fds con las funciones antes descriptas; unlink() llama a find\_inode() pidiendo
+que se borre el archivo; rename() busca ambos paths y intercambia la entrada;
+lseek() modifica el puntero al archivo en la lista de fds.
+
+Por el lado de manejo de directorios, rmdir() remueve un directorio asegurandose
+primero que este vacío; chdir() cambia el directorio actual (el inodo del
+directorio actual se guarda en la tabla del proceso); mkdir() crea un directorio
+mediante find\_inode(). 
