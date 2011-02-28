@@ -1,7 +1,6 @@
 #include "fs.h"
 #include <minikernel/misc.h>
 
-static ino_t search_inode(struct inode_s *dir, char *path, int flag);
 static char *parse_path(char *path);
 
 /* find the target inode based on the 'user_path' and the current directory 'dir';
@@ -13,14 +12,12 @@ static char *parse_path(char *path);
 ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
 {
     struct inode_s *r;
+    struct dir_entry_s *dentry;
     char *begin, *end, path[MAX_PATH];
-    ino_t ino_num;
-
-    ino_num = NO_INODE;
+    ino_t tmp;
     
     /* start at root if path starts with slash */
     if (dir == NULL || *path == '/') {
-        ino_num = 1;
         r = root;
     } else {
         /* check if dir was removed or is not a directory */
@@ -30,7 +27,7 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
     }
 
     /* copy path and check if it is too long */
-    if (mystrncpy(user_path, path, MAX_PATH) < 0)
+    if (mystrncpy(path, user_path, MAX_PATH) < 0)
         return NO_INODE;
 
     /* search the last directory of the path */
@@ -43,16 +40,45 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
             return NO_INODE;
 
         /* advance to the next component of the path */
-        if ( (ino_num = search_inode(r, begin, FS_SEARCH_GET)) == NO_INODE)
+        if ( (dentry = search_inode(r, begin)) == NULL)
             return NO_INODE;
-        r = get_inode(ino_num);
+        if ( (r = get_inode(dentry->num)) == NULL)
+            return NO_INODE;
 
         /* parse next path component */
         begin = end;
         end = parse_path(begin);
     }
 
-    return search_inode(r, begin, flag);
+    if (flag == FS_SEARCH_LASTDIR)
+        return dentry->num;
+
+    if ( (dentry = search_inode(r, begin)) == NULL)
+        return NO_INODE;
+
+    switch (flag) {
+        case FS_SEARCH_GET:
+            return dentry->num;
+
+        case FS_SEARCH_ADD:
+            if (dentry->num != 0)
+                return dentry->num;
+
+            if ( (tmp = empty_inode()) == NO_INODE)
+                return NO_INODE;
+            dentry->num = tmp;
+            mystrncpy(dentry->name, begin, MAX_NAME);
+            r->i_size += DIRENTRY_SIZE;
+            return dentry->num;
+
+        case FS_SEARCH_REMOVE:
+            tmp = dentry->num;
+            dentry->num = NO_INODE;
+            r->i_size -= DIRENTRY_SIZE;
+            return tmp;
+    }
+
+    return NO_INODE;
 }
 
 /* parse next path component, omitting heading slashes '/' */
@@ -70,23 +96,20 @@ static char *parse_path(char *path)
 }
 
 /* search an inode in a directory based on its name, return a pointer to it
- * if it is found, or 0 otherwise
+ * if it is found, or an empty entry otherwise
  */
-static ino_t search_inode(struct inode_s *dir, char *name, int flag)
+struct dir_entry_s *search_inode(struct inode_s *dir, const char *name)
 {
-    struct dir_entry_s *dentry;
-    struct dir_entry_s *end;
-    struct dir_entry_s *empty;
+    struct dir_entry_s *dentry, *end, *empty;
     unsigned int pos;
-    ino_t tmp;
 
     if (*name == '\0')
-        return NO_INODE;
+        return NULL;
 
-    if (dir == 0)
-        return NO_INODE;
+    if (dir == NULL)
+        return NULL;
 
-    empty = 0;
+    empty = NULL;
     for (pos = 0; pos < dir->i_size; pos += BLOCK_SIZE) {
         /* get the block with the files/subdirectories */
         dentry = (struct dir_entry_s *) get_block(read_map(dir, pos));
@@ -94,35 +117,14 @@ static ino_t search_inode(struct inode_s *dir, char *name, int flag)
 
         /* cycle through the dir entries and search for the required name */
         for (; dentry < end; dentry++) {
-            if (!empty && dentry->num == 0)
+            if (empty == NULL && dentry->num == 0)
                 empty = dentry;
-            if (dentry->num != 0 && mystrncmp(name, dentry->name, MAX_NAME) == 0) {
-                switch (flag) {
-                    case FS_SEARCH_REMOVE:
-                        rm_inode(dentry->num);
-                        tmp = dentry->num;
-                        dentry->num = 0;
-                        dir->i_size -= DIRENTRY_SIZE;
-                        return tmp;
-                    case FS_SEARCH_GET:
-                    case FS_SEARCH_ADD:
-                        return dentry->num;
-                }
-            }
+            if (dentry->num != 0 && mystrncmp(name, dentry->name, MAX_NAME) == 0)
+                return dentry;
         }
     }
 
-    /* if we didnt find the file, and our flag asks to create it... */
-    if (flag == FS_SEARCH_ADD && empty) {
-        ino_t ino_num;
-        if ( (ino_num = empty_inode()) == NO_INODE) return NO_INODE;
-        empty->num = ino_num;
-        mystrncpy(name, empty->name, MAX_NAME);
-        dir->i_size += DIRENTRY_SIZE;
-        return ino_num;
-    }
-
-    return NO_INODE;
+    return empty;
 }
 
 /* get the pointer of an inode based on its number */

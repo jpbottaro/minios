@@ -115,7 +115,7 @@ static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag)
         off = pos % BLOCK_SIZE;
         size = MIN(n, BLOCK_SIZE - off);
 
-        if (flag == FS_READ)
+        if (flag == FS_WRITE)
             mymemcpy(block + off, buf, size);
         else
             mymemcpy(buf, block + off, size);
@@ -149,12 +149,14 @@ int sys_write(unsigned int fd, char *buf, unsigned int n)
 /* remove file/dir from fs */
 int sys_unlink(const char *pathname)
 {
+    ino_t ino;
     struct inode_s *dir;
 
     dir = get_inode(current_dir());
 
-    if (find_inode(dir, pathname, FS_SEARCH_REMOVE) == NO_INODE)
+    if ( (ino = find_inode(dir, pathname, FS_SEARCH_REMOVE)) == NO_INODE)
         return ERROR;
+    rm_inode(ino);
     return OK;
 }
 
@@ -162,17 +164,69 @@ int sys_chdir(const char *path)
 {
     ino_t ino;
 
-    if ( (ino = find_inode(current_dir(), path, FS_SEARCH_GET)) == NO_INODE)
+    if ( (ino = find_inode(get_inode(current_dir()), path, FS_SEARCH_GET))
+                                                                    == NO_INODE)
         return ERROR;
 
     set_current_dir(ino);
     return OK;
 }
 
+void last_component(const char *path, char *last)
+{
+    int i;
+    const char *a;
+
+    a = NULL;
+    while (*path != '\0') {
+        if (*path == '/' && *(path+1) != '/')
+            a = path + 1;
+        path++;
+    }
+
+    i = 0;
+    if (a != NULL)
+        for (; *a != '\0' && *a != '/' && i < MAX_NAME; i++)
+            last[i] = a[i];
+    last[i] = '\0';
+}
+
+/* rename oldpath to newpath */
 int sys_rename(const char *oldpath, const char *newpath)
 {
-    /* COMPLETAR */
-    return ERROR;
+    ino_t ino;
+    struct inode_s *last_dir;
+    struct dir_entry_s *dentry;
+    char name[MAX_NAME];
+
+    /* get last directory of path */
+    if ( (ino = find_inode(get_inode(current_dir()), newpath, FS_SEARCH_LASTDIR))
+                                                                        == NO_INODE)
+        return ERROR;
+    last_dir = get_inode(ino);
+
+    /* get last component of path */
+    last_component(newpath, name);
+
+    /* new entry in the last directory of path (or old one if file exists) */
+    if ( (dentry = search_inode(last_dir, name)) == NULL)
+        return ERROR;
+
+    /* error if file is actually a dir */
+    if (IS_DIR(get_inode(dentry->num)->i_mode))
+        return ERROR;
+
+    /* remove entry from the old directory */
+    if ( (ino = find_inode(get_inode(current_dir()), oldpath, FS_SEARCH_REMOVE))
+                                                                        == NO_INODE)
+        return ERROR;
+
+    /* fill entry in new directory */
+    dentry->num = ino;
+    mystrncpy(dentry->name, name, MAX_NAME);
+    last_dir->i_size += DIRENTRY_SIZE;
+
+    return OK;
 }
 
 int sys_mkdir(const char *pathname, mode_t mode)
@@ -187,7 +241,7 @@ int sys_rmdir(const char *pathname)
     return ERROR;
 }
 
-int sys_getdents(unsigned int fd, struct dirent *dirp, unsigned int n);
+int sys_getdents(unsigned int fd, struct dirent *dirp, unsigned int n)
 {
     /* COMPLETAR */
     return ERROR;
