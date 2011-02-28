@@ -268,7 +268,7 @@ fs/file.h. Cada proceso en su tabla contiene un arreglo con los fds y
 sus respectivos inodos. Mediante las funciones get\_fd() y release\_fd(), uno
 reserva y devuelve fds según las necesidades del proceso.
 
-La implementación de estas funciones hace uso de el archivo sys/queue.h, una
+La implementación de estas funciones hace uso del archivo sys/queue.h, una
 implementación estándar de listas para los sistemas unix. Declarando un par de
 punteros en el arreglo de fds, simulamos una lista tipo fifo con la que nos
 aseguramos que pedir y devolver fds sea siempre $O(1)$. En el caso de get\_fd()
@@ -340,9 +340,9 @@ fds con las funciones antes descriptas; unlink() llama a find\_inode() pidiendo
 que se borre el archivo; lseek() modifica el puntero al archivo en la lista de 
 fds.
 
-En un principio las funciones search\_inode() y find\_inode eran muy simples,
-uno le daba un path y devolvian el inodo correspondiente. Al encontrarme con
-tener que implementar las llamadas de sistema de directorios me di cuenta que
+En un principio las funciones search\_inode() y find\_inode() eran muy simples,
+uno le daba un path y devolvian el inodo correspondiente. Cuando comenzé a
+implementar las llamadas de sistema de directorios me di cuenta que
 este método no iba a funcionar, y tenía dos opciones: o bien crear nuevas
 funciones de manejo de inodos para directorios, o cambiar estas 2 y reordenar el
 código. El problema de la primer opción es que mucho código se duplica, lo que
@@ -355,7 +355,11 @@ primero que este vacío. Esto requiere de conseguir el inodo del padre y del
 hijo, checker que este vacío y limpiar la entrada en el padre.
 
 La llamada mkdir() no solo requiere crear el nuevo inodo de directorio, sino que
-también hay que colocar los links a '.' y '..'.
+también hay que colocar los links a '.' y '..'; también rename() hace uso de
+este cambio, toma las entradas del directorio viejo y del nuevo, y copia los
+contenidos de una a la otra, además debe fijarse si se trata de un directorio,
+para actualizar la referencia '..'; chdir() que cambia el directorio actual
+(el inodo del directorio actual se guarda en la tabla del proceso).
 
-Por último, chdir() cambia el directorio actual (el inodo del directorio actual
-se guarda en la tabla del proceso)
+Por último esta getdents(), que se utiliza para recorrer un directorio.
+COMPLETAR GETDENTS
