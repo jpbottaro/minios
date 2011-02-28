@@ -238,18 +238,18 @@ int sys_mkdir(const char *pathname, mode_t mode)
     struct dir_entry_s *dentry;
     char name[MAX_NAME];
 
+    last_component(pathname, name);
+
     /* get inode numbers from parent and new dir */
     dir = get_inode(current_dir());
     if ( (parent_num = find_inode(dir, pathname, FS_SEARCH_LASTDIR)) == NO_INODE)
         return ERROR;
-
     dir = get_inode(parent_num);
-    last_component(pathname, name);
     if ( (ino_num = find_inode(dir, name, FS_SEARCH_ADD)) == NO_INODE)
         return ERROR;
+    ino = get_inode(ino_num);
 
     /* fill new dir inode */
-    ino = get_inode(ino_num);
     fill_inode(ino, mode);
     ino->i_mode = (ino->i_mode & ~I_TYPE) | I_DIRECTORY;
 
@@ -276,16 +276,15 @@ int sys_rmdir(const char *pathname)
     struct inode_s *ino, *dir;
     char name[MAX_NAME];
 
+    last_component(pathname, name);
+
     /* get inode numbers from parent and new dir */
     dir = get_inode(current_dir());
     if ( (parent_num = find_inode(dir, pathname, FS_SEARCH_LASTDIR)) == NO_INODE)
         return ERROR;
-
     dir = get_inode(parent_num);
-    last_component(pathname, name);
-    if ( (ino_num = find_inode(dir, name, FS_SEARCH_ADD)) == NO_INODE)
+    if ( (ino_num = find_inode(dir, name, FS_SEARCH_GET)) == NO_INODE)
         return ERROR;
-
     ino = get_inode(ino_num);
 
     /* check if dir is empty */
