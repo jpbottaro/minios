@@ -97,13 +97,15 @@ static char *parse_path(char *path)
 
 /* search an inode in a directory based on its name, return a pointer to it
  * if it is found, or an empty entry otherwise
+ *
+ * if name is null, find the first non-empty entry which is not '.' or '..'
  */
 struct dir_entry_s *search_inode(struct inode_s *dir, const char *name)
 {
     struct dir_entry_s *dentry, *end, *empty;
     unsigned int pos;
 
-    if (*name == '\0')
+    if (name != NULL && *name == '\0')
         return NULL;
 
     if (dir == NULL)
@@ -119,8 +121,14 @@ struct dir_entry_s *search_inode(struct inode_s *dir, const char *name)
         for (; dentry < end; dentry++) {
             if (empty == NULL && dentry->num == 0)
                 empty = dentry;
-            if (dentry->num != 0 && mystrncmp(name, dentry->name, MAX_NAME) == 0)
-                return dentry;
+            /* this if's are a little ugly, but at least they are descriptive */
+            if (dentry->num != 0) {
+                if (name == NULL && mystrncmp(".",  dentry->name, 2) != 0 &&
+                                    mystrncmp("..", dentry->name, 3) != 0)
+                    return dentry;
+                else if (mystrncmp(name, dentry->name, MAX_NAME) == 0)
+                    return dentry;
+            }
         }
     }
 
