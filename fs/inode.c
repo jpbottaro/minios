@@ -73,8 +73,13 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
 
         case FS_SEARCH_REMOVE:
             tmp = dentry->num;
-            dentry->num = NO_INODE;
-            r->i_size -= DIRENTRY_SIZE;
+            if (tmp != 0) {
+                dentry->num = NO_INODE;
+                r->i_size -= DIRENTRY_SIZE;
+                if (IS_DIR(get_inode(tmp)->i_mode)) {
+                    r->i_nlinks--;
+                }
+            }
             return tmp;
     }
 
