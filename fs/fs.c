@@ -36,6 +36,7 @@ static void fill_inode(struct inode_s *ino, int mode)
     ino->i_mtime  = 0;
     ino->i_ctime  = 0;
     for(i = 0; i < NR_ZONES; i++) ino->i_zone[i] = 0;
+    ino->i_zone[0] = empty_block();
 }
 
 /* open file and return fd; to make our life easier, always open RW */
@@ -229,16 +230,77 @@ int sys_rename(const char *oldpath, const char *newpath)
     return OK;
 }
 
+/* create new directory */
 int sys_mkdir(const char *pathname, mode_t mode)
 {
-    /* COMPLETAR */
-    return ERROR;
+    ino_t parent_num, ino_num;
+    struct inode_s *ino, *dir;
+    struct dir_entry_s *dentry;
+    char name[MAX_NAME];
+
+    /* get inode numbers from parent and new dir */
+    dir = get_inode(current_dir());
+    if ( (parent_num = find_inode(dir, pathname, FS_SEARCH_LASTDIR)) == NO_INODE)
+        return ERROR;
+
+    dir = get_inode(parent_num);
+    last_component(pathname, name);
+    if ( (ino_num = find_inode(dir, name, FS_SEARCH_ADD)) == NO_INODE)
+        return ERROR;
+
+    /* fill new dir inode */
+    ino = get_inode(ino_num);
+    fill_inode(ino, mode);
+    ino->i_mode = (ino->i_mode & ~I_TYPE) | I_DIRECTORY;
+
+    /* add '.' and '..' */
+    if ( (dentry = search_inode(ino, ".")) == NULL)
+        return ERROR;
+    dentry->num = ino_num;
+    mystrncpy(dentry->name, ".", 2);
+    ino->i_nlinks++;
+
+    if ( (dentry = search_inode(ino, ".")) == NULL)
+        return ERROR;
+    dentry->num = parent_num;
+    mystrncpy(dentry->name, "..", 3);
+    dir->i_nlinks++;
+
+    return OK;
 }
 
 int sys_rmdir(const char *pathname)
 {
-    /* COMPLETAR */
-    return ERROR;
+    ino_t parent_num, ino_num;
+    struct inode_s *ino, *dir;
+    char name[MAX_NAME];
+
+    /* get inode numbers from parent and new dir */
+    dir = get_inode(current_dir());
+    if ( (parent_num = find_inode(dir, pathname, FS_SEARCH_LASTDIR)) == NO_INODE)
+        return ERROR;
+
+    dir = get_inode(parent_num);
+    last_component(pathname, name);
+    if ( (ino_num = find_inode(dir, name, FS_SEARCH_ADD)) == NO_INODE)
+        return ERROR;
+
+    ino = get_inode(ino_num);
+
+    /* check if dir is empty */
+    if (search_inode(ino, NULL) != NULL)
+        return ERROR;
+
+    /* remove link from '..' in parent */
+    dir->i_nlinks--;
+
+    /* this cant give an error */
+    find_inode(dir, name, FS_SEARCH_REMOVE);
+
+    /* free blocks and inode */
+    rm_inode(ino_num);
+
+    return OK;
 }
 
 int sys_getdents(unsigned int fd, struct dirent *dirp, unsigned int n)
