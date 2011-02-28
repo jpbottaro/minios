@@ -49,8 +49,9 @@ fuera un disco comun).
 
 Con respecto a las rutinas de manejo de MinixFS, implementaré todo lo necesario
 para interactuar normalmente con un sistema de archivos en un SO POSIX, es decir
-open/close/read/write/lseek, incluyendo las flags mas importantes de cada uno
-(por ejemplo O\_CREAT/O\_APPEND/O\_TRUNC en open).
+open/close/read/write/lseek/unlink, incluyendo manejo de directorios con
+chdir/mkdir/rmdir/getdents, entre otras, considerando las flags más importantes
+de cada uno (por ejemplo O\_CREAT/O\_APPEND/O\_TRUNC en open).
 
 Por último, hay 3 versiones de MinixFS, en este caso implementamos la versión 2.
 Si bien comenzamos con su última versión, nos dimos cuenta que no existe mucho
