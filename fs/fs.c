@@ -269,6 +269,7 @@ int sys_mkdir(const char *pathname, mode_t mode)
     return OK;
 }
 
+/* remove directory (only if it is empty) */
 int sys_rmdir(const char *pathname)
 {
     ino_t parent_num, ino_num;
