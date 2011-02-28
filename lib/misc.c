@@ -1,7 +1,7 @@
 #include "misc.h"
 
 /* copy string 'from' to 'to', writing at most 'len' characters */
-int mystrncpy(const char *from, char *to, int len)
+int mystrncpy(char *to, const char *from, int len)
 {
     int i;
 
@@ -31,7 +31,7 @@ int mystrncmp(const char *str1, const char *str2, int len)
     return 0;
 }
 
-void mymemcpy(char *from, char *to, unsigned int size)
+void mymemcpy(char *to, const char *from, unsigned int size)
 {
     while (size--) {
         *from = *to;
