@@ -214,7 +214,7 @@ Analicemos más de cerca esta última función. Comienza recorriendo un
 directorio entrada por entrada buscando aquella que coincide con el nombre de
 archivo/carpeta buscado. Hace uso de varias funciones auxiliares que
 detallaremos a continuación. El siguiente extracto de código de search\_inode()
-muestra el loop principal:
+muestra el loop principal (simplificado):
 
 \begin{verbatim}
 for (pos = 0; pos < dir->i_size; pos += BLOCK_SIZE) {
