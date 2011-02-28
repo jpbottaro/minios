@@ -231,7 +231,7 @@ int sys_rename(const char *oldpath, const char *newpath)
     if (IS_DIR(ino->i_mode)) {
         dentry = search_inode(ino, "..");
         dentry->num = parent_num;
-        last_dir->nlinks++;
+        last_dir->i_nlinks++;
     }
 
     return OK;
@@ -296,9 +296,6 @@ int sys_rmdir(const char *pathname)
     /* check if dir is empty */
     if (search_inode(ino, NULL) != NULL)
         return ERROR;
-
-    /* remove link from '..' in parent */
-    dir->i_nlinks--;
 
     /* this cant give an error */
     find_inode(dir, name, FS_SEARCH_REMOVE);
