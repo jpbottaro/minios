@@ -99,9 +99,17 @@ void free_bit(int map, unsigned int num)
         zmap_origin = wptr;
 }
 
-/* mark inode as unused in bitmap */
+/* mark inode as unused in bitmap and free its blocks */
+/* XXX just works with direct zones */
 void rm_inode(ino_t ino_num)
 {
+    int i;
+    struct inode_s *ino;
+
+    ino = get_inode(ino_num);
+    for (i = 0; i < NR_ZONES; i++)
+        if (ino->i_zone[i] != NO_BLOCK)
+            rm_block(ino->i_zone[i]);
     free_bit(IMAP, ino_num);
 }
 
