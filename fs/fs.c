@@ -192,7 +192,7 @@ void last_component(const char *path, char *last)
     last[i] = '\0';
 }
 
-/* rename oldpath to newpath */
+/* rename oldpath to newpath (not directories) */
 int sys_rename(const char *oldpath, const char *newpath)
 {
     ino_t ino;
@@ -259,8 +259,7 @@ int sys_mkdir(const char *pathname, mode_t mode)
     dentry->num = ino_num;
     mystrncpy(dentry->name, ".", 2);
     ino->i_nlinks++;
-
-    if ( (dentry = search_inode(ino, ".")) == NULL)
+    if ( (dentry = search_inode(ino, "..")) == NULL)
         return ERROR;
     dentry->num = parent_num;
     mystrncpy(dentry->name, "..", 3);
