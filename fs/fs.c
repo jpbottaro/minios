@@ -161,7 +161,9 @@ int sys_unlink(const char *pathname)
 
     if ( (ino = find_inode(dir, pathname, FS_SEARCH_REMOVE)) == NO_INODE)
         return ERROR;
+
     rm_inode(ino);
+
     return OK;
 }
 
@@ -182,17 +184,15 @@ void last_component(const char *path, char *last)
     int i;
     const char *a;
 
-    a = NULL;
+    a = path;
     while (*path != '\0') {
         if (*path == '/' && *(path+1) != '/')
             a = path + 1;
         path++;
     }
 
-    i = 0;
-    if (a != NULL)
-        for (; *a != '\0' && *a != '/' && i < MAX_NAME; i++)
-            last[i] = a[i];
+    for (i = 0; a[i] != '\0' && a[i] != '/' && i < MAX_NAME; i++)
+        last[i] = a[i];
     last[i] = '\0';
 }
 
