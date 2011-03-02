@@ -50,8 +50,12 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
         end = parse_path(begin);
     }
 
-    if (flag == FS_SEARCH_LASTDIR)
-        return dentry->num;
+    if (flag == FS_SEARCH_LASTDIR) {
+        if (dentry == NULL)
+            return current_dir();
+        else
+            return dentry->num;
+    }
 
     if ( (dentry = search_inode(r, begin)) == NULL)
         return NO_INODE;
@@ -77,6 +81,7 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
                 dentry->num = NO_INODE;
                 r->i_size -= DIRENTRY_SIZE;
                 if (IS_DIR(get_inode(tmp)->i_mode)) {
+                    /* we assume the directory is already empty */
                     r->i_nlinks--;
                 }
             }
