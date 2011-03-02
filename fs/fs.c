@@ -75,20 +75,24 @@ int sys_close(unsigned int fd)
 int sys_lseek(unsigned int fd, off_t offset, int whence)
 {
     struct inode_s *ino;
+    int pos;
+
+    ino = get_inode(file_inode(fd));
     switch (whence) {
         case SEEK_SET:
-            set_file_pos(fd, offset);
+            pos = offset;
             break;
         case SEEK_CUR:
-            set_file_pos(fd, file_pos(fd) + offset);
+            pos = file_pos(fd) + offset;
             break;
         case SEEK_END:
-            ino = get_inode(file_inode(fd));
-            set_file_pos(fd, ino->i_size + offset);
+            pos = ino->i_size + offset;
             break;
         default:
             return ERROR;
     }
+    pos = pos > ino->i_size ? ino->i_size : pos < 0 ? 0 : pos;
+    set_file_pos(fd, pos);
     return OK;
 }
 
