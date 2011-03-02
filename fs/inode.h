@@ -42,8 +42,9 @@ struct dir_entry_s *search_inode(struct inode_s *dir, const char *path);
 /* flags for find_inode */
 #define FS_SEARCH_GET     0x0001
 #define FS_SEARCH_ADD     0x0002
-#define FS_SEARCH_REMOVE  0x0003
-#define FS_SEARCH_LASTDIR 0x0004
+#define FS_SEARCH_CREAT   0x0003
+#define FS_SEARCH_REMOVE  0x0004
+#define FS_SEARCH_LASTDIR 0x0005
 
 /* constants for attribute i_mode in inode struct */
 #define I_TYPE           0170000

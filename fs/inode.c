@@ -64,9 +64,14 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
         case FS_SEARCH_GET:
             return dentry->num;
 
-        case FS_SEARCH_ADD:
+        case FS_SEARCH_CREAT:
             if (dentry->num != 0)
                 return dentry->num;
+
+            /* CREAT keeps going... */
+        case FS_SEARCH_ADD:
+            if (dentry->num != 0)
+                return NO_INODE;
 
             if ( (tmp = empty_inode()) == NO_INODE)
                 return NO_INODE;

@@ -46,7 +46,7 @@ int sys_open(const char *filename, int flags, int mode)
     ino_t ino_num;
     struct inode_s *ino, *dir;
 
-    flag = (flags & O_CREAT) ? FS_SEARCH_ADD : FS_SEARCH_GET;
+    flag = (flags & O_CREAT) ? FS_SEARCH_CREAT : FS_SEARCH_GET;
     dir = get_inode(current_dir());
 
     if ( (ino_num = find_inode(dir, filename, flag)) == NO_INODE)
