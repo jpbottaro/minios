@@ -3,8 +3,9 @@ BITS 32
 
 extern reset_intr_pic1
 extern schedule
-extern system_calls
+extern keyboard
 extern print_msg
+extern system_calls
 
 global _isr0
 global _isr1
@@ -31,130 +32,134 @@ global _isr33   ; keyboard
 global _isr80   ; sys_call
 
 _isr0:
-	mov esi, DE
-	mov ecx, DE_len
-	call print_msg
+    mov esi, DE
+    mov ecx, DE_len
+    call print_msg
     jmp $
 _isr1:
-	mov esi, DB
-	mov ecx, DB_len
-	call print_msg
+    mov esi, DB
+    mov ecx, DB_len
+    call print_msg
     jmp $
 _isr2:
-	mov esi, NMI
-	mov ecx, NMI_len
-	call print_msg
+    mov esi, NMI
+    mov ecx, NMI_len
+    call print_msg
     jmp $
 _isr3:
-	mov esi, _BP
-	mov ecx, _BP_len
-	call print_msg
+    mov esi, _BP
+    mov ecx, _BP_len
+    call print_msg
     jmp $
 _isr4:
-	mov esi, OF
-	mov ecx, OF_len
-	call print_msg
+    mov esi, OF
+    mov ecx, OF_len
+    call print_msg
     jmp $
 _isr5:
-	mov esi, BR
-	mov ecx, BR_len
-	call print_msg
+    mov esi, BR
+    mov ecx, BR_len
+    call print_msg
     jmp $
 _isr6:
-	mov esi, UD
-	mov ecx, UD_len
-	call print_msg
+    mov esi, UD
+    mov ecx, UD_len
+    call print_msg
     jmp $
 _isr7:
-	mov esi, NM
-	mov ecx, NM_len
-	call print_msg
+    mov esi, NM
+    mov ecx, NM_len
+    call print_msg
     jmp $
 _isr8:
-	mov esi, DF
-	mov ecx, DF_len
-	call print_msg
+    mov esi, DF
+    mov ecx, DF_len
+    call print_msg
     jmp $
 _isr9:
-	mov esi, CSO
-	mov ecx, CSO_len
-	call print_msg
+    mov esi, CSO
+    mov ecx, CSO_len
+    call print_msg
     jmp $
 _isr10:
-	mov esi, TS
-	mov ecx, TS_len
-	call print_msg
+    mov esi, TS
+    mov ecx, TS_len
+    call print_msg
     jmp $
 _isr11:
-	mov esi, NP
-	mov ecx, NP_len
-	call print_msg
+    mov esi, NP
+    mov ecx, NP_len
+    call print_msg
     jmp $
 _isr12:
-	mov esi, _SS
-	mov ecx, _SS_len
-	call print_msg
+    mov esi, _SS
+    mov ecx, _SS_len
+    call print_msg
     jmp $
 _isr13:
-	mov esi, GP
-	mov ecx, GP_len
-	call print_msg
+    mov esi, GP
+    mov ecx, GP_len
+    call print_msg
     jmp $
 _isr14:
-	mov esi, PF
-	mov ecx, PF_len
-	call print_msg
+    mov esi, PF
+    mov ecx, PF_len
+    call print_msg
     jmp $
 _isr15:
-	mov esi, IR
-	mov ecx, IR_len
-	call print_msg
+    mov esi, IR
+    mov ecx, IR_len
+    call print_msg
     jmp $
 _isr16:
-	mov esi, MF
-	mov ecx, MF_len
-	call print_msg
+    mov esi, MF
+    mov ecx, MF_len
+    call print_msg
     jmp $
 _isr17:
-	mov esi, AC
-	mov ecx, AC_len
-	call print_msg
+    mov esi, AC
+    mov ecx, AC_len
+    call print_msg
     jmp $
 _isr18:
-	mov esi, MC
-	mov ecx, MC_len
-	call print_msg
+    mov esi, MC
+    mov ecx, MC_len
+    call print_msg
     jmp $
 _isr19:
-	mov esi, XM
-	mov ecx, XM_len
-	call print_msg
+    mov esi, XM
+    mov ecx, XM_len
+    call print_msg
     jmp $
 _isr32:
-	pushad
+    pushad
     call schedule
-	popad
-	call reset_intr_pic1
-	iret
+    popad
+    call reset_intr_pic1
+    iret
 _isr33:
-	pushad
-    ; SEND TO STDIN
-	popad
-	call reset_intr_pic1
-	iret
+    pushad
+    xor eax, eax
+    in al, 0x60
+    push eax
+    call keyboard
+    pop eax
+    popad
+    call reset_intr_pic1
+    iret
 _isr80:
-	pushad
-    push ebx
-    push ecx
+    pushad
     push edx
+    push ecx
+    push ebx
     lea eax, [system_calls + eax]
     call eax
-    pop edx
-    pop ecx
     pop ebx
-	popad
-	call reset_intr_pic1
-	iret
+    pop ecx
+    pop edx
+    popad
+    call reset_intr_pic1
+    iret
 
 ; Protected Mode Exceptions and Interrupts (messages)
 DE: db "(*) Fault: Divide Error. #DE"
