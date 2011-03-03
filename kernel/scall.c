@@ -1,4 +1,4 @@
-extern void panic(char *msg);
+#include "panic.h"
 
 extern void sys_exit();
 extern void sys_fork();

@@ -4,6 +4,7 @@ BITS 32
 extern reset_intr_pic1
 extern schedule
 extern system_calls
+extern print_msg
 
 global _isr0
 global _isr1
@@ -154,17 +155,6 @@ _isr80:
 	popad
 	call reset_intr_pic1
 	iret
-
-print_msg:
-	mov ax, 0x18
-	mov es, ax      ; video segment
-	mov edi, 0
-	mov ah, 0x9c    ; blue background, red letters, blink
-	.loop:
-		lodsb
-		stosw
-		loop .loop
-	ret
 
 ; Protected Mode Exceptions and Interrupts (messages)
 DE: db "(*) Fault: Divide Error. #DE"

@@ -1,5 +1,6 @@
 #include "mmu.h"
 #include "i386.h"
+#include "panic.h"
 
 void init_mmu()
 {
@@ -42,8 +43,7 @@ void umap_page(unsigned int virtual, unsigned int cr3)
     table_entry  = (unsigned int *) ((*dir_entry & ~0xFFF) + table_index * 4);
     
     if (!(*dir_entry & 0x1) || (!table_entry & 0x1)) // page not mapped
-        ;
-        //panic("umap");
+        panic("umap");
 
     *table_entry = 0;
     tlbflush();
