@@ -152,7 +152,7 @@ _isr80:
     push edx
     push ecx
     push ebx
-    lea eax, [system_calls + eax]
+    lea eax, [system_calls + eax * 4]
     call eax
     pop ebx
     pop ecx
