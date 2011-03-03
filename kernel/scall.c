@@ -1,4 +1,4 @@
-#include "panic.h"
+#include <minikernel/panic.h>
 
 extern void sys_exit();
 extern void sys_fork();

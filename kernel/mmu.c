@@ -1,6 +1,6 @@
 #include "mmu.h"
 #include "i386.h"
-#include "panic.h"
+#include <minikernel/panic.h>
 
 void init_mmu()
 {
