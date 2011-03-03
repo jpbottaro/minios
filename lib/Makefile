@@ -3,7 +3,7 @@ _OBJ=misc.o
 OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
 
 CC=gcc
-CFLAGS=-m32 -g -ggdb -Wall -Werror -O0 -I ../ -I ../include\
+CFLAGS=-m32 -g -ggdb -Wall -Werror -O0 -I ../include\
   -fno-zero-initialized-in-bss -fno-stack-protector -ffreestanding
 
 .PHONY=all clean
