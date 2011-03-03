@@ -9,6 +9,7 @@ extern gdt
 extern GDT_DESC
 extern IDT_DESC
 extern init_idt
+extern init_scall
 extern init_mmu
 extern init_dir_kernel
 extern init_dir_usuario
@@ -53,6 +54,9 @@ protectedmode:
     ; init IDT
     call init_idt
 
+    ; init system calls table
+    call init_scall
+
     ; MMU
     call init_mmu
 
@@ -76,6 +80,6 @@ protectedmode:
 
     ; end of kernel code
 
-    ; data
+; data
 
-    %include "a20.asm"
+%include "a20.asm"

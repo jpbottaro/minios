@@ -31,8 +31,9 @@ void init_idt() {
     IDT_ENTRY(17); // Aligment Check 
     IDT_ENTRY(18); // Machine Check
     IDT_ENTRY(19); // Streaming SIMD Extentsions
-    IDT_ENTRY(32); // remapped clock
-    IDT_ENTRY(33); // remapped keyboard
+    IDT_ENTRY(32); // Remapped Clock
+    IDT_ENTRY(33); // Remapped Keyboard
+    IDT_ENTRY(80); // System Call
 }
 
 idt_entry idt[255] = {};

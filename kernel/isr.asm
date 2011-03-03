@@ -2,6 +2,8 @@ BITS 32
 %include "macrosmodoprotegido.mac"
 
 extern reset_intr_pic1
+extern schedule
+extern system_calls
 
 global _isr0
 global _isr1
@@ -129,21 +131,28 @@ _isr19:
     jmp $
 _isr32:
 	pushad
-    ; SCHEDULER
-	call reset_intr_pic1
+    call schedule
 	popad
+	call reset_intr_pic1
 	iret
 _isr33:
 	pushad
     ; SEND TO STDIN
-	call reset_intr_pic1
 	popad
+	call reset_intr_pic1
 	iret
 _isr80:
 	pushad
-    ; MAKE WRAPPERS AND CALL SYS_CALL
-	call reset_intr_pic1
+    push ebx
+    push ecx
+    push edx
+    lea eax, [system_calls + eax]
+    call eax
+    pop edx
+    pop ecx
+    pop ebx
 	popad
+	call reset_intr_pic1
 	iret
 
 print_msg:
