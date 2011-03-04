@@ -29,6 +29,4 @@ int sys_rmdir(const char *pathname);
 int sys_getdents(unsigned int fd, struct dirent *dirp, unsigned int n);
 int end_fs();
 
-void init_fds(unsigned int id);
-
 #endif /* _FS_H */
