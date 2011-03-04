@@ -1,3 +1,5 @@
 kernel.asm
 sched.c
+schedasm.asm
+keyboard.c
 mmu.c

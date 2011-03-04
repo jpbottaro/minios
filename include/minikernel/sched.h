@@ -7,6 +7,9 @@
 #define MAX_PROCESSES 20
 
 struct process_state_s {
+    /* number */
+    int i;
+
     /* data for context switch */
     unsigned int cr3;
     unsigned int eip;
@@ -31,7 +34,13 @@ struct process_state_s {
     /* fs data */
     struct file_s files[MAX_FILES];
     unsigned int curr_dir;
-};
+
+    /* scheduler list */
+    CIRCLEQ_ENTRY(process_state_s) schedule;
+
+    /* scheduler list */
+    LIST_ENTRY(process_state_s) unused;
+} __attribute__((__packed__)) ;
 
 extern struct process_state_s ps[MAX_PROCESSES];
 extern unsigned int current_process;
