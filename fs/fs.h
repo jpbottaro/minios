@@ -17,6 +17,4 @@
 extern char *fs_offset;
 extern struct inode_s *root;
 
-void init_fds(unsigned int id);
-
 #endif /* __FS_H__ */
