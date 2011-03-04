@@ -14,7 +14,7 @@ static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag);
 static void fill_inode(struct inode_s *ino, int mode);
 
 /* initialize fs, needs to be ALL mapped in memory, fs_start being first byte */
-int fs_init(char *fs_start)
+int init_fs(char *fs_start)
 {
     fs_offset = fs_start;
     root = (struct inode_s *) (fs_offset + INODE_OFFSET);
@@ -319,7 +319,7 @@ int sys_getdents(unsigned int fd, struct dirent *dirp, unsigned int n)
 /* this one should close all open fds and write buffered changes etc. but,
  * as you probably know already ;), no real need for that
  */
-int fs_end()
+int end_fs()
 {
     return OK;
 }

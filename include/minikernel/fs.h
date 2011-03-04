@@ -15,7 +15,7 @@ struct file_s {
     LIST_ENTRY(file_s) unused;
 };
 
-int fs_init(char *fs_start);
+int init_fs(char *fs_start);
 int sys_open(const char *filename, int flags, int mode);
 int sys_close(unsigned int fd);
 int sys_lseek(unsigned int fd, off_t offset, int whence);
@@ -27,7 +27,7 @@ int sys_chdir(const char *path);
 int sys_mkdir(const char *pathname, mode_t mode);
 int sys_rmdir(const char *pathname);
 int sys_getdents(unsigned int fd, struct dirent *dirp, unsigned int n);
-int fs_end();
+int end_fs();
 
 void init_fds(unsigned int id);
 

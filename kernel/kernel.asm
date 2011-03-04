@@ -5,6 +5,7 @@ BITS 16
 %define KORG 0x1200
 
 global start
+global idle
 global panic
 global print_msg
 extern gdt
@@ -15,9 +16,13 @@ extern init_scall
 extern init_mmu
 extern init_dir_kernel
 extern init_dir_usuario
+extern init_scheduler
+extern init_fs
 extern reset_pic
 extern enable_pic
 extern disable_pic
+
+; ------- code
 
 start:
 
@@ -76,13 +81,26 @@ protectedmode:
     call reset_pic
     call enable_pic
 
+    ; init fs
+    push dword [fs_initial_pos]
+    call init_fs
+    pop eax
+
+    ; init scheduler
+    call init_scheduler
+
     sti
 
+idle:
     jmp $
 
-; end of kernel code
+    ; end of kernel code
 
-; data
+; ------- data
+
+fs_initial_pos: equ 0x20000-0x1200
+
+; ------- functions
 
 ; print msg and panic
 panic:
