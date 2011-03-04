@@ -46,7 +46,7 @@ int get_fd(ino_t ino_num, unsigned int pos)
 /* release a fd */
 int release_fd(int fd)
 {
-    struct file_s *file = &ps[current_process].files[fd];
+    struct file_s *file = &current_process->files[fd];
 
     if (file->ino != NO_INODE) {
         file->ino = NO_INODE;
@@ -60,30 +60,30 @@ int release_fd(int fd)
 
 void set_file_inode(unsigned int fd, ino_t ino)
 {
-    ps[current_process].files[fd].ino = ino;
+    current_process->files[fd].ino = ino;
 }
 
 ino_t file_inode(unsigned int fd)
 {
-    return ps[current_process].files[fd].ino;
+    return current_process->files[fd].ino;
 }
 
 void set_file_pos(unsigned int fd, unsigned int pos)
 {
-    ps[current_process].files[fd].pos = pos;
+    current_process->files[fd].pos = pos;
 }
 
 unsigned int file_pos(unsigned int fd)
 {
-    return ps[current_process].files[fd].pos;
+    return current_process->files[fd].pos;
 }
 
 ino_t current_dir()
 {
-    return ps[current_process].curr_dir;
+    return current_process->curr_dir;
 }
 
 void set_current_dir(ino_t ino)
 {
-    ps[current_process].curr_dir = ino;
+    current_process->curr_dir = ino;
 }

@@ -43,7 +43,7 @@ struct process_state_s {
 } __attribute__((__packed__)) ;
 
 extern struct process_state_s ps[MAX_PROCESSES];
-extern unsigned int current_process;
+extern struct process_state_s *current_process;
 
 unsigned int current_uid();
 unsigned int current_gid();
