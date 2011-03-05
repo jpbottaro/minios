@@ -1,6 +1,7 @@
 global load_process
 extern task_desc
 
+; load new process jumping to its tss entry in the gdt
 load_process:
     mov ebx, [esp + 4]
     push ebx

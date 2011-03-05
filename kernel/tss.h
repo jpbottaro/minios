@@ -1,6 +1,8 @@
 #ifndef __TSS_H__
 #define __TSS_H__
 
+#include "sched.h"
+
 struct tss_s {
 	unsigned short ptl;
 	unsigned short  unused0;
@@ -47,6 +49,8 @@ int add_idle(unsigned int pos);
 int add_tss(unsigned int pos, unsigned int user_cr3);
 void load_process(unsigned int num);
 unsigned int task_desc(unsigned int pos);
+
+extern struct tss_s tss[MAX_PROCESSES];
 
 #define MAX_PAGES 20
 

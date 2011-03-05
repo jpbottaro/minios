@@ -44,9 +44,8 @@ unsigned int current_uid();
 unsigned int current_gid();
 
 void sys_exit(int status);
-pid_t sys_fork(void);
+pid_t sys_newprocess(const char *filename, char *const argvp[]);
 pid_t sys_waitpid(pid_t pid, int *status, int options);
-int sys_execve(const char *filename, char *const argvp[], char *const envp[]);
 pid_t sys_getpid(void);
 
 #endif /* _SCHED_H */

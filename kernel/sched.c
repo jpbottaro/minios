@@ -1,5 +1,8 @@
+#include <minikernel/misc.h>
 #include "sched.h"
 #include "tss.h"
+#include "mmu.h"
+#include "i386.h"
 
 struct process_state_s ps[MAX_PROCESSES];
 struct process_state_s *current_process;
@@ -113,61 +116,82 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
     current_process = current_process->schedule.cqe_next;
     CIRCLEQ_REMOVE(&sched_list, current_process, schedule);
 
-    schedule();
-
     return current_process->child_pid;
 }
 
-pid_t sys_fork(void);
-int sys_execve(const char *filename, char *const argvp[], char *const envp[]);
+pid_t sys_newprocess(const char *filename, char *const argvp[])
+{
+    unsigned int i, size, page, dirbase;
+    struct process_state_s *process;
+    struct inode_s *ino, *dir;
+    ino_t ino_num;
+
+    /* get process entry for child */
+    process = LIST_FIRST(&unused_list);
+    if (process == NULL)
+        return -1;
+
+    /* get inode of new process' exe */
+    dir = get_inode(current_process->curr_dir);
+    if ( (ino_num = find_inode(dir, filename, FS_SEARCH_GET)) == NO_INODE)
+            return -1;
+    ino = get_inode(ino_num);
+
+    /* fill child entry */
+    LIST_REMOVE(process, unused);
+    process->pid = pid++;
+    process->uid = 0;
+    process->gid = 0;
+    process->waiting = NULL;
+    process->parent = current_process;
+    process->curr_dir = current_process->curr_dir;
+    init_fds(process->i);
+
+    /* build directory table for new process */
+    dirbase = new_page();
+
+    /* build stack */
+    page = new_page();
+    map_page(0xFFFFFFFF, dirbase, page);
+
+    /* build code */
+    for (i = 0; i < ino->i_size; i += PAGE_SIZE) {
+        /* get new page for code */
+        page = new_page();
+
+        /* temporary ident mapping to be able to copy the code */
+        map_page(page, rcr3(), page);
+
+        /* copy file from filesystem to the new page */
+        size = MIN(PAGE_SIZE, ino->i_size - i);
+        copy_file((char *) page, size, i, ino, FS_READ);
+
+        /* add the new code page to the page directory table */
+        map_page(i, dirbase, page);
+        
+        /* remove temporary ident mapping */
+        umap_page(page, rcr3());
+    }
+    add_tss(process->i, dirbase);
+
+    /* add to scheduler */
+    CIRCLEQ_INSERT_HEAD(&sched_list, process, schedule);
+
+    /* make child come back to this point */
+    return process->pid;
+}
 
 pid_t sys_getpid(void)
 {
     return current_process->pid;
 }
 
-
-#if 0
-    struct process_state_s *process;
-
-    process = LIST_FIRST(&unused_fd);
-    if (process != NULL) {
-        LIST_REMOVE(process, unused);
-        process->pid = pid++;
-        process->uid = 0;
-        process->gid = 0;
-        CIRCLEQ_INSERT_HEAD(&sched_list, process, schedule);
-        add_tss(process->i, eip, size);
-    }
-#endif
     /* TAKEN FROM TSS, BUILD CR3 HERE */
 #if 0
-    unsigned int i, j, stack, code[MAX_PAGES];
-    unsigned int *p, *c;
 
-    /* reserve pages for stack and code */
-    stack = new_page();
-    for (i = 0; i * PAGE_SIZE < size; i++) {
-        code[i] = new_page();
-        /* temporary ident mapping to be able to copy the code */
-        map_page(code[i], rcr3(), code[i]);
-    }
-
-    /* create directoy table for the new process */
-    user_cr3 = init_dir_user(code, i, stack);
-
-
-    /* copy the code */
-    p = (unsigned int *) eip;
-    for (i = 0; i * PAGE_SIZE < size; ++i) {
-        c = (unsigned int *) code[i];
-        for (j = 0; j < PAGE_SIZE / 4; ++j)
-            *(c++) = *(p++);
-    }
 
     /* remove temporary mapping */
     for (i = 0; i * PAGE_SIZE < size; i++)
-        umap_page(code[i], rcr3());
 #endif
 
 unsigned int current_uid()

@@ -1,6 +1,5 @@
 kernel.asm
 sched.c
 tss.c
-tssasm.asm
 keyboard.c
 mmu.c
