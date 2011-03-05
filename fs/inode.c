@@ -161,7 +161,7 @@ struct inode_s *get_inode(ino_t num)
     char *p = fs_offset;
 
     /* check limits */
-    if (num > INODE_MAX) return 0;
+    if (num > INODE_MAX || num == NO_INODE) return NULL;
 
     /* inode 0 doesn not exist */
     num--;
