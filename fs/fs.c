@@ -4,9 +4,6 @@
 #include <minikernel/misc.h>
 #include <minikernel/sched.h> /* get uid and gid of process */
 
-#define FS_READ  0
-#define FS_WRITE 1
-
 char *fs_offset;
 struct inode_s *root;
 

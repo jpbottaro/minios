@@ -54,6 +54,11 @@ void init_fds(unsigned int id);
 #define FS_SEARCH_LASTDIR 0x0005
 
 ino_t find_inode(struct inode_s *dir, const char *user_path, int flag);
+
+/* flags for copy_file */
+#define FS_READ  0
+#define FS_WRITE 1
+
 unsigned int copy_file(char *buf, unsigned int n, unsigned int pos,
                        struct inode_s *ino, int flag);
 
