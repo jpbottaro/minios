@@ -1,8 +1,6 @@
 #include "sched.h"
 #include "tss.h"
 
-extern void idle();
-
 struct process_state_s ps[MAX_PROCESSES];
 struct process_state_s *current_process;
 CIRCLEQ_HEAD(sched_list_t, process_state_s) sched_list;
