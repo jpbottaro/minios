@@ -2,7 +2,6 @@
 #include <minikernel/sched.h> /* process table (needed for process fd's) */
 #include <sys/queue.h>
 
-
 /* init fds for a process */
 /* XXX see what to do with special files stdin/out/err */
 void init_fds(unsigned int id)
