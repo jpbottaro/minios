@@ -116,6 +116,8 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
     current_process = current_process->schedule.cqe_next;
     CIRCLEQ_REMOVE(&sched_list, current_process, schedule);
 
+    schedule();
+
     return current_process->child_pid;
 }
 
