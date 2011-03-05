@@ -62,6 +62,9 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag);
 unsigned int copy_file(char *buf, unsigned int n, unsigned int pos,
                        struct inode_s *ino, int flag);
 
+#define NO_BLOCK ((block_t) 0)
+#define NO_INODE ((ino_t)   0)
+
 struct inode_s *get_inode(ino_t num);
 void           *get_block(zone_t num);
 
