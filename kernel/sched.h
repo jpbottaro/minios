@@ -4,7 +4,7 @@
 #include <minikernel/sched.h>
 
 void schedule();
-void add_process(char *path);
-void kill_proces(unsigned int id);
+int add_process(char *path);
+int kill_proces(unsigned int id);
 
 #endif

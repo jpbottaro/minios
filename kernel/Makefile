@@ -1,5 +1,5 @@
 ODIR=$(CURDIR)/obj
-_OBJ=kernel.o gdt.o pic.o idt.o isr.o mmu.o sched.o scall.o keyboard.o schedasm.o
+_OBJ=kernel.o gdt.o pic.o idt.o isr.o mmu.o sched.o scall.o keyboard.o tssasm.o tss.o
 OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
 
 CC=gcc

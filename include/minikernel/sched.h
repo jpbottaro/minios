@@ -10,20 +10,6 @@ struct process_state_s {
     /* number */
     int i;
 
-    /* data for context switch */
-    unsigned int cr3;
-    unsigned int eip;
-    unsigned int eflags;
-    unsigned int eax;
-    unsigned int ecx;
-    unsigned int edx;
-    unsigned int ebx;
-    unsigned int esp;
-    unsigned int ebp;
-    unsigned int esi;
-    unsigned int edi;
-    unsigned int ss;
-
     /* process id */
     unsigned int pid;
 

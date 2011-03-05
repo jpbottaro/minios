@@ -82,7 +82,7 @@ protectedmode:
     call enable_pic
 
     ; init fs
-    push dword [fs_initial_pos]
+    push dword fs_initial_pos
     call init_fs
     pop eax
 
@@ -93,7 +93,6 @@ protectedmode:
 
 idle:
     jmp $
-
     ; end of kernel code
 
 ; ------- data
@@ -126,7 +125,7 @@ print_msg:
 	mov ax, 0x18
 	mov es, ax      ; video segment
 	mov edi, 0
-	mov ah, 0x9c    ; blue background, red letters, blink
+	mov ah, 0x1c    ; blue background, red letters, blink
 	.loop:
 		lodsb
 		stosw
