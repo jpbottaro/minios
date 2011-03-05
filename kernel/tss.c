@@ -76,8 +76,9 @@ int add_idle(unsigned int pos)
 
 int add_tss(unsigned int pos, unsigned int eip, unsigned int size)
 {
-    unsigned int i, stack, code[MAX_PAGES];
-    unsigned int *user_cr3, *code_ptr;
+    unsigned int i, j, stack, code[MAX_PAGES];
+    unsigned int *user_cr3;
+    unsigned int *p, *c;
 
     /* reserve pages for stack and code */
     stack = new_page();
@@ -90,10 +91,14 @@ int add_tss(unsigned int pos, unsigned int eip, unsigned int size)
     /* create directoy table for the new process */
     user_cr3 = init_dir_user(code, i, stack);
 
+
     /* copy the code */
-    code_ptr = code;
-    for (i = eip; i < eip + size; i += 4, code_ptr++)
-        *code_ptr = *((unsigned int *) i);
+    p = (unsigned int *) eip;
+    for (i = 0; i * PAGE_SIZE < size; ++i) {
+        c = (unsigned int *) code[i];
+        for (j = 0; j < PAGE_SIZE / 4; ++j)
+            *(c++) = *(p++);
+    }
 
     /* remove temporary mapping */
     for (i = 0; i * PAGE_SIZE < size; i++)
