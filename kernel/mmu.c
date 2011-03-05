@@ -1,10 +1,10 @@
-#include "mmu.h"
-#include "i386.h"
 #include <minikernel/panic.h>
+#include "i386.h"
+#include "mmu.h"
 
 void init_mmu()
 {
-    kFreePage = KERNEL_PAGES + PAGE_SIZE * 2;
+    kFreePage = KERNEL_PAGES;
 }
 
 unsigned int new_page()
@@ -52,8 +52,8 @@ void umap_page(unsigned int virtual, unsigned int cr3)
 unsigned int *init_dir_kernel()
 {
     unsigned int base;
-    unsigned int *dirbase   = (unsigned int *) 0x00100000;
-    unsigned int *tablebase = (unsigned int *) 0x00101000;
+    unsigned int *dirbase   = (unsigned int *) new_page();
+    unsigned int *tablebase = (unsigned int *) new_page();
 
     *dirbase = ((unsigned int) tablebase | 3); // present and read/write
     for (base = 0; base < 0x1fffff; base += PAGE_SIZE) {

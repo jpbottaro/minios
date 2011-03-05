@@ -1,8 +1,8 @@
 #ifndef __MMU_H__
 #define __MMU_H__
 
-#define KERNEL_PAGES    0x00100000
-#define PAGE_SIZE       0x1000
+#define KERNEL_PAGES 0x00100000
+#define PAGE_SIZE    0x1000
 
 unsigned int kFreePage;
 
