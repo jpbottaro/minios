@@ -63,19 +63,3 @@ unsigned int *init_dir_kernel()
 
     return dirbase;
 }
-
-unsigned int *init_dir_user(unsigned int code[], unsigned int code_size,
-                            unsigned int stack)
-{
-    unsigned int i;
-    unsigned int dirbase = new_page();
-
-    /* code (from virtual 0) */
-    for (i = 0; i < code_size; i++)
-        map_page(i * PAGE_SIZE, dirbase, code[i]);
-
-    /* stack (from virtual 0xFFFFFFFF) */
-    map_page(0xFFFFFFFF, dirbase, stack);
-    
-    return (unsigned int *) dirbase;
-}

@@ -15,7 +15,6 @@ extern init_idt
 extern init_scall
 extern init_mmu
 extern init_dir_kernel
-extern init_dir_usuario
 extern init_scheduler
 extern init_fs
 extern reset_pic

@@ -11,8 +11,6 @@
 #define MAX_PATH 120
 #define MAX_NAME 30
 #define NO_LINK  ((nlink_t) 0)
-#define NO_BLOCK ((block_t) 0)
-#define NO_INODE ((ino_t)   0)
 
 struct dir_entry_s {
     u16_t num;
