@@ -28,6 +28,8 @@ struct file_s {
     LIST_ENTRY(file_s) unused;
 };
 
+LIST_HEAD(unused_fd_t, file_s);
+
 int init_fs(char *fs_start);
 int sys_open(const char *filename, int flags, int mode);
 int sys_close(unsigned int fd);

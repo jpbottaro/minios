@@ -19,6 +19,4 @@ void  set_file_inode(unsigned int fd, ino_t ino);
 unsigned int     file_pos(unsigned int fd);
 void         set_file_pos(unsigned int fd, unsigned int pos);
 
-extern LIST_HEAD(unused_fd_t, file_s) unused_fd;
-
 #endif /* __FILE_H__ */

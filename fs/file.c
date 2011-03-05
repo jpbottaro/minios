@@ -2,7 +2,6 @@
 #include <minikernel/sched.h> /* process table (needed for process fd's) */
 #include <sys/queue.h>
 
-struct unused_fd_t unused_fd;
 
 /* init fds for a process */
 /* XXX see what to do with special files stdin/out/err */
@@ -10,6 +9,7 @@ void init_fds(unsigned int id)
 {
     int i;
     struct file_s *file = ps[id].files;
+    struct unused_fd_t *unused_fd;
 
     file->ino = find_inode(root, "/dev/stdin", FS_SEARCH_GET);
     file->pos = 0; file->fd = 0; file++;
@@ -18,20 +18,22 @@ void init_fds(unsigned int id)
     file->ino = find_inode(root, "/dev/stderr", FS_SEARCH_GET);
     file->pos = 0; file->fd = 2; file++;
 
-    LIST_INIT(&unused_fd);
+    unused_fd = &ps[id].unused_fd;
+    LIST_INIT(unused_fd);
     i = 3;
     for (; file < &ps[id].files[MAX_FILES]; ++file) {
         file->fd = i++;
         file->ino = NO_INODE;
         file->pos = 0;
-        LIST_INSERT_HEAD(&unused_fd, file, unused);
+        LIST_INSERT_HEAD(unused_fd, file, unused);
     }
 }
 
 /* get a new fd */
 int get_fd(ino_t ino_num, unsigned int pos)
 {
-    struct file_s *file = LIST_FIRST(&unused_fd);
+    struct unused_fd_t *unused_fd = &current_process->unused_fd;
+    struct file_s *file = LIST_FIRST(unused_fd);
 
     if (file != NULL) {
         LIST_REMOVE(file, unused);
@@ -46,12 +48,13 @@ int get_fd(ino_t ino_num, unsigned int pos)
 /* release a fd */
 int release_fd(int fd)
 {
+    struct unused_fd_t *unused_fd = &current_process->unused_fd;
     struct file_s *file = &current_process->files[fd];
 
     if (file->ino != NO_INODE) {
         file->ino = NO_INODE;
         file->pos = 0;
-        LIST_INSERT_HEAD(&unused_fd, file, unused);
+        LIST_INSERT_HEAD(unused_fd, file, unused);
         return OK;
     } else {
         return ERROR;

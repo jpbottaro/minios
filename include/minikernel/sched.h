@@ -26,6 +26,7 @@ struct process_state_s {
     pid_t child_pid;
 
     /* fs data */
+    struct unused_fd_t unused_fd;
     struct file_s files[MAX_FILES];
     unsigned int curr_dir;
 
