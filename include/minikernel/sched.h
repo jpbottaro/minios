@@ -11,11 +11,19 @@ struct process_state_s {
     int i;
 
     /* process id */
-    unsigned int pid;
+    pid_t pid;
+
+    /* parent */
+    struct process_state_s *parent;
 
     /* process owner's uid and gid */
-    unsigned int uid;
-    unsigned int gid;
+    pid_t uid;
+    pid_t gid;
+
+    /* data to keep track of waitpid sys call */
+    struct process_state_s *waiting;
+    int *status;
+    pid_t child_pid;
 
     /* fs data */
     struct file_s files[MAX_FILES];
@@ -33,5 +41,11 @@ extern struct process_state_s *current_process;
 
 unsigned int current_uid();
 unsigned int current_gid();
+
+void sys_exit(int status);
+pid_t sys_fork(void);
+pid_t sys_waitpid(pid_t pid, int *status, int options);
+int sys_execve(const char *filename, char *const argvp[], char *const envp[]);
+pid_t sys_getpid(void);
 
 #endif /* _SCHED_H */

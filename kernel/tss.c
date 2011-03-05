@@ -22,6 +22,7 @@
     entry->db          = 0x0; \
     entry->g           = 0x1;
 
+/* label from kernel.asm, just a jmp $ */
 extern void idle();
 
 struct tss_s tss[MAX_PROCESSES];
@@ -32,7 +33,7 @@ void init_tss()
     struct tss_s *t;
     gdt_entry *entry;
 
-    /* load gdt with tss entries */
+    /* fill gdt with tss entries */
     for (t = &tss[0]; t < &tss[MAX_PROCESSES]; t++) {
         entry = (gdt_entry *) gdt_free_entry();
         if (t == &tss[0])
@@ -74,37 +75,9 @@ int add_idle(unsigned int pos)
     return 0;   
 }
 
-int add_tss(unsigned int pos, unsigned int eip, unsigned int size)
+int add_tss(unsigned int pos, unsigned int user_cr3)
 {
-    unsigned int i, j, stack, code[MAX_PAGES];
-    unsigned int *user_cr3;
-    unsigned int *p, *c;
-
-    /* reserve pages for stack and code */
-    stack = new_page();
-    for (i = 0; i * PAGE_SIZE < size; i++) {
-        code[i] = new_page();
-        /* temporary ident mapping to be able to copy the code */
-        map_page(code[i], rcr3(), code[i]);
-    }
-
-    /* create directoy table for the new process */
-    user_cr3 = init_dir_user(code, i, stack);
-
-
-    /* copy the code */
-    p = (unsigned int *) eip;
-    for (i = 0; i * PAGE_SIZE < size; ++i) {
-        c = (unsigned int *) code[i];
-        for (j = 0; j < PAGE_SIZE / 4; ++j)
-            *(c++) = *(p++);
-    }
-
-    /* remove temporary mapping */
-    for (i = 0; i * PAGE_SIZE < size; i++)
-        umap_page(code[i], rcr3());
-
-    tss[pos].cr3    = (unsigned int) user_cr3;
+    tss[pos].cr3    = user_cr3;
     tss[pos].eip    = 0;
     tss[pos].eflags = EFLAGS_MASK;
     tss[pos].esp    = 0xFFFFFFFF;
@@ -114,7 +87,7 @@ int add_tss(unsigned int pos, unsigned int eip, unsigned int size)
     tss[pos].ss     = SEG_DESC_DATA;
     tss[pos].fs     = SEG_DESC_DATA;
     tss[pos].gs     = SEG_DESC_DATA;
-    tss[pos].es     = SEG_DESC_VIDEO;
+    tss[pos].es     = SEG_DESC_DATA;
     tss[pos].dtrap  = 0x0;
     tss[pos].iomap  = 0xFFFF;
 

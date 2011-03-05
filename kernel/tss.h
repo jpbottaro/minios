@@ -44,7 +44,7 @@ struct tss_s {
 
 void init_tss();
 int add_idle(unsigned int pos);
-int add_tss(unsigned int pos, unsigned int eip, unsigned int size);
+int add_tss(unsigned int pos, unsigned int user_cr3);
 void load_process(unsigned int num);
 unsigned int task_desc(unsigned int pos);
 
