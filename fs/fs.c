@@ -110,7 +110,7 @@ static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag)
 
     /* if performance is the objective, the first block could be separated so
      * that we dont have to do '%' every cicle and therefore remove 'off'
-     * altogether; I prefer small n clean code in these project
+     * altogether; I prefer small n clean code in this project
      */
     while (n > 0) {
         if ( (blocknr = read_map(ino, pos)) == NO_BLOCK)
@@ -120,10 +120,8 @@ static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag)
         off = pos % BLOCK_SIZE;
         size = MIN(n, BLOCK_SIZE - off);
 
-        if (flag == FS_WRITE)
-            mymemcpy(block + off, buf, size);
-        else
-            mymemcpy(buf, block + off, size);
+        if (flag == FS_WRITE) mymemcpy(block + off, buf, size);
+        else                  mymemcpy(buf, block + off, size);
 
         n -= size;
         pos += size;
