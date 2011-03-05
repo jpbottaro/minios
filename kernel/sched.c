@@ -186,14 +186,6 @@ pid_t sys_getpid(void)
     return current_process->pid;
 }
 
-    /* TAKEN FROM TSS, BUILD CR3 HERE */
-#if 0
-
-
-    /* remove temporary mapping */
-    for (i = 0; i * PAGE_SIZE < size; i++)
-#endif
-
 unsigned int current_uid()
 {
     return current_process->uid;
