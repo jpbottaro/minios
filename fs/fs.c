@@ -100,13 +100,30 @@ static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag)
 {
     struct inode_s *ino = get_inode(file_inode(fd));
     unsigned int pos = file_pos(fd);
-    unsigned int size, off;
-    block_t blocknr;
-    char *block;
         
     /* check limit of file in read operation */
     if (flag == FS_READ)
         n = MIN(n, ino->i_size - pos);
+
+    /* read/write the buffer */
+    pos = copy_file(buf, n, pos, ino, flag);
+
+    /* check how much did we read/write */
+    n = pos - file_pos(fd);
+
+    /* set new filepos */
+    set_file_pos(fd, pos);
+
+    return n;
+}
+
+/* read/write (flag) to 'buf' 'n' bytes from position 'pos' of the file 'ino' */
+unsigned int copy_file(char *buf, unsigned int n, unsigned int pos,
+                       struct inode_s *ino, int flag)
+{
+    unsigned int size, off;
+    block_t blocknr;
+    char *block;
 
     /* if performance is the objective, the first block could be separated so
      * that we dont have to do '%' every cicle and therefore remove 'off'
@@ -128,13 +145,7 @@ static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag)
         buf += size;
     }
 
-    /* check how much did we read/write */
-    n = pos - file_pos(fd);
-
-    /* set new filepos */
-    set_file_pos(fd, pos);
-
-    return n;
+    return pos;
 }
 
 /* read 'n' bytes from a file a put them on buf */

@@ -15,28 +15,12 @@
 #define NO_BLOCK ((block_t) 0)
 #define NO_INODE ((ino_t)   0)
 
-struct inode_s {
-    u16_t i_mode;           /* file type, protection, etc. */
-    u16_t i_nlinks;         /* how many links to this file */
-    u16_t i_uid;            /* user id of the file's owner */
-    u16_t i_gid;            /* group number */
-    u32_t i_size;           /* current file size in bytes */
-    u32_t i_atime;
-    u32_t i_mtime;          /* when was file data last changed */
-    u32_t i_ctime;
-    u32_t i_zone[NR_ZONES]; /* zone numbers for direct, ind, and dbl ind */
-};
-
 struct dir_entry_s {
     u16_t num;
     char name[MAX_NAME];
 };
 
-struct inode_s *get_inode(ino_t num);
-void           *get_block(zone_t num);
-
 block_t read_map(struct inode_s *ino, unsigned int pos);
-ino_t find_inode(struct inode_s *dir, const char *user_path, int flag);
 struct dir_entry_s *search_inode(struct inode_s *dir, const char *path);
 
 /* flags for find_inode */
