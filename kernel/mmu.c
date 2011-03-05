@@ -42,7 +42,7 @@ void umap_page(unsigned int virtual, unsigned int cr3)
 
     table_entry  = (unsigned int *) ((*dir_entry & ~0xFFF) + table_index * 4);
     
-    if (!(*dir_entry & 0x1) || (!table_entry & 0x1)) // page not mapped
+    if (!(*dir_entry & 0x1) || !(*table_entry & 0x1)) // page not mapped
         panic("umap");
 
     *table_entry = 0;
@@ -64,15 +64,18 @@ unsigned int *init_dir_kernel()
     return dirbase;
 }
 
-unsigned int *init_dir_user(unsigned int code, unsigned int stack)
+unsigned int *init_dir_user(unsigned int code[], unsigned int code_size,
+                            unsigned int stack)
 {
-    unsigned int *dirbase = (unsigned int *) new_page();
+    unsigned int i;
+    unsigned int dirbase = new_page();
 
-    // code (from virtual 0)
-    map_page(0, (unsigned int) dirbase, code);
+    /* code (from virtual 0) */
+    for (i = 0; i < code_size; i++)
+        map_page(i * PAGE_SIZE, dirbase, code[i]);
 
-    // stack (from virtual 0xFFFFFFFF)
-    map_page(0xFFFFFFFF, (unsigned int) dirbase, stack);
+    /* stack (from virtual 0xFFFFFFFF) */
+    map_page(0xFFFFFFFF, dirbase, stack);
     
-    return dirbase;
+    return (unsigned int *) dirbase;
 }
