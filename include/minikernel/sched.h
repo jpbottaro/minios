@@ -47,7 +47,7 @@ unsigned int current_uid();
 unsigned int current_gid();
 
 void sys_exit(int status);
-pid_t sys_newprocess(const char *filename, char *const argvp[]);
+pid_t sys_newprocess(const char *filename);
 pid_t sys_waitpid(pid_t pid, int *status, int options);
 pid_t sys_getpid(void);
 

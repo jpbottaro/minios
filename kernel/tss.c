@@ -25,7 +25,7 @@
 
 /* label from kernel.asm, just a jmp $ */
 extern void idle();
-extern unsigned int *kstack;
+extern unsigned int *KSTACK;
 
 struct tss_s tss[MAX_PROCESSES];
 unsigned short first;
@@ -60,8 +60,8 @@ int add_idle(unsigned int pos)
     tss[pos].cr3    = (unsigned int) rcr3();
     tss[pos].eip    = (unsigned int) idle;
     tss[pos].eflags = EFLAGS_MASK;
-    tss[pos].esp    = ((unsigned int) kstack) + KSTACKSIZE;
-    tss[pos].ebp    = ((unsigned int) kstack) + KSTACKSIZE;
+    tss[pos].esp    = ((unsigned int) KSTACK) + KSTACKSIZE;
+    tss[pos].ebp    = ((unsigned int) KSTACK) + KSTACKSIZE;
     tss[pos].cs     = SEG_DESC_CODE;
     tss[pos].ds     = SEG_DESC_DATA;
     tss[pos].ss     = SEG_DESC_DATA;

@@ -140,7 +140,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
     return current_process->child_pid;
 }
 
-pid_t sys_newprocess(const char *filename, char *const argvp[])
+pid_t sys_newprocess(const char *filename)
 {
     unsigned int i, size, page, dirbase;
     struct process_state_s *process;

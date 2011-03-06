@@ -6,6 +6,8 @@ global start
 global idle
 global panic
 global print_msg
+global KSTACK
+
 extern gdt
 extern GDT_DESC
 extern IDT_DESC
@@ -18,12 +20,13 @@ extern init_fs
 extern reset_pic
 extern enable_pic
 extern disable_pic
+extern sys_newprocess
 
 ; ------- code
 
 start:
-    lea ebp, [kstack + KSTACKSIZE]
-    lea esp, [kstack + KSTACKSIZE]
+    lea ebp, [KSTACK + KSTACKSIZE]
+    lea esp, [KSTACK + KSTACKSIZE]
 
     ; enable A20
     call disable_A20
@@ -58,8 +61,8 @@ protectedmode:
     mov es, ax
 
     ; set stack
-    lea ebp, [kstack + KSTACKSIZE]
-    lea esp, [kstack + KSTACKSIZE]
+    lea ebp, [KSTACK + KSTACKSIZE]
+    lea esp, [KSTACK + KSTACKSIZE]
 
     ; init IDT
     call init_idt
@@ -85,9 +88,9 @@ protectedmode:
     call enable_pic
 
     ; init fs
-    push dword fs_initial_pos
+    push dword FS_INITIAL_POS
     call init_fs
-    pop eax
+    add esp, 4
 
     ; init scheduler
     call init_scheduler
@@ -140,11 +143,12 @@ print_msg:
 
 ; ------- data
 
-global kstack
 KSTACKSIZE: equ 0x1FF0
-kstack: resb 0x2000
+KSTACK: resb 0x2000
 
-fs_initial_pos: equ 0x20000-0x1200
+FS_INITIAL_POS: equ 0x20000-0x1200
+
+CASH_PATH: db "/bin/cash", 0
 
 IDLEMSG: db "Estamos en idleeee"
 IDLEMSG_len: equ $-IDLEMSG
