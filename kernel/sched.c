@@ -62,7 +62,8 @@ void sys_exit(int status)
     struct process_state_s *parent = current_process->parent;
 
     /* schedule a wake up if parent was waiting */
-    if (parent->waiting == current_process || parent->waiting == parent) {
+    if (parent != NULL &&
+        (parent->waiting == current_process || parent->waiting == parent)) {
         parent->waiting = NULL;
         *(parent->status) = status;
         parent->child_pid = current_process->pid;
@@ -126,15 +127,17 @@ pid_t sys_newprocess(const char *filename, char *const argvp[])
     unsigned int i, size, page, dirbase;
     struct process_state_s *process;
     struct inode_s *ino, *dir;
-    ino_t ino_num;
+    ino_t curr_dir, ino_num;
 
     /* get process entry for child */
     process = LIST_FIRST(&unused_list);
     if (process == NULL)
         return -1;
 
+    curr_dir = (current_process == NULL) ? 1 : current_process->curr_dir;
+
     /* get inode of new process' exe */
-    dir = get_inode(current_process->curr_dir);
+    dir = get_inode(curr_dir);
     if ( (ino_num = find_inode(dir, filename, FS_SEARCH_GET)) == NO_INODE)
             return -1;
     ino = get_inode(ino_num);
@@ -146,7 +149,7 @@ pid_t sys_newprocess(const char *filename, char *const argvp[])
     process->gid = 0;
     process->waiting = NULL;
     process->parent = current_process;
-    process->curr_dir = current_process->curr_dir;
+    process->curr_dir = curr_dir;
     init_fds(process->i);
 
     /* build directory table for new process (with kernel already mapped) */
