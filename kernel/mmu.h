@@ -12,6 +12,6 @@ unsigned int new_page();
 void map_page(unsigned int virtual, unsigned int cr3, unsigned int real);
 void umap_page(unsigned int virtual, unsigned int cr3);
 
-unsigned int *init_dirirectory();
+unsigned int init_directory();
 
 #endif /* __MMU_H__ */

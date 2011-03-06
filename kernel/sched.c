@@ -149,8 +149,8 @@ pid_t sys_newprocess(const char *filename, char *const argvp[])
     process->curr_dir = current_process->curr_dir;
     init_fds(process->i);
 
-    /* build directory table for new process */
-    dirbase = new_page();
+    /* build directory table for new process (with kernel already mapped) */
+    dirbase = init_directory();
 
     /* build stack */
     page = new_page();
