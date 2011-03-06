@@ -57,14 +57,11 @@ unsigned int task_desc(unsigned int pos)
 
 int add_idle(unsigned int pos)
 {
-    unsigned int stack = new_page();
-    map_page(stack, rcr3(), stack);
-
     tss[pos].cr3    = (unsigned int) rcr3();
     tss[pos].eip    = (unsigned int) idle;
     tss[pos].eflags = EFLAGS_MASK;
-    tss[pos].esp    = stack + PAGE_SIZE - 1;
-    tss[pos].ebp    = stack + PAGE_SIZE - 1;
+    tss[pos].esp    = ((unsigned int) kstack) + KSTACKSIZE;
+    tss[pos].ebp    = ((unsigned int) kstack) + KSTACKSIZE;
     tss[pos].cs     = SEG_DESC_CODE;
     tss[pos].ds     = SEG_DESC_DATA;
     tss[pos].ss     = SEG_DESC_DATA;
