@@ -2,6 +2,8 @@
 #include "i386.h"
 #include "mmu.h"
 
+unsigned int kFreePage = KERNEL_PAGES;
+
 void init_mmu()
 {
     kFreePage = KERNEL_PAGES;
@@ -49,7 +51,8 @@ void umap_page(unsigned int virtual, unsigned int cr3)
     tlbflush();
 }
 
-unsigned int *init_dir_kernel()
+/* make page directory table with first 0x0 to 0x1fffff ident mapping (kernel) */
+unsigned int *init_directory()
 {
     unsigned int base;
     unsigned int *dirbase   = (unsigned int *) new_page();

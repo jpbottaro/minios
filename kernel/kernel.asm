@@ -14,7 +14,7 @@ extern IDT_DESC
 extern init_idt
 extern init_scall
 extern init_mmu
-extern init_dir_kernel
+extern init_directory
 extern init_scheduler
 extern init_fs
 extern reset_pic
@@ -57,6 +57,10 @@ protectedmode:
     mov ax, 0x18    ; video data segment (4th gdt entry)
     mov es, ax
 
+    ; set stack
+    lea ebp, [kstack + KSTACKSIZE]
+    lea esp, [kstack + KSTACKSIZE]
+
     ; init IDT
     call init_idt
 
@@ -67,7 +71,7 @@ protectedmode:
     call init_mmu
 
     ; ident mapping
-    call init_dir_kernel
+    call init_directory
     mov  cr3, eax
 
     ; enable paging
@@ -101,7 +105,12 @@ idle:
 
 ; ------- data
 
+global kstack
+KSTACKSIZE: equ 0x1FF0
+kstack: resb 0x2000
+
 fs_initial_pos: equ 0x20000-0x1200
+
 IDLEMSG: db "Estamos en idleeee"
 IDLEMSG_len: equ $-IDLEMSG
 
