@@ -6,6 +6,9 @@
 
 #define MAX_PROCESSES 20
 
+/* this is where processes start, not at 0x0 */
+#define CODE_OFFSET 0x200000
+
 struct process_state_s {
     /* number */
     int i;

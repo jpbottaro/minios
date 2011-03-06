@@ -6,6 +6,7 @@
 
 #define EFLAGS_MASK 0x00000202
 #define TSS_SIZE    0x68
+#define KSTACKSIZE  0x1FF0
 
 #define tss_gdt_entry(entry, tss_addr) \
     entry->limit_0_15  = TSS_SIZE - 1; \
@@ -24,6 +25,7 @@
 
 /* label from kernel.asm, just a jmp $ */
 extern void idle();
+extern unsigned int *kstack;
 
 struct tss_s tss[MAX_PROCESSES];
 unsigned short first;
@@ -69,6 +71,8 @@ int add_idle(unsigned int pos)
     tss[pos].fs     = SEG_DESC_DATA;
     tss[pos].gs     = SEG_DESC_DATA;
     tss[pos].es     = SEG_DESC_VIDEO;
+    tss[pos].ss0    = SEG_DESC_DATA;
+    tss[pos].esp0   = ((unsigned int) kstack) + KSTACKSIZE;
     tss[pos].dtrap  = 0x0;
     tss[pos].iomap  = 0xFFFF;
 
@@ -78,7 +82,7 @@ int add_idle(unsigned int pos)
 int add_tss(unsigned int pos, unsigned int user_cr3)
 {
     tss[pos].cr3    = user_cr3;
-    tss[pos].eip    = 0;
+    tss[pos].eip    = CODE_OFFSET;
     tss[pos].eflags = EFLAGS_MASK;
     tss[pos].esp    = 0xFFFFFFFF;
     tss[pos].ebp    = 0xFFFFFFFF;
@@ -88,6 +92,8 @@ int add_tss(unsigned int pos, unsigned int user_cr3)
     tss[pos].fs     = SEG_DESC_DATA;
     tss[pos].gs     = SEG_DESC_DATA;
     tss[pos].es     = SEG_DESC_DATA;
+    tss[pos].ss0    = SEG_DESC_DATA;
+    tss[pos].esp0   = ((unsigned int) kstack) + KSTACKSIZE;
     tss[pos].dtrap  = 0x0;
     tss[pos].iomap  = 0xFFFF;
 

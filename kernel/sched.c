@@ -161,25 +161,24 @@ pid_t sys_newprocess(const char *filename, char *const argvp[])
         /* get new page for code */
         page = new_page();
 
-        /* temporary ident mapping to be able to copy the code */
-        map_page(page, rcr3(), page);
+        /* temporary map page to 0 to be able to copy the code */
+        map_page(0x0, rcr3(), page);
 
         /* copy file from filesystem to the new page */
         size = MIN(PAGE_SIZE, ino->i_size - i);
-        copy_file((char *) page, size, i, ino, FS_READ);
+        copy_file((char *) 0x0, size, i, ino, FS_READ);
 
         /* add the new code page to the page directory table */
-        map_page(i, dirbase, page);
-        
+        map_page(i + CODE_OFFSET, dirbase, page);
+
         /* remove temporary ident mapping */
-        umap_page(page, rcr3());
+        umap_page(0x0, rcr3());
     }
     add_tss(process->i, dirbase);
 
     /* add to scheduler */
     CIRCLEQ_INSERT_HEAD(&sched_list, process, schedule);
 
-    /* make child come back to this point */
     return process->pid;
 }
 
