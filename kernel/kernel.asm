@@ -90,13 +90,20 @@ protectedmode:
 
     sti
 
+    jmp $
+
 idle:
+    mov esi, IDLEMSG
+    mov ecx, IDLEMSG_len
+    call print_msg
     jmp $
     ; end of kernel code
 
 ; ------- data
 
 fs_initial_pos: equ 0x20000-0x1200
+IDLEMSG: db "Estamos en idleeee"
+IDLEMSG_len: equ $-IDLEMSG
 
 ; ------- functions
 
