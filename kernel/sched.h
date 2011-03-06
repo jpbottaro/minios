@@ -3,6 +3,7 @@
 
 #include <minikernel/sched.h>
 
+void init_scheduler();
 void schedule();
 
 #endif

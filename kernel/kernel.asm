@@ -1,7 +1,5 @@
 BITS 16
 
-%include "macrosmodoreal.mac"
-
 %define KORG 0x1200
 
 global start
@@ -24,6 +22,8 @@ extern disable_pic
 ; ------- code
 
 start:
+    lea ebp, [kstack + KSTACKSIZE]
+    lea esp, [kstack + KSTACKSIZE]
 
     ; enable A20
     call disable_A20
@@ -103,17 +103,6 @@ idle:
     jmp $
     ; end of kernel code
 
-; ------- data
-
-global kstack
-KSTACKSIZE: equ 0x1FF0
-kstack: resb 0x2000
-
-fs_initial_pos: equ 0x20000-0x1200
-
-IDLEMSG: db "Estamos en idleeee"
-IDLEMSG_len: equ $-IDLEMSG
-
 ; ------- functions
 
 ; print msg and panic
@@ -148,3 +137,14 @@ print_msg:
 	ret
 
 %include "a20.asm"
+
+; ------- data
+
+global kstack
+KSTACKSIZE: equ 0x1FF0
+kstack: resb 0x2000
+
+fs_initial_pos: equ 0x20000-0x1200
+
+IDLEMSG: db "Estamos en idleeee"
+IDLEMSG_len: equ $-IDLEMSG

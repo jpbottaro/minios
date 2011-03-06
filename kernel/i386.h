@@ -1,7 +1,6 @@
 #ifndef __i386_H__
 #define __i386_H__
 
-
 #define LS_INLINE static __inline __attribute__((always_inline))
 
 LS_INLINE void lcr0(unsigned int val);
@@ -22,9 +21,6 @@ LS_INLINE void hlt(void);
 
 LS_INLINE void breakpoint(void);
 
-/* 
- * Implementaciones
- */
 
 LS_INLINE void lcr0(unsigned int val) {
 	__asm __volatile("movl %0,%%cr0" : : "r" (val));
