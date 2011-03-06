@@ -68,8 +68,6 @@ int add_idle(unsigned int pos)
     tss[pos].fs     = SEG_DESC_DATA;
     tss[pos].gs     = SEG_DESC_DATA;
     tss[pos].es     = SEG_DESC_VIDEO;
-    tss[pos].ss0    = SEG_DESC_DATA;
-    tss[pos].esp0   = ((unsigned int) kstack) + KSTACKSIZE;
     tss[pos].dtrap  = 0x0;
     tss[pos].iomap  = 0xFFFF;
 
@@ -90,7 +88,7 @@ int add_tss(unsigned int pos, unsigned int user_cr3)
     tss[pos].gs     = SEG_DESC_DATA;
     tss[pos].es     = SEG_DESC_DATA;
     tss[pos].ss0    = SEG_DESC_DATA;
-    tss[pos].esp0   = ((unsigned int) kstack) + KSTACKSIZE;
+    tss[pos].esp0   = 0; /* FIXME COMPLETAR */
     tss[pos].dtrap  = 0x0;
     tss[pos].iomap  = 0xFFFF;
 

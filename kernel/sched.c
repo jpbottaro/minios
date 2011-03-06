@@ -4,6 +4,8 @@
 #include "mmu.h"
 #include "i386.h"
 
+#define IDLE (&ps[1])
+
 struct process_state_s ps[MAX_PROCESSES];
 struct process_state_s *current_process;
 CIRCLEQ_HEAD(sched_list_t, process_state_s) sched_list;
@@ -32,12 +34,11 @@ void init_scheduler()
     init_tss();
 
     /* add idle task */
-    process = &ps[1];
+    process = IDLE;
     process->i = 1;
     process->pid = 1;
     process->uid = 0;
     process->gid = 0;
-    CIRCLEQ_INSERT_HEAD(&sched_list, process, schedule);
     add_idle(1);
 
     current_process = NULL;
@@ -46,13 +47,29 @@ void init_scheduler()
 
 void schedule()
 {
-    /* first time we do schedule? go idle */
+    struct process_state_s *process;
+
+    /* no process running */
     if (current_process == NULL) {
-        current_process = &ps[1];
-        load_process(1);
-    /* only do this if there are more than 1 process ready */
-    } else if (current_process->schedule.cqe_next != current_process) {
-        current_process = current_process->schedule.cqe_next;
+        /* if any process ready then execute, otherwise go idle */
+        if (!CIRCLEQ_EMPTY(&sched_list)) {
+            process = CIRCLEQ_FIRST(&sched_list);
+            current_process = process;
+            load_process(process->i);
+        } else {
+            current_process = IDLE;
+            load_process(1);
+        }
+    /* if we are idle, check for new processes */
+    } else if (current_process == IDLE) {
+        if (!CIRCLEQ_EMPTY(&sched_list)) {
+            process = CIRCLEQ_FIRST(&sched_list);
+            current_process = process;
+            load_process(process->i);
+        }
+    /* if there are more than 1 process ready */
+    } else if (CIRCLEQ_NEXT(current_process, schedule) != current_process) {
+        current_process = CIRCLEQ_NEXT(current_process, schedule);
         load_process(current_process->i);
     }
 }
@@ -73,6 +90,9 @@ void sys_exit(int status)
     current_process->pid = 0;
     LIST_INSERT_HEAD(&unused_list, current_process, unused);
     CIRCLEQ_REMOVE(&sched_list, current_process, schedule);
+
+    current_process = NULL;
+    schedule();
 }
 
 /* find process by pid. bruteforce!! probably would be better if parent would
@@ -112,11 +132,9 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
     current_process->status = status;
     current_process->child_pid = -1;
 
-    /* remove from list, making sure we dont break schedule() */
-    /* XXX trouble if only active process is idle, fix schedule() */
-    current_process = current_process->schedule.cqe_next;
+    /* remove from list */
     CIRCLEQ_REMOVE(&sched_list, current_process, schedule);
-
+    current_process = NULL;
     schedule();
 
     return current_process->child_pid;
