@@ -1,16 +1,16 @@
 %define KORG 0x200000
 
-global start
+global print
 
 section .text
 
 ; ------- code
 
-start:
-    mov esi, MSG
-    mov ecx, MSG_len
+print:
+    mov esi, [esp + 4]
+    mov ecx, 5
     call print_msg
-    jmp $
+    ret
 
 ; ------- functions
 
