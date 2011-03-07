@@ -30,9 +30,14 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
     if (mystrncpy(path, user_path, MAX_PATH) < 0)
         return NO_INODE;
 
-    /* search the last directory of the path */
     begin = path;
 	while (*begin == '/') begin++;
+
+    /* remove the case that the result is root */
+    if (*begin == '\0')
+        return 1;
+
+    /* search the last directory of the path */
     end = parse_path(begin);
     while (*end != '\0') {
         /* only follow path if component is in fact a directory */
@@ -130,7 +135,7 @@ struct dir_entry_s *search_inode(struct inode_s *dir, const char *name)
     for (pos = 0; pos < dir->i_size; pos += BLOCK_SIZE) {
         /* get the block with the files/subdirectories */
         dentry = (struct dir_entry_s *) get_block(read_map(dir, pos));
-        end = dentry + (dir->i_size - pos) % NR_DIR_ENTRIES;
+        end = dentry + NR_DIR_ENTRIES;
 
         /* cycle through the dir entries and search for the required name */
         for (; dentry < end; dentry++) {
