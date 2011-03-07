@@ -95,6 +95,12 @@ protectedmode:
     ; init scheduler
     call init_scheduler
 
+    ; add cash shell to the process table
+    push CASH_PATH
+    call sys_newprocess
+    add esp, 4
+
+    ; enable interruptions (and therefore scheduler)
     sti
 
     jmp $
