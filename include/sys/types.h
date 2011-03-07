@@ -71,7 +71,7 @@ typedef unsigned int size_t;
 
 #ifndef _SSIZE_T
 #define _SSIZE_T
-typedef int ssize_t;
+//typedef int ssize_t;
 #endif
 
 #ifndef _TIME_T

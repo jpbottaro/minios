@@ -54,13 +54,13 @@ extern gid_t getgid(void);
 extern uid_t getuid(void);
 extern int link(const char *_existing, const char *_new);
 extern off_t lseek(int _fd, off_t _offset, int _whence);
-extern ssize_t read(int _fd, void *_buf, size_t _n);
+extern int read(int _fd, void *_buf, size_t _n);
 extern int rmdir(const char *_path);
 extern int setgid(gid_t _gid);
 extern int setuid(uid_t _uid);
 extern unsigned int sleep(unsigned int _seconds);
 extern int unlink(const char *_path);
-extern ssize_t write(int _fd, const void *_buf, size_t _n);
+extern int write(int _fd, const void *_buf, size_t _n);
 extern int truncate(const char *_path, off_t _length);
 extern int ftruncate(int _fd, off_t _length);
 
