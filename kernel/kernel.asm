@@ -152,7 +152,7 @@ print_msg:
 KSTACKSIZE: equ 0x1FF0
 KSTACK: resb 0x2000
 
-FS_INITIAL_POS: equ 0x20000-0x1200
+FS_INITIAL_POS: equ 0x20000
 
 CASH_PATH: db "/bin/cash", 0
 
