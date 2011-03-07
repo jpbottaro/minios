@@ -7,7 +7,6 @@ KERNELMEM=126464	# 0x20000 - 0x1200
 
 MAKE=make
 LD=ld
-LDTASKFLAGS=-static -m elf_i386 --oformat binary -b elf32-i386 -e start
 LDFLAGS=-static -m elf_i386 --oformat binary -b elf32-i386 -e start \
 		-Ttext 0x1200
 MCOPY=mcopy
