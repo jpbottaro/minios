@@ -38,6 +38,7 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
         return 1;
 
     /* search the last directory of the path */
+    dentry = NULL;
     end = parse_path(begin);
     while (*end != '\0') {
         /* only follow path if component is in fact a directory */
