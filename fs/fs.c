@@ -14,8 +14,8 @@ static void fill_inode(struct inode_s *ino, int mode);
 int init_fs(char *fs_start)
 {
     fs_offset = fs_start;
-    root = (struct inode_s *) (fs_offset + INODE_OFFSET);
     read_super();
+    root = (struct inode_s *) (fs_offset + INODE_OFFSET);
     return OK;
 }
 
