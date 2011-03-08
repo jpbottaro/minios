@@ -31,9 +31,7 @@ start:
 
     ; enable A20
     call disable_A20
-    ;call check_A20
     call enable_A20
-    ;call check_A20
 
     ; disable interruptions
     cli
@@ -101,6 +99,7 @@ protectedmode:
     call sys_newprocess
     add esp, 4
 
+    ; clear screen
     call clear_screen
 
     ; enable interruptions (and therefore scheduler)
