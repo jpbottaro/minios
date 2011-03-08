@@ -1,5 +1,4 @@
 kernel.asm
 sched.c
-tss.c
-keyboard.c
+keyboardscreen.c
 mmu.c
