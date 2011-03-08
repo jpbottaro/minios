@@ -1,5 +1,4 @@
 BITS 32
-%include "macrosmodoprotegido.mac"
 
 extern reset_intr_pic1
 extern schedule
@@ -133,9 +132,9 @@ _isr19:
     jmp $
 _isr32:
     pushad
+    call reset_intr_pic1
     call schedule
     popad
-    call reset_intr_pic1
     iret
 _isr33:
     pushad
@@ -144,8 +143,8 @@ _isr33:
     push eax
     call keyboard
     pop eax
-    popad
     call reset_intr_pic1
+    popad
     iret
 _isr80:
     pushad
@@ -157,8 +156,8 @@ _isr80:
     pop ebx
     pop ecx
     pop edx
-    popad
     call reset_intr_pic1
+    popad
     iret
 
 ; Protected Mode Exceptions and Interrupts (messages)
