@@ -6,6 +6,7 @@ global start
 global idle
 global panic
 global print_msg
+global vram
 global KSTACK
 
 extern gdt
@@ -21,6 +22,7 @@ extern reset_pic
 extern enable_pic
 extern disable_pic
 extern sys_newprocess
+extern clear_screen
 
 ; ------- code
 
@@ -100,6 +102,8 @@ protectedmode:
     call sys_newprocess
     add esp, 4
 
+    call clear_screen
+
     ; enable interruptions (and therefore scheduler)
     sti
 
@@ -158,3 +162,5 @@ CASH_PATH: db "/bin/cash", 0
 
 IDLEMSG: db "Estamos en idleeee"
 IDLEMSG_len: equ $-IDLEMSG
+
+vram: dd 0xb8000
