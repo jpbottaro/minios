@@ -68,7 +68,8 @@ void schedule()
             load_process(process->i);
         }
     /* if there are more than 1 process ready */
-    } else if (CIRCLEQ_NEXT(current_process, schedule) != current_process) {
+    } else if (CIRCLEQ_NEXT(current_process, schedule) !=
+               CIRCLEQ_PREV(current_process, schedule)) {
         current_process = CIRCLEQ_NEXT(current_process, schedule);
         load_process(current_process->i);
     }
