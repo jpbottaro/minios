@@ -6,7 +6,6 @@ global start
 global idle
 global panic
 global print_msg
-global vram
 global KSTACK
 
 extern gdt
@@ -162,5 +161,3 @@ CASH_PATH: db "/bin/cash", 0
 
 IDLEMSG: db "Estamos en idleeee"
 IDLEMSG_len: equ $-IDLEMSG
-
-vram: dd 0xb8000

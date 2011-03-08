@@ -52,7 +52,7 @@ struct video_char_s {
 char kbd_buffer[MAX_KEYS];
 unsigned int pos = 0, end = 0;
 
-extern struct video_char_s (*vram)[25][80];
+struct video_char_s (*vram)[25][80] = (struct video_char_s (*)[25][80]) 0xB8000;
 unsigned int x = 0, y = 0;
 
 void clear_screen()
@@ -65,6 +65,8 @@ void clear_screen()
             (*vram)[i][j].color = WHITE;
         }
     }
+
+    x = y = 0;
 }
 
 void scroll_up_vram()
