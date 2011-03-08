@@ -1,6 +1,6 @@
-#include "keyboard.h"
+#include "keyboardscreen.h"
 
-/* taken from http://www.osdever.net/bkerndev/Docs/keyboard.htm */
+/* array taken from http://www.osdever.net/bkerndev/Docs/keyboard.htm */
 unsigned char kbdus[128] =
 {
     0,  27, '1', '2', '3', '4', '5', '6', '7', '8',	/* 9 */
@@ -125,6 +125,14 @@ void buffer_key(char key)
         kbd_buffer[end++] = key;
         end %= MAX_KEYS;
     }
+}
+
+void print(const char *str)
+{
+    const char *p;
+
+    for (p = str; *p != '\0'; p++)
+        print_key(*p);
 }
 
 void get_line(char *line)
