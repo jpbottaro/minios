@@ -16,7 +16,7 @@ print:
 
 ; print msg in esi, ecx chars
 print_msg:
-	mov ax, 0x18
+	mov ax, 0x28
 	mov es, ax      ; video segment
 	mov edi, 0
 	mov ah, 0x1c    ; blue background, red letters, blink

@@ -2,7 +2,7 @@ extern void print(const char *);
 
 int main()
 {
-    print("hola\n");
+//    print("hola\n");
 
     for(;;) {}
 }
