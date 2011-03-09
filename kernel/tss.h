@@ -52,6 +52,4 @@ unsigned int task_desc(unsigned int pos);
 
 extern struct tss_s tss[MAX_PROCESSES];
 
-#define MAX_PAGES 20
-
 #endif //__TSS_H__

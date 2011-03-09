@@ -56,12 +56,15 @@ protectedmode:
     mov fs, ax
     mov ss, ax
 
-    mov ax, 0x18    ; video data segment (4th gdt entry)
+    mov ax, 0x28    ; video data segment (6th gdt entry)
     mov es, ax
 
     ; set stack
     lea ebp, [KSTACK + KSTACKSIZE]
     lea esp, [KSTACK + KSTACKSIZE]
+
+    ; clear screen
+    call clear_screen
 
     ; init IDT
     call init_idt
@@ -99,9 +102,6 @@ protectedmode:
     call sys_newprocess
     add esp, 4
 
-    ; clear screen
-    call clear_screen
-
     ; enable interruptions (and therefore scheduler)
     sti
 
@@ -137,7 +137,7 @@ len_msg:
 
 ; print msg in esi, ecx chars
 print_msg:
-	mov ax, 0x18
+	mov ax, 0x28
 	mov es, ax      ; video segment
 	mov edi, 0
 	mov ah, 0x1c    ; blue background, red letters, blink

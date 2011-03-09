@@ -1,9 +1,11 @@
 #ifndef __GDT_H__
 #define __GDT_H__
 
-#define SEG_DESC_CODE  0x8
-#define SEG_DESC_DATA  0x10
-#define SEG_DESC_VIDEO 0x18
+#define SEG_DESC_KCODE 0x8
+#define SEG_DESC_KDATA 0x10
+#define SEG_DESC_UCODE 0x18
+#define SEG_DESC_UDATA 0x20
+#define SEG_DESC_VIDEO 0x28
 
 typedef struct str_gdt_descriptor {
 	unsigned short gdt_length;
