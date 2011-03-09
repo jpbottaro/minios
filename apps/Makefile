@@ -9,7 +9,7 @@ NASM=nasm
 NASMFLAGS=-felf32
 LD=ld
 LDFLAGS=-static -m elf_i386 --oformat binary -b elf32-i386 -e main \
-		-Ttext 0x200000
+		-Ttext 0x400000
 
 .PHONY=all clean
 
@@ -26,3 +26,4 @@ all: $(OBJ)
 
 clean:
 	rm -rf $(ODIR)
+	rm -f test
