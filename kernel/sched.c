@@ -174,9 +174,13 @@ pid_t sys_newprocess(const char *filename)
     /* build directory table for new process (with kernel already mapped) */
     dirbase = init_directory();
 
-    /* build stack */
+    /* build user stack */
     page = new_page();
     map_page(0xFFFFFFFF, dirbase, page);
+
+    /* build kernel stack */
+    page = new_page();
+    map_page(0xFFFFEFFF, dirbase, page);
 
     /* build code */
     for (i = 0; i < ino->i_size; i += PAGE_SIZE) {
