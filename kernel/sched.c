@@ -201,7 +201,7 @@ pid_t sys_newprocess(const char *filename)
     page = new_page();
     map_page(0xFFFFFFFF, dirbase, page);
 
-    /* build kernel stack */
+    /* build kernel stack (we are not using this since everithing is ring 0) */
     page = new_page();
     map_page(0xFFFFEFFF, dirbase, page);
 
