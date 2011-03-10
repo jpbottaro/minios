@@ -1,5 +1,5 @@
 ODIR=$(CURDIR)/obj
-_OBJ=test.o testc.o
+_OBJ=scall.o test.o
 OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
 
 CC=gcc
@@ -22,7 +22,7 @@ $(ODIR)/%.o: %.asm
 	$(NASM) $(NASMFLAGS) -o $@ $^
 
 all: $(OBJ)
-	$(LD) $(LDFLAGS) -o test obj/testc.o obj/test.o
+	$(LD) $(LDFLAGS) -o test obj/scall.o obj/test.o
 
 clean:
 	rm -rf $(ODIR)
