@@ -7,13 +7,18 @@ section .text
 ; ------- code
 
 write:
-    mov edx, [esp + 12]
-    mov ecx, [esp + 8]
-    mov ebx, [esp + 4]
+    push ebp
+    mov ebp, esp
+    push ebx
+    push esi
+    push edi
+    mov edx, [ebp + 16]
+    mov ecx, [ebp + 12]
+    mov ebx, [ebp + 8]
     mov eax, 4
     int 0x80
+    pop edi
+    pop esi
+    pop ebx
+    pop ebp
     ret
-
-; ------- functions
-
-

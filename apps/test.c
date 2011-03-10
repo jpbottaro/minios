@@ -1,6 +1,6 @@
 extern int write(int fd, const void *buf, unsigned int n);
 
-#define MAX_PS 128
+#define MAX_PS 20
 
 int main()
 {

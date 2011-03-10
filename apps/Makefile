@@ -22,7 +22,7 @@ $(ODIR)/%.o: %.asm
 	$(NASM) $(NASMFLAGS) -o $@ $^
 
 all: $(OBJ)
-	$(LD) $(LDFLAGS) -o test obj/scall.o obj/test.o
+	$(LD) $(LDFLAGS) -o test obj/test.o obj/scall.o
 
 clean:
 	rm -rf $(ODIR)
