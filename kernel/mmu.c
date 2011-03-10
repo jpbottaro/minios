@@ -13,7 +13,7 @@ unsigned int new_page()
 {
     unsigned int base;
 
-    for (base = kFreePage; base < kFreePage + PAGE_SIZE; base += 4)
+    for (base = kFreePage; base < kFreePage + PAGE_SIZE; base++)
         *((unsigned int *) base) = 0;
     kFreePage += PAGE_SIZE;
 

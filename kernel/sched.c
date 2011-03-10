@@ -12,7 +12,7 @@ CIRCLEQ_HEAD(sched_list_t, process_state_s) sched_list;
 LIST_HEAD(unused_list_t, process_state_s) unused_list;
 unsigned int pid;
 
-/* Taken from James Molly in
+/* init_timer taken from James Molly in
  * http://www.jamesmolloy.co.uk/tutorial_html/5.-IRQs%20and%20the%20PIT.html
  */
 void init_timer(unsigned int frequency)

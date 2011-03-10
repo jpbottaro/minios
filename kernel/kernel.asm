@@ -56,8 +56,6 @@ protectedmode:
     mov gs, ax
     mov fs, ax
     mov ss, ax
-
-    mov ax, 0x28    ; video data segment (6th gdt entry)
     mov es, ax
 
     ; set stack
