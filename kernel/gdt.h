@@ -3,8 +3,8 @@
 
 #define SEG_DESC_KCODE 0x8
 #define SEG_DESC_KDATA 0x10
-#define SEG_DESC_UCODE 0x18
-#define SEG_DESC_UDATA 0x20
+#define SEG_DESC_UCODE 0x1B
+#define SEG_DESC_UDATA 0x23
 #define SEG_DESC_VIDEO 0x28
 
 typedef struct str_gdt_descriptor {

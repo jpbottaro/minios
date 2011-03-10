@@ -43,7 +43,7 @@ void umap_page(unsigned int virtual, unsigned int cr3)
     unsigned int *table_entry;
 
     table_entry  = (unsigned int *) ((*dir_entry & ~0xFFF) + table_index * 4);
-    
+
     if (!(*dir_entry & 0x1) || !(*table_entry & 0x1)) // page not mapped
         panic("umap");
 
@@ -51,7 +51,7 @@ void umap_page(unsigned int virtual, unsigned int cr3)
     tlbflush();
 }
 
-/* make page directory table with first 0x0 to 0x1fffff ident mapping (kernel) */
+/* make page directory table with first 0x0 to 0x3fffff ident mapping (kernel) */
 unsigned int init_directory()
 {
     unsigned int base;
