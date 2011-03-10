@@ -1,4 +1,5 @@
 #include "keyboardscreen.h"
+#include "i386.h"
 
 /* array taken from http://www.osdever.net/bkerndev/Docs/keyboard.htm */
 unsigned char kbdus[128] =
@@ -55,20 +56,7 @@ unsigned int pos = 0, end = 0;
 struct video_char_s (*vram)[25][80] = (struct video_char_s (*)[25][80]) 0xB8000;
 unsigned int x = 0, y = 0;
 
-void clear_screen()
-{
-    int i, j;
-
-    for (i = 0; i < 25; i++) {
-        for (j = 0; j < 80; j++) {
-            (*vram)[i][j].letter = 0;
-            (*vram)[i][j].color = WHITE;
-        }
-    }
-
-    x = y = 0;
-}
-
+/* move the video ram 1 row up */
 void scroll_up_vram()
 {
     int i, j;
@@ -86,6 +74,37 @@ void scroll_up_vram()
     }
 }
 
+/* move cursor to (x,y), we asume the ports are 0x3D4-0x3D5 */
+void move_cursor(int x, int y)
+{
+    unsigned short pos;
+
+    pos = (y * 80) + x;
+    /* low register */
+    outb(0x3D4, 0x0F);
+    outb(0x3D5, (unsigned char) (pos & 0xFF));
+    /* high register */
+    outb(0x3D4, 0x0E);
+    outb(0x3D5, (unsigned char) ((pos >> 8) & 0xFF));
+}
+
+/* clear screen... */
+void clear_screen()
+{
+    int i, j;
+
+    for (i = 0; i < 25; i++) {
+        for (j = 0; j < 80; j++) {
+            (*vram)[i][j].letter = 0;
+            (*vram)[i][j].color = WHITE;
+        }
+    }
+
+    x = y = 0;
+    move_cursor(0, 0);
+}
+
+/* print 1 key in the screen */
 void print_key(char key)
 {
     switch (key) {
@@ -116,8 +135,10 @@ void print_key(char key)
                     y++;
             }
     }
+    move_cursor(x, y);
 }
 
+/* save key in a buffer */
 void buffer_key(char key)
 {
     if (key == '\b') {
@@ -129,6 +150,7 @@ void buffer_key(char key)
     }
 }
 
+/* print a null terminated string in the screen */
 void print(const char *str)
 {
     const char *p;
@@ -137,6 +159,7 @@ void print(const char *str)
         print_key(*p);
 }
 
+/* get a line from the screen */
 void get_line(char *line)
 {
     unsigned int i, j;
