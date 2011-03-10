@@ -3,6 +3,7 @@
 #include <fcntl.h>  /* get constants for sys calls */
 #include <minikernel/misc.h>
 #include <minikernel/sched.h> /* get uid and gid of process */
+#include <minikernel/dev.h>
 
 char *fs_offset;
 struct inode_s *root;
@@ -13,9 +14,30 @@ static void fill_inode(struct inode_s *ino, int mode);
 /* initialize fs, needs to be ALL mapped in memory, fs_start being first byte */
 int init_fs(char *fs_start)
 {
+    struct inode_s *ino, *dev;
+    ino_t ino_num;
     fs_offset = fs_start;
     read_super();
     root = (struct inode_s *) (fs_offset + INODE_OFFSET);
+
+    /* make stdin, stdout, stderr */
+    if ( (ino_num = find_inode(NULL, "/dev", FS_SEARCH_GET)) == NO_INODE)
+            return ERROR;
+    dev = get_inode(ino_num);
+
+    ino_num = find_inode(dev, "stdin", FS_SEARCH_ADD);
+    ino = get_inode(ino_num);
+    fill_inode(ino, I_SPECIAL);
+    ino->i_zone[0] = DEV_STDIN;
+    ino_num = find_inode(dev, "stdout", FS_SEARCH_ADD);
+    ino = get_inode(ino_num);
+    fill_inode(ino, I_SPECIAL);
+    ino->i_zone[0] = DEV_STDOUT;
+    ino_num = find_inode(dev, "stderr", FS_SEARCH_ADD);
+    ino = get_inode(ino_num);
+    fill_inode(ino, I_SPECIAL);
+    ino->i_zone[0] = DEV_STDERR;
+
     return OK;
 }
 
@@ -98,6 +120,10 @@ static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag)
     struct inode_s *ino = get_inode(file_inode(fd));
     unsigned int pos = file_pos(fd);
         
+    /* if its a char special file, call the kernel */
+    if (IS_CHAR(ino->i_mode))
+        return dev_io(ino->i_zone[0], buf, n, flag);
+
     /* check limit of file in read operation */
     if (flag == FS_READ)
         n = MIN(n, ino->i_size - pos);

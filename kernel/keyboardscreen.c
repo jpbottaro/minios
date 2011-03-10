@@ -1,3 +1,4 @@
+#include <minikernel/misc.h>
 #include "keyboardscreen.h"
 #include "i386.h"
 
@@ -151,22 +152,25 @@ void buffer_key(char key)
 }
 
 /* print a null terminated string in the screen */
-void print(const char *str)
+void print(const char *str, unsigned int n)
 {
     const char *p;
+    unsigned int i;
 
-    for (p = str; *p != '\0'; p++)
-        print_key(*p);
+    p = str;
+    for (i = 0; i < n && p[i] != '\0'; i++)
+        print_key(p[i]);
 }
 
 /* get a line from the screen */
-void get_line(char *line)
+void get_line(char *line, unsigned int n)
 {
-    unsigned int i, j;
+    unsigned int i, j, max;
 
     i = 0;
     j = pos;
-    while (i < MAX_LINE-1 && (j % MAX_KEYS) != end &&
+    max = MIN(MAX_LINE - 1, n);
+    while (i < max && (j % MAX_KEYS) != end &&
                                                 kbd_buffer[j % MAX_KEYS] != '\0')
         line[i++] = kbd_buffer[j++];
 
