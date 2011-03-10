@@ -6,7 +6,7 @@ load_process:
     mov ebx, [esp + 4]
     push ebx
     call task_desc
-    pop ebx
+    add esp, 4
     mov [desc], ax
     jmp far [addr]
     ret
