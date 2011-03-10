@@ -28,7 +28,7 @@ global _isr18
 global _isr19
 global _isr32	; clock
 global _isr33   ; keyboard
-global _isr80   ; sys_call
+global _isr128  ; sys_call (int 0x80)
 
 _isr0:
     mov esi, DE
@@ -146,12 +146,12 @@ _isr33:
     call reset_intr_pic1
     popad
     iret
-_isr80:
+_isr128:
     pushad
     push edx
     push ecx
     push ebx
-    lea eax, [system_calls + eax * 4]
+    mov eax, [system_calls + eax * 4]
     call eax
     pop ebx
     pop ecx
