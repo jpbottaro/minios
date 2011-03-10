@@ -119,6 +119,9 @@ static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag)
 {
     struct inode_s *ino = get_inode(file_inode(fd));
     unsigned int pos = file_pos(fd);
+
+    if (ino == NULL)
+        return -1;
         
     /* if its a char special file, call the kernel */
     if (IS_CHAR(ino->i_mode))
