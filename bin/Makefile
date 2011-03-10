@@ -15,6 +15,9 @@ MCOPY=mcopy
 
 all: image
 
+test:
+	make clean && make && bochs
+
 $(ODIR)/%.o: $(SRC)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $^
 
