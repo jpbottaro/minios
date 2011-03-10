@@ -15,6 +15,7 @@ extern init_idt
 extern init_scall
 extern init_mmu
 extern init_directory
+extern init_timer
 extern init_scheduler
 extern init_fs
 extern reset_pic
@@ -88,6 +89,11 @@ protectedmode:
     call disable_pic
     call reset_pic
     call enable_pic
+
+    ; set clock to 50hz
+    push 50
+    call init_timer
+    add esp, 4
 
     ; init fs
     push dword FS_INITIAL_POS

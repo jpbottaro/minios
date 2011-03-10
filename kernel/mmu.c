@@ -59,9 +59,9 @@ unsigned int init_directory()
     unsigned int *tablebase = (unsigned int *) new_page();
 
     /* 011 means present, r/w and supervisor */
-    *dirbase = ((unsigned int) tablebase | 0111);
+    *dirbase = ((unsigned int) tablebase | 011);
     for (base = 0; base < 0x3fffff; base += PAGE_SIZE) {
-        *tablebase = ((unsigned int) base | 0111);
+        *tablebase = ((unsigned int) base | 011);
         tablebase++;
     }
 

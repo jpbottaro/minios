@@ -142,7 +142,7 @@ _isr33:
     in al, 0x60
     push eax
     call keyboard
-    pop eax
+    add esp, 4
     call reset_intr_pic1
     popad
     iret

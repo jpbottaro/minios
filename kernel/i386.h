@@ -21,6 +21,9 @@ LS_INLINE void hlt(void);
 
 LS_INLINE void breakpoint(void);
 
+LS_INLINE void outb(int port, unsigned char data) {
+	__asm __volatile("outb %0,%w1" : : "a" (data), "d" (port));
+}
 
 LS_INLINE void lcr0(unsigned int val) {
 	__asm __volatile("movl %0,%%cr0" : : "r" (val));
