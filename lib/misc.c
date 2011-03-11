@@ -7,9 +7,9 @@ int mystrncpy(char *to, const char *from, int len)
 
     for (i = 0; i < len && from[i] != '\0'; i++)
         to[i] = from[i];
+    to[i] = '\0';
     if (i == len && from[i] != '\0')
         return -1;
-    to[i] = '\0';
 
     return 0;
 }
@@ -19,13 +19,11 @@ int mystrncmp(const char *str1, const char *str2, int len)
 {
     int i;
 
-    for (i = 0; i < len && *str1 != '\0'; i++) {
-        if (*str1 != *str2)
+    for (i = 0; i < len && str1[i] != '\0' && str2[i] != '\0'; i++)
+        if (str1[i] != str2[i])
             return -1;
-        str1++; str2++;
-    }
     /* check that both ended and 'len' was not passed */
-    if (i == len || *str2 != '\0')
+    if (i == len || str1[i] != str2[i])
         return -1;
 
     return 0;
