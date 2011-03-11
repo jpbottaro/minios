@@ -110,13 +110,10 @@ protectedmode:
     sti
 
     jmp $
+    ; end of kernel code
 
 idle:
-    mov esi, IDLEMSG
-    mov ecx, IDLEMSG_len
-    call print_msg
     jmp $
-    ; end of kernel code
 
 ; ------- functions
 
@@ -161,6 +158,3 @@ KSTACK: resb 0x2000
 FS_INITIAL_POS: equ 0x20000
 
 CASH_PATH: db "/bin/cash", 0
-
-IDLEMSG: db "Estamos en idleeee"
-IDLEMSG_len: equ $-IDLEMSG

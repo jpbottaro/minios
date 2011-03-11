@@ -1,4 +1,6 @@
 #include <minikernel/misc.h>
+#include <minikernel/dev.h>
+#include <minikernel/sched.h>
 #include "keyboardscreen.h"
 #include "i386.h"
 
@@ -165,7 +167,7 @@ void print(const char *str, unsigned int n)
 }
 
 /* get a line from the screen */
-void get_line(char *line, unsigned int n)
+int get_line(char *line, unsigned int n)
 {
     unsigned int i, j, max;
 
@@ -178,6 +180,8 @@ void get_line(char *line, unsigned int n)
     line[i] = '\0';
 
     pos = (j % MAX_KEYS != end && kbd_buffer[j % MAX_KEYS] == '\0') ? j + 1: j;
+
+    return i + 1;
 }
 
 /* manage keyboard interruptions */
@@ -193,7 +197,7 @@ void keyboard(unsigned char scancode)
     if (key) {
         print_key(key);
         buffer_key(key);
-        //if (key == '\n')
-        //    keyboard_wakeup();
+        if (key == '\n')
+            unblock_process(DEV_STDIN);
     }
 }

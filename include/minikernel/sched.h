@@ -33,10 +33,16 @@ struct process_state_s {
     struct file_s files[MAX_FILES];
     unsigned int curr_dir;
 
-    /* scheduler list */
-    CIRCLEQ_ENTRY(process_state_s) schedule;
+    /* dev io data */
+    unsigned int dev;
 
-    /* scheduler list */
+    /* scheduler ready list */
+    CIRCLEQ_ENTRY(process_state_s) ready;
+
+    /* scheduler waiting list */
+    LIST_ENTRY(process_state_s) wait;
+
+    /* unused list */
     LIST_ENTRY(process_state_s) unused;
 } __attribute__((__packed__)) ;
 
@@ -45,6 +51,9 @@ extern struct process_state_s *current_process;
 
 unsigned int current_uid();
 unsigned int current_gid();
+
+void unblock_process(unsigned int dev);
+void block_process(struct process_state_s *process, unsigned int dev);
 
 void sys_exit(int status);
 pid_t sys_newprocess(const char *filename);

@@ -8,7 +8,8 @@
 
 struct process_state_s ps[MAX_PROCESSES];
 struct process_state_s *current_process;
-CIRCLEQ_HEAD(sched_list_t, process_state_s) sched_list;
+CIRCLEQ_HEAD(ready_list_t, process_state_s) ready_list;
+LIST_HEAD(waiting_list_t, process_state_s) waiting_list;
 LIST_HEAD(unused_list_t, process_state_s) unused_list;
 unsigned int pid;
 
@@ -41,8 +42,8 @@ void init_scheduler()
     struct process_state_s *process;
 
     /* init unused process entries list */
-    i = 1;
-    process = &ps[1];
+    i = 2;
+    process = &ps[2];
     LIST_INIT(&unused_list);
     for (; process < &ps[MAX_PROCESSES]; ++process, ++i) {
         process->i = i;
@@ -51,7 +52,7 @@ void init_scheduler()
     }
 
     /* init scheduler's list */
-    CIRCLEQ_INIT(&sched_list);
+    CIRCLEQ_INIT(&ready_list);
 
     /* init tss array */
     init_tss();
@@ -68,6 +69,38 @@ void init_scheduler()
     pid = 2;
 }
 
+void unblock_process(unsigned int dev)
+{
+    struct process_state_s *process;
+
+    /* unblock process waiting for the device */
+    /* XXX this is very _VERY_ limited, since we dont check who gets it, just
+     * XXX the first one. It will do for now, only for the keyboard */
+    LIST_FOREACH(process, &waiting_list, wait) {
+        if (process->dev == dev) {
+            LIST_REMOVE(process, wait);
+            CIRCLEQ_INSERT_HEAD(&ready_list, process, ready);
+            return;
+        }
+    }
+}
+
+void block_process(struct process_state_s *process, unsigned int dev)
+{
+    /* remove from list */
+    CIRCLEQ_REMOVE(&ready_list, process, ready);
+
+    /* add to waiting list */
+    process->dev = dev;
+    LIST_INSERT_HEAD(&waiting_list, process, wait);
+
+    /* if caller is the current process, schedule to next one */
+    if (process == current_process) {
+        current_process = NULL;
+        schedule();
+    }
+}
+
 void schedule()
 {
     struct process_state_s *process;
@@ -75,8 +108,8 @@ void schedule()
     /* no process running */
     if (current_process == NULL) {
         /* if any process ready then execute, otherwise go idle */
-        if (!CIRCLEQ_EMPTY(&sched_list)) {
-            process = CIRCLEQ_FIRST(&sched_list);
+        if (!CIRCLEQ_EMPTY(&ready_list)) {
+            process = CIRCLEQ_FIRST(&ready_list);
             current_process = process;
             load_process(process->i);
         } else {
@@ -85,15 +118,15 @@ void schedule()
         }
     /* if we are idle, check for new processes */
     } else if (current_process == IDLE) {
-        if (!CIRCLEQ_EMPTY(&sched_list)) {
-            process = CIRCLEQ_FIRST(&sched_list);
+        if (!CIRCLEQ_EMPTY(&ready_list)) {
+            process = CIRCLEQ_FIRST(&ready_list);
             current_process = process;
             load_process(process->i);
         }
     /* if there are more than 1 process ready */
-    } else if (CIRCLEQ_NEXT(current_process, schedule) !=
-               CIRCLEQ_PREV(current_process, schedule)) {
-        current_process = CIRCLEQ_NEXT(current_process, schedule);
+    } else if (CIRCLEQ_NEXT(current_process, ready) !=
+               CIRCLEQ_PREV(current_process, ready)) {
+        current_process = CIRCLEQ_NEXT(current_process, ready);
         load_process(current_process->i);
     }
 }
@@ -108,12 +141,12 @@ void sys_exit(int status)
         parent->waiting = NULL;
         *(parent->status) = status;
         parent->child_pid = current_process->pid;
-        CIRCLEQ_INSERT_HEAD(&sched_list, parent, schedule);
+        CIRCLEQ_INSERT_HEAD(&ready_list, parent, ready);
     }
 
     current_process->pid = 0;
     LIST_INSERT_HEAD(&unused_list, current_process, unused);
-    CIRCLEQ_REMOVE(&sched_list, current_process, schedule);
+    CIRCLEQ_REMOVE(&ready_list, current_process, ready);
 
     current_process = NULL;
     schedule();
@@ -157,7 +190,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
     current_process->child_pid = -1;
 
     /* remove from list */
-    CIRCLEQ_REMOVE(&sched_list, current_process, schedule);
+    CIRCLEQ_REMOVE(&ready_list, current_process, ready);
     current_process = NULL;
     schedule();
 
@@ -226,7 +259,7 @@ pid_t sys_newprocess(const char *filename)
     add_tss(process->i, dirbase);
 
     /* add to scheduler */
-    CIRCLEQ_INSERT_HEAD(&sched_list, process, schedule);
+    CIRCLEQ_INSERT_HEAD(&ready_list, process, ready);
 
     return process->pid;
 }

@@ -153,12 +153,14 @@ _isr128:
     push ebx
     mov eax, [system_calls + eax * 4]
     call eax
-    pop ebx
-    pop ecx
-    pop edx
+    mov [res], eax
+    add esp, 12
     call reset_intr_pic1
     popad
+    mov eax, [res]
     iret
+
+res: dd 0
 
 ; Protected Mode Exceptions and Interrupts (messages)
 DE: db "(*) Fault: Divide Error. #DE"

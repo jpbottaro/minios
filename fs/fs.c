@@ -1,10 +1,10 @@
-#include "fs.h"
 #include <unistd.h> /* get constants for sys calls */
 #include <fcntl.h>  /* get constants for sys calls */
 #include <minikernel/misc.h>
 #include <minikernel/sched.h> /* get uid and gid of process */
 #include <minikernel/dev.h>
 #include <minikernel/panic.h>
+#include "fs.h"
 
 char *fs_offset;
 struct inode_s *root;
