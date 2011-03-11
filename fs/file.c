@@ -4,7 +4,6 @@
 #include <minikernel/panic.h>
 
 /* init fds for a process */
-/* XXX see what to do with special files stdin/out/err */
 void init_fds(unsigned int id)
 {
     int i;

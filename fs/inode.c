@@ -16,7 +16,11 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
     struct dir_entry_s *dentry;
     char *begin, *end, path[MAX_PATH];
     ino_t tmp;
-    
+ 
+    /* copy path and check if it is too long */
+    if (mystrncpy(path, user_path, MAX_PATH) < 0)
+        return NO_INODE;
+   
     /* start at root if path starts with slash */
     if (dir == NULL || *path == '/') {
         r = root;
@@ -26,10 +30,6 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
             return NO_INODE;
         r = dir;
     }
-
-    /* copy path and check if it is too long */
-    if (mystrncpy(path, user_path, MAX_PATH) < 0)
-        return NO_INODE;
 
     begin = path;
 	while (*begin == '/') begin++;
