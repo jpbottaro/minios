@@ -1,5 +1,6 @@
 #include "fs.h"
 #include <minikernel/misc.h>
+#include <minikernel/panic.h>
 
 static char *parse_path(char *path);
 

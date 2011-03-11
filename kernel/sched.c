@@ -42,9 +42,9 @@ void init_scheduler()
 
     /* init unused process entries list */
     i = 1;
-    process = &ps[2];
+    process = &ps[1];
     LIST_INIT(&unused_list);
-    for (; process < &ps[MAX_PROCESSES]; ++process) {
+    for (; process < &ps[MAX_PROCESSES]; ++process, ++i) {
         process->i = i;
         process->pid = 0;
         LIST_INSERT_HEAD(&unused_list, process, unused);

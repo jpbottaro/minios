@@ -4,6 +4,7 @@
 #include <minikernel/misc.h>
 #include <minikernel/sched.h> /* get uid and gid of process */
 #include <minikernel/dev.h>
+#include <minikernel/panic.h>
 
 char *fs_offset;
 struct inode_s *root;
@@ -22,7 +23,7 @@ int init_fs(char *fs_start)
 
     /* make stdin, stdout, stderr */
     if ( (ino_num = find_inode(NULL, "/dev", FS_SEARCH_GET)) == NO_INODE)
-            return ERROR;
+        panic("No /dev folder!!");
     dev = get_inode(ino_num);
 
     ino_num = find_inode(dev, "stdin", FS_SEARCH_ADD);

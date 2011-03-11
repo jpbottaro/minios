@@ -1,20 +1,27 @@
 #include "fs.h"
 #include <minikernel/sched.h> /* process table (needed for process fd's) */
 #include <sys/queue.h>
+#include <minikernel/panic.h>
 
 /* init fds for a process */
 /* XXX see what to do with special files stdin/out/err */
 void init_fds(unsigned int id)
 {
     int i;
+    ino_t ino_num;
+    struct inode_s *dev;
     struct file_s *file = ps[id].files;
     struct unused_fd_t *unused_fd;
 
-    file->ino = find_inode(root, "/dev/stdin", FS_SEARCH_GET);
+    if ( (ino_num = find_inode(NULL, "/dev", FS_SEARCH_GET)) == NO_INODE)
+        panic("No /dev folder (init_fds)");
+    dev = get_inode(ino_num);
+
+    file->ino = find_inode(dev, "stdin", FS_SEARCH_GET);
     file->pos = 0; file->fd = 0; file++;
-    file->ino = find_inode(root, "/dev/stdout", FS_SEARCH_GET);
+    file->ino = find_inode(dev, "stdout", FS_SEARCH_GET);
     file->pos = 0; file->fd = 1; file++;
-    file->ino = find_inode(root, "/dev/stderr", FS_SEARCH_GET);
+    file->ino = find_inode(dev, "stderr", FS_SEARCH_GET);
     file->pos = 0; file->fd = 2; file++;
 
     unused_fd = &ps[id].unused_fd;
