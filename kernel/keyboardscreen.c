@@ -55,7 +55,7 @@ char kbd_buffer[MAX_KEYS];
 unsigned int pos = 0, end = 0;
 
 struct video_char_s (*vram)[25][80] = (struct video_char_s (*)[25][80]) 0xB8000;
-unsigned int x = 0, y = 0;
+unsigned int x = 0, y = 0, xlimit = 0;
 
 /* move the video ram 1 row up */
 void scroll_up_vram()
@@ -101,7 +101,7 @@ void clear_screen()
         }
     }
 
-    x = y = 0;
+    x = xlimit = y = 0;
     move_cursor(0, 0);
 }
 
@@ -110,14 +110,14 @@ void print_key(char key)
 {
     switch (key) {
         case '\n':
-            x = 0;
+            x = xlimit = 0;
             if (y == 24)
                 scroll_up_vram();
             else
                 y++;
             break;
         case '\b':
-            if (x > 0) {
+            if (x > xlimit) {
                 x--;
                 (*vram)[y][x].letter = 0;
             }
@@ -140,6 +140,7 @@ void print_key(char key)
 }
 
 /* save key in a buffer */
+/* XXX what out for strange \b behaviour... */
 void buffer_key(char key)
 {
     if (key == '\b') {
@@ -160,6 +161,7 @@ void print(const char *str, unsigned int n)
     p = str;
     for (i = 0; i < n && p[i] != '\0'; i++)
         print_key(p[i]);
+    xlimit = x;
 }
 
 /* get a line from the screen */
@@ -170,8 +172,7 @@ void get_line(char *line, unsigned int n)
     i = 0;
     j = pos;
     max = MIN(MAX_LINE - 1, n);
-    while (i < max && (j % MAX_KEYS) != end &&
-                                                kbd_buffer[j % MAX_KEYS] != '\0')
+    while (i < max && (j % MAX_KEYS) != end && kbd_buffer[j % MAX_KEYS] != '\0')
         line[i++] = kbd_buffer[j++];
 
     line[i] = '\0';
