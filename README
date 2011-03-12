@@ -29,3 +29,11 @@ es modificada por el kernel, los cambios a la misma se pierden cuando se
 apaga bochs. Para editar la imagen, montarla con:
 
 mount -o loop -t minix fsimage CARPETA
+
+Para crear una nueva, utilizar:
+
+dd if=/dev/zero of=NOMBRE bs=1k count=CANTIDAD_BLOQUES
+mkfs.minix -v NOMBRE CANTIDAD_BLOQUES
+
+Es importante que sea MinixFS v2, las versiones 1 y 3 no estan soportadas (esto
+se logra con la flag -v)
