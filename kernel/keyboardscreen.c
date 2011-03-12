@@ -148,9 +148,12 @@ void buffer_key(char key)
     if (key == '\b') {
         end = (end == pos) ? end : (end == 0) ? MAX_KEYS - 1 : end - 1;
     } else {
-        if (key == '\n') key = '\0';
         kbd_buffer[end++] = key;
         end %= MAX_KEYS;
+        if (key == '\n') {
+            kbd_buffer[end++] = '\0';
+            end %= MAX_KEYS;
+        }
     }
 }
 
