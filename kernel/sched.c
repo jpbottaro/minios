@@ -137,9 +137,10 @@ void sys_exit(int status)
 
     /* schedule a wake up if parent was waiting */
     if (parent != NULL &&
-        (parent->waiting == current_process || parent->waiting == parent)) {
+       (parent->waiting == current_process || parent->waiting == parent)) {
         parent->waiting = NULL;
-        *(parent->status) = status;
+        if (parent->status != NULL)
+            *(parent->status) = status;
         parent->child_pid = current_process->pid;
         CIRCLEQ_INSERT_HEAD(&ready_list, parent, ready);
     }
@@ -184,10 +185,12 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
             return -1;
     }
 
-    *status = -1;
     current_process->waiting = process;
     current_process->status = status;
     current_process->child_pid = -1;
+
+    if (status != NULL)
+        *status = -1;
 
     /* remove from list */
     CIRCLEQ_REMOVE(&ready_list, current_process, ready);
