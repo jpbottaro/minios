@@ -1,5 +1,4 @@
-extern int write(int fd, const void *buf, unsigned int n);
-extern int read(int fd, const void *buf, unsigned int n);
+#include <unistd.h>
 
 #define MAX_PS 50
 

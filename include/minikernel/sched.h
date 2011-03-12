@@ -56,7 +56,7 @@ void unblock_process(unsigned int dev);
 void block_process(struct process_state_s *process, unsigned int dev);
 
 void sys_exit(int status);
-pid_t sys_newprocess(const char *filename);
+pid_t sys_newprocess(const char *filename, char *const argv[])
 pid_t sys_waitpid(pid_t pid, int *status, int options);
 pid_t sys_getpid(void);
 

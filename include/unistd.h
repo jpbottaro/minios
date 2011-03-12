@@ -38,30 +38,16 @@
 /* Function Prototypes. */
 extern void _exit(int _status);
 extern int chdir(const char *_path);
-extern int fchdir(int fd);
-extern int chown(const char *_path, uid_t _owner, gid_t _group);
-extern int fchown(int fd, uid_t _owner, gid_t _group);
 extern int close(int _fd);
-extern int execl(const char *_path, const char *_arg, ...);
-extern int execle(const char *_path, const char *_arg, ...);
-extern int execlp(const char *_file, const char *arg, ...);
-extern int execv(const char *_path, char *const _argv[]);
-extern int execve(const char *_path, char *const _argv[], 
-						char *const _envp[]);
-extern int execvp(const char *_file, char *const _argv[]);
-extern pid_t fork(void);
+extern int newprocess(const char *_path, char *const _argv[]);
+extern int waitpid(unsigned int pid, int *status, int options);
 extern gid_t getgid(void);
 extern uid_t getuid(void);
-extern int link(const char *_existing, const char *_new);
 extern off_t lseek(int _fd, off_t _offset, int _whence);
 extern int read(int _fd, void *_buf, size_t _n);
 extern int rmdir(const char *_path);
-extern int setgid(gid_t _gid);
-extern int setuid(uid_t _uid);
 extern unsigned int sleep(unsigned int _seconds);
 extern int unlink(const char *_path);
 extern int write(int _fd, const void *_buf, size_t _n);
-extern int truncate(const char *_path, off_t _length);
-extern int ftruncate(int _fd, off_t _length);
 
 #endif /* _UNISTD_H */
