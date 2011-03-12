@@ -105,6 +105,8 @@ int sh_cmd(const char *cmd, char *const argv[])
     } else if (mystrncmp(cmd, "pwd", sizeof("pwd") + 1) == 0) {
         write(STDOUT_FILENO, pwd, sizeof(pwd));
         write(STDOUT_FILENO, "\n", 1);
+    } else if (mystrncmp(cmd, "exit", sizeof("exit") + 1) == 0) {
+        exit(1);
     } else {
         return 0;
     }

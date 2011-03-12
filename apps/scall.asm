@@ -1,5 +1,6 @@
 %define KORG 0x200000
 
+global exit
 global _exit
 global read
 global write
@@ -18,6 +19,7 @@ global get_dents
 
 ; ------- code
 
+exit:
 _exit:
     mov eax, 1
     jmp next

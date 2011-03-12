@@ -1,5 +1,5 @@
 ODIR=$(CURDIR)/obj
-_OBJ=misc.o scall.o test.o cash.o
+_OBJ=misc.o scall.o lineecho.o cash.o
 OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
 
 CC=gcc
@@ -22,9 +22,9 @@ $(ODIR)/%.o: %.asm
 	$(NASM) $(NASMFLAGS) -o $@ $^
 
 all: $(OBJ)
-	$(LD) $(LDFLAGS) -o test obj/test.o obj/scall.o obj/misc.o
+	$(LD) $(LDFLAGS) -o lineecho obj/lineecho.o obj/scall.o obj/misc.o
 	$(LD) $(LDFLAGS) -o cash obj/cash.o obj/scall.o obj/misc.o
 
 clean:
 	rm -rf $(ODIR)
-	rm -f test cash
+	rm -f lineecho cash
