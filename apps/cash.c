@@ -68,7 +68,7 @@ void execute(const char *buf)
         *(s++) = '\0';
 
     /* make argv */
-    argv[0] = 0;
+    argv[0] = cmd;
     i = 2;
     argv[1] = s;
     while (*s != '\0' && *s != '\n') {
@@ -114,7 +114,7 @@ int sh_cmd(const char *cmd, char *const argv[])
     return 1;
 }
 
-/* update pwd acording to the given path*/
+/* update pwd acording to the given path */
 int updatepwd(const char *path)
 {
     const char *begin, *end;

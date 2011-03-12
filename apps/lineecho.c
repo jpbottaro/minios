@@ -2,7 +2,7 @@
 #include "misc.h"
 
 #define MAX_BUF 100
-#define MOTD "echo application, write something and it echoes it\n"
+#define MOTD "write something and it echoes it (type exit to quit)\n"
 
 void main()
 {
