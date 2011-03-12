@@ -214,7 +214,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     /* get inode of new process' exe */
     dir = get_inode(curr_dir);
     if ( (ino_num = find_inode(dir, filename, FS_SEARCH_GET)) == NO_INODE)
-            return -1;
+        return -1;
     ino = get_inode(ino_num);
 
     /* fill child entry */

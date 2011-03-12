@@ -22,8 +22,8 @@ int mystrncmp(const char *str1, const char *str2, int len)
     for (i = 0; i < len && str1[i] != '\0' && str2[i] != '\0'; i++)
         if (str1[i] != str2[i])
             return -1;
-    /* check that both ended and 'len' was not passed */
-    if (i == len || str1[i] != str2[i])
+    /* check that both ended */
+    if (i < len && str1[i] != str2[i])
         return -1;
 
     return 0;
