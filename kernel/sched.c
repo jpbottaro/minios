@@ -202,10 +202,11 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
 
 pid_t sys_newprocess(const char *filename, char *const argv[])
 {
-    unsigned int i, size, page, dirbase;
+    unsigned int i, j, size, page, stack, dirbase;
     struct process_state_s *process;
     struct inode_s *ino, *dir;
     ino_t curr_dir, ino_num;
+    char *tmpargv[MAX_ARG];
 
     /* get process entry for child */
     process = LIST_FIRST(&unused_list);
@@ -233,14 +234,6 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     /* build directory table for new process (with kernel already mapped) */
     dirbase = init_directory();
 
-    /* build user stack */
-    page = new_page();
-    map_page(0xFFFFFFFF, dirbase, page);
-
-    /* build kernel stack (we are not using this since everithing is ring 0) */
-    page = new_page();
-    map_page(0xFFFFEFFF, dirbase, page);
-
     /* build code */
     for (i = 0; i < ino->i_size; i += PAGE_SIZE) {
         /* get new page for code */
@@ -259,6 +252,37 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         /* remove temporary ident mapping */
         umap_page(0x0, rcr3());
     }
+    /* build user stack */
+    stack = new_page();
+    map_page(0xFFFFF000, dirbase, stack);
+
+    /* build kernel stack (we are not using this since everything is ring 0) */
+    page = new_page();
+    map_page(0xFFFFE000, dirbase, page);
+
+    /* add argc and argv to the new process (lets hope it only takes 1 page) */
+    page = new_page();
+    map_page(0xFFFFD000, dirbase, page);
+    map_page(0x0, rcr3(), page);
+    /* put the arguments in the new page */
+    for (i = 0, j = 0; i < MAX_ARG - 1 && argv[i] != NULL; ++i) {
+        tmpargv[i] = (char *) (0xFFFFD000 + j);
+        size = mystrlen(argv[i]);
+        mymemcpy((char *) j, argv[i], size + 1);
+        j += size + 1;
+    }
+    /* copy the tmpargv array of pointers to the arguments */
+    tmpargv[i] = NULL;
+    mymemcpy((char *) j, (char *) tmpargv, (i + 1) * 4);
+    umap_page(0x0, rcr3());
+    /* add the values to the stack so that main() can get them */
+    map_page(0x0, rcr3(), stack);
+    *((unsigned int *) 0xFFC) = 0xFFFFD000 + j;
+    *((unsigned int *) 0xFF8) = i;
+    *((unsigned int *) 0xFF4) = 0;
+    umap_page(0x0, rcr3());
+
+    /* add tss for the new task, using the created page directory table */
     add_tss(process->i, dirbase);
 
     /* add to scheduler */

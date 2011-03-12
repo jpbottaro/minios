@@ -79,8 +79,8 @@ int add_tss(unsigned int pos, unsigned int user_cr3)
     tss[pos].cr3    = user_cr3;
     tss[pos].eip    = CODE_OFFSET;
     tss[pos].eflags = EFLAGS_MASK;
-    tss[pos].esp    = 0xFFFFFFFF;
-    tss[pos].ebp    = 0xFFFFFFFF;
+    tss[pos].esp    = 0xFFFFFFF4;
+    tss[pos].ebp    = 0xFFFFFFF4;
     tss[pos].cs     = SEG_DESC_KCODE;
     tss[pos].ds     = SEG_DESC_KDATA;
     tss[pos].ss     = SEG_DESC_KDATA;
@@ -88,7 +88,7 @@ int add_tss(unsigned int pos, unsigned int user_cr3)
     tss[pos].gs     = SEG_DESC_KDATA;
     tss[pos].es     = SEG_DESC_KDATA;
     tss[pos].ss0    = SEG_DESC_KDATA;
-    tss[pos].esp0   = 0xFFFFEFFF;
+    tss[pos].esp0   = 0xFFFFEFFC;
     tss[pos].dtrap  = 0x0;
     tss[pos].iomap  = 0xFFFF;
 

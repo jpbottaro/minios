@@ -3,6 +3,8 @@
 
 #include <minikernel/sched.h>
 
+#define MAX_ARG 10
+
 void init_scheduler();
 void schedule();
 
