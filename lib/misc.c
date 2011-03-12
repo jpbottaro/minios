@@ -1,5 +1,13 @@
 #include "misc.h"
 
+/* string length */
+int mystrlen(const char *str)
+{
+    int i;
+    for (i = 0; str[i] != '\0'; ++i) {}
+    return i;
+}
+
 /* copy string 'from' to 'to', writing at most 'len' characters */
 int mystrncpy(char *to, const char *from, int len)
 {
