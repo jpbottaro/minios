@@ -37,6 +37,7 @@
 
 /* Function Prototypes. */
 extern void _exit(int _status);
+extern void exit(int _status);
 extern int chdir(const char *_path);
 extern int close(int _fd);
 extern int newprocess(const char *_path, char *const _argv[]);
