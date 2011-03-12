@@ -211,6 +211,9 @@ int sys_chdir(const char *path)
                                                                     == NO_INODE)
         return ERROR;
 
+    if (!IS_DIR(get_inode(ino)->i_mode))
+        return ERROR;
+
     set_current_dir(ino);
     return OK;
 }
