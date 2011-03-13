@@ -68,4 +68,13 @@ unsigned int copy_file(char *buf, unsigned int n, unsigned int pos,
 struct inode_s *get_inode(ino_t num);
 void           *get_block(zone_t num);
 
+/* constants for attribute i_mode in inode struct */
+#define I_TYPE           0170000
+#define I_FILE           0100000
+#define I_DIRECTORY      0040000
+#define I_SPECIAL        0020000
+#define IS_FILE(mode)    (((mode) & I_TYPE) == I_FILE)
+#define IS_DIR(mode)     (((mode) & I_TYPE) == I_DIRECTORY)
+#define IS_CHAR(mode)    (((mode) & I_TYPE) == I_SPECIAL)
+
 #endif /* _FS_H */

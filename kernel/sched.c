@@ -221,6 +221,9 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         return -1;
     ino = get_inode(ino_num);
 
+    if (!IS_FILE(ino->i_mode))
+        return -1;
+
     /* fill child entry */
     LIST_REMOVE(process, unused);
     process->pid = pid++;

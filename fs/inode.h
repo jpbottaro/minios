@@ -20,13 +20,4 @@ struct dir_entry_s {
 block_t read_map(struct inode_s *ino, unsigned int pos);
 struct dir_entry_s *search_inode(struct inode_s *dir, const char *path);
 
-/* constants for attribute i_mode in inode struct */
-#define I_TYPE           0170000
-#define I_FILE           0100000
-#define I_DIRECTORY      0040000
-#define I_SPECIAL        0020000
-#define IS_FILE(mode)    (((mode) & I_TYPE) == I_FILE)
-#define IS_DIR(mode)     (((mode) & I_TYPE) == I_DIRECTORY)
-#define IS_CHAR(mode)    (((mode) & I_TYPE) == I_SPECIAL)
-
 #endif /* __INODE_H__ */
