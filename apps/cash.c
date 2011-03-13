@@ -69,8 +69,8 @@ void execute(const char *buf)
 
     /* make argv */
     argv[0] = cmd;
-    i = 2;
     argv[1] = s;
+    i = 2;
     while (*s != '\0' && *s != '\n') {
         if (*s == ' ' || *s == '\t') {
             *s = '\0';

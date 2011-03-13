@@ -15,7 +15,7 @@ global getpid
 global rename
 global mkdir
 global rmdir
-global get_dents
+global getdents
 
 ; ------- code
 
@@ -62,7 +62,7 @@ mkdir:
 rmdir:
     mov eax, 40
     jmp next
-get_dents:
+getdents:
     mov eax, 141
     jmp next
 
