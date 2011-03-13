@@ -4,6 +4,7 @@
 #include <minikernel/sched.h> /* get uid and gid of process */
 #include <minikernel/dev.h>
 #include <minikernel/panic.h>
+#include <minikernel/dirent.h>
 #include "fs.h"
 
 char *fs_offset;
@@ -349,10 +350,70 @@ int sys_rmdir(const char *pathname)
     return OK;
 }
 
+struct dir_entry_s *next_entry(struct inode_s *dir, unsigned int *p)
+{
+    unsigned int pos;
+    struct dir_entry_s *dentry, *begin, *end;
+
+    pos = *p;
+    while (pos < dir->i_size) {
+        begin = (struct dir_entry_s *) (get_block(read_map(dir, pos)) +
+                                        pos % BLOCK_SIZE);
+        end = begin + (BLOCK_SIZE - pos % BLOCK_SIZE) / DIRENTRY_SIZE;
+
+        for (dentry = begin; dentry < end; dentry++) {
+            if (dentry->num != 0) {
+                *p = pos + (begin - dentry + 1) * DIRENTRY_SIZE;
+                return dentry;
+            }
+        }
+
+        pos += (BLOCK_SIZE - pos % BLOCK_SIZE);
+    }
+
+    *p = dir->i_size;
+    return NULL;
+}
+
 int sys_getdents(int fd, char *buf, size_t n)
 {
-    /* COMPLETAR */
-    return ERROR;
+    unsigned int i, pos;
+    struct inode_s *dir, *ino;
+    struct dir_entry_s *dentry;
+    struct dirent *dent;
+
+    dir = get_inode(file_inode(fd));
+
+    if (!IS_DIR(dir->i_mode))
+        return ERROR;
+
+    i = 0;
+    pos = file_pos(fd);
+    while (n >= sizeof(struct dirent) + 1) {
+        dentry = next_entry(dir, &pos);
+        if (dentry == NULL)
+            break;
+        ino = get_inode(dentry->num);
+        dent = (struct dirent *) (buf + i);
+        dent->d_ino = dentry->num; 
+        dent->d_off = pos - sizeof(struct dir_entry_s);
+        dent->d_reclen = mystrncpy(dent->d_name, dentry->name, MAX_NAME) + 
+                         1 +                      /* add the \0 */
+                         sizeof(ino_t) +          /* add the d_ino */
+                         sizeof(off_t) +          /* add the d_off */
+                         sizeof(unsigned short) + /* add the d_reclen */
+                         1;                       /* add the d_type */
+        /* add d_type */
+        *(buf + i + dent->d_reclen - 1) = (IS_DIR(ino->i_mode) ? DT_DIR :
+                                          IS_FILE(ino->i_mode) ? DT_REG :
+                                          IS_CHAR(ino->i_mode) ? DT_CHR :
+                                                                 DT_UNK);
+        i += dent->d_reclen;
+        n -= dent->d_reclen;
+    }
+    set_file_pos(fd, pos);
+
+    return i;
 }
 
 /* this one should close all open fds and write buffered changes etc. but,
