@@ -6,6 +6,7 @@
 
 void execute(const char *buf);
 
+char extendcmd[MAX_LEN] = "/bin/";
 char user[MAX_LEN] = "jpbottaro";
 char pwd[MAX_LEN] = "/";
 unsigned int pwd_len = 1;
@@ -53,38 +54,39 @@ void writePS1()
 
 void execute(const char *buf)
 {
-    int i, pid;
-    char *s, *cmd;
+    int i, pid, len;
+    char *s;
     char line[MAX_LINE];
     char *argv[MAX_ARGS];
 
     /* cmd points to the program's path */
-    mystrncpy(line, buf, MAX_LINE);
+    len = mystrncpy(line, buf, MAX_LINE);
     s = line;
-    while (*s == ' ') s++;
-    cmd = s;
-    while (*s != '\0' && *s != '\t' && *s != ' ' && *s != '\n') s++;
-    if (*s == ' ' || *s == '\n' || *s == '\t')
-        *(s++) = '\0';
 
     /* make argv */
-    argv[0] = cmd;
-    argv[1] = s;
-    i = 2;
-    while (*s != '\0' && *s != '\n') {
-        if (*s == ' ' || *s == '\t') {
+    i = 0;
+    if (*s != '\0' && !space(*s))
+        argv[i++] = s;
+    while (s - line < len) {
+        if (space(*s)) {
             *s = '\0';
-            argv[i++] = s + 1;
+            if (!space(*(s + 1)) && *(s + 1) != '\0')
+                argv[i++] = s + 1;
         }
         s++;
     }
-    *s = '\0';
-    argv[i] = 0;
+    argv[i] = NULL;
+
+    /* no command? */
+    if (i == 0)
+        return;
 
     /* if cmd is not a shell cmd, find binary and execute it */
-    if (!sh_cmd(cmd, argv)) {
+    if (!sh_cmd(argv[0], argv)) {
         /* create process and wait for it to finish */
-        if ( (pid = newprocess(cmd, argv)) < 0) {
+        mystrncpy(extendcmd + sizeof("/bin/") - 1, argv[0], MAX_LEN);
+        if ( (pid = newprocess(argv[0], argv)) < 0 &&
+             (pid = newprocess(extendcmd, argv)) < 0) {
             write(STDOUT_FILENO, "Program not found\n",
                           sizeof("Program not found\n"));
         } else {
@@ -96,16 +98,18 @@ void execute(const char *buf)
 /* some commands like 'cd' are handled by the shell here */
 int sh_cmd(const char *cmd, char *const argv[])
 {
-    if (mystrncmp(cmd, "cd", sizeof("cd") + 1) == 0) {
-        if (chdir(argv[1]) == 0)
-            updatepwd(argv[1]);
-        else
-            write(STDOUT_FILENO, "Directory not found\n",
-                          sizeof("Directory not found\n"));
-    } else if (mystrncmp(cmd, "pwd", sizeof("pwd") + 1) == 0) {
+    if (mystrncmp(cmd, "cd", sizeof("cd")) == 0) {
+        if (argv[1] != NULL) {
+            if (chdir(argv[1]) == 0)
+                updatepwd(argv[1]);
+            else
+                write(STDOUT_FILENO, "Directory not found\n",
+                        sizeof("Directory not found\n"));
+        }
+    } else if (mystrncmp(cmd, "pwd", sizeof("pwd")) == 0) {
         write(STDOUT_FILENO, pwd, sizeof(pwd));
         write(STDOUT_FILENO, "\n", 1);
-    } else if (mystrncmp(cmd, "exit", sizeof("exit") + 1) == 0) {
+    } else if (mystrncmp(cmd, "exit", sizeof("exit")) == 0) {
         exit(1);
     } else {
         return 0;

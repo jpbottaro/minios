@@ -19,7 +19,7 @@ int mystrncpy(char *to, const char *from, int len)
     if (i == len && from[i] != '\0')
         return -1;
 
-    return 0;
+    return i;
 }
 
 /* compare 'str1' to 'str2' on at most 'len' chars, 0 if equal, non-0 otherwise */
