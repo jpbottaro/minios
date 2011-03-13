@@ -349,7 +349,7 @@ int sys_rmdir(const char *pathname)
     return OK;
 }
 
-int sys_getdents(int fd, char *buf, size_t n);
+int sys_getdents(int fd, char *buf, size_t n)
 {
     /* COMPLETAR */
     return ERROR;
