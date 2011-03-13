@@ -16,5 +16,5 @@ void main()
         len = read(0, buf, MAX_BUF);
     }
 
-    exit(0);
+    _exit(0);
 }
