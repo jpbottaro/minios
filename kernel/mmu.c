@@ -26,9 +26,13 @@ void map_page(unsigned int virtual, unsigned int cr3, unsigned int real)
     unsigned int table_index = (virtual >> 12) & 0x3FF;
     unsigned int *dir_entry  = (unsigned int *) (cr3 + dir_index * 4);
     unsigned int *table_entry;
+    unsigned int table_page;
     
-    if (!(*dir_entry & 0x1)) // table not present
-        *dir_entry = new_page() | 0111;
+    if (!(*dir_entry & 0x1)) { // table not present
+        table_page = new_page() | 0111;
+        *dir_entry = table_page;
+        map_page(table_page, cr3, table_page);
+    }
 
     table_entry  = (unsigned int *) ((*dir_entry & ~0xFFF) + table_index * 4);
     *table_entry = (real & ~0xFFF) | 0111;
@@ -58,9 +62,10 @@ unsigned int init_directory()
     unsigned int *dirbase   = (unsigned int *) new_page();
     unsigned int *tablebase = (unsigned int *) new_page();
 
-    /* 011 means present, r/w and supervisor */
-    *dirbase = ((unsigned int) tablebase | 011);
+    /* 0111 means present, r/w and user */
+    *dirbase = ((unsigned int) tablebase | 0111);
     for (base = 0; base < 0x3fffff; base += PAGE_SIZE) {
+        /* 011 means present, r/w and supervisor */
         *tablebase = ((unsigned int) base | 011);
         tablebase++;
     }

@@ -88,7 +88,7 @@ int add_tss(unsigned int pos, unsigned int user_cr3)
     tss[pos].gs     = SEG_DESC_KDATA;
     tss[pos].es     = SEG_DESC_KDATA;
     tss[pos].ss0    = SEG_DESC_KDATA;
-    tss[pos].esp0   = 0xFFFFEFFC;
+    tss[pos].esp0   = 0xFFFFEFE0;
     tss[pos].dtrap  = 0x0;
     tss[pos].iomap  = 0xFFFF;
 
