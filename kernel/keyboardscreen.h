@@ -4,7 +4,7 @@
 #define MAX_LINE 200
 
 void keyboard(unsigned char scancode);
-void print(const char *str, unsigned int n);
+int print(const char *str, unsigned int n);
 int get_line(char *line, unsigned int n);
 
 #endif /* __KEYBOARDSCREEN_H__ */

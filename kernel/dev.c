@@ -15,7 +15,7 @@ int dev_io(unsigned int dev, char *buf, unsigned int n, int flag)
         case DEV_STDOUT:
         case DEV_STDERR:
             if (flag == FS_WRITE)
-                print(buf, n);
+                return print(buf, n);
             break;
         default:
             break;

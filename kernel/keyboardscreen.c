@@ -158,7 +158,7 @@ void buffer_key(char key)
 }
 
 /* print a null terminated string in the screen */
-void print(const char *str, unsigned int n)
+int print(const char *str, unsigned int n)
 {
     const char *p;
     unsigned int i;
@@ -167,6 +167,7 @@ void print(const char *str, unsigned int n)
     for (i = 0; i < n && p[i] != '\0'; i++)
         print_key(p[i]);
     xlimit = x;
+    return i;
 }
 
 /* get a line from the screen */
