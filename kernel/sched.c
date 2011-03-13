@@ -252,6 +252,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         /* remove temporary ident mapping */
         umap_page(0x0, rcr3());
     }
+
     /* build user stack */
     stack = new_page();
     map_page(0xFFFFF000, dirbase, stack);
