@@ -124,7 +124,11 @@ static int fs_readwrite(int fd, char *buf, unsigned int n, int flag)
 
     if (ino == NULL)
         return -1;
-        
+ 
+    /* if its a directory, error */
+    if (IS_DIR(ino->i_mode))
+        return -1;
+       
     /* if its a char special file, call the kernel */
     if (IS_CHAR(ino->i_mode))
         return dev_io(ino->i_zone[0], buf, n, flag);
