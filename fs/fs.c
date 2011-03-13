@@ -9,7 +9,7 @@
 char *fs_offset;
 struct inode_s *root;
 
-static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag);
+static int fs_readwrite(int fd, char *buf, unsigned int n, int flag);
 static void fill_inode(struct inode_s *ino, int mode);
 
 /* initialize fs, needs to be ALL mapped in memory, fs_start being first byte */
@@ -86,13 +86,13 @@ int sys_open(const char *filename, int flags, int mode)
 /* close file; since our fs resides in memory and we dont have to write changes
  * anywhere, we just release fd
  */
-int sys_close(unsigned int fd)
+int sys_close(int fd)
 {
     return release_fd(fd);
 }
 
 /* move the pointer of a file to a different position in it */
-int sys_lseek(unsigned int fd, off_t offset, int whence)
+int sys_lseek(int fd, off_t offset, int whence)
 {
     struct inode_s *ino;
     int pos;
@@ -116,7 +116,7 @@ int sys_lseek(unsigned int fd, off_t offset, int whence)
     return OK;
 }
 
-static int fs_readwrite(unsigned int fd, char *buf, unsigned int n, int flag)
+static int fs_readwrite(int fd, char *buf, unsigned int n, int flag)
 {
     struct inode_s *ino = get_inode(file_inode(fd));
     unsigned int pos = file_pos(fd);
@@ -176,13 +176,13 @@ unsigned int copy_file(char *buf, unsigned int n, unsigned int pos,
 }
 
 /* read 'n' bytes from a file a put them on buf */
-int sys_read(unsigned int fd, char *buf, unsigned int n)
+int sys_read(int fd, char *buf, unsigned int n)
 {
     return fs_readwrite(fd, buf, n, FS_READ);
 }
 
 /* write 'n' bytes from 'buf' in the file referenced by 'fd' */
-int sys_write(unsigned int fd, char *buf, unsigned int n)
+int sys_write(int fd, char *buf, unsigned int n)
 {
     return fs_readwrite(fd, buf, n, FS_WRITE);
 }
@@ -349,7 +349,7 @@ int sys_rmdir(const char *pathname)
     return OK;
 }
 
-int sys_getdents(unsigned int fd, struct dirent *dirp, unsigned int n)
+int sys_getdents(int fd, char *buf, size_t n);
 {
     /* COMPLETAR */
     return ERROR;
