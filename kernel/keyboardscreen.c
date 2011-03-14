@@ -59,11 +59,13 @@ unsigned int pos = 0, end = 0;
 struct video_char_s (*vram)[25][80] = (struct video_char_s (*)[25][80]) 0xB8000;
 unsigned int x = 0, y = 0, xlimit = 0;
 
+/* WHYY CANT I DEFINE THIS IN SCROLL_UP_VRAM!! it throws some random #gp when
+ * i write to the screen :s smth to do with the stack but it beats me.. */
+int i, j;
+
 /* move the video ram 1 row up */
 void scroll_up_vram()
 {
-    int i, j;
-
     for (i = 0; i < 24; i++) {
         for (j = 0; j < 80; j++) {
             (*vram)[i][j].letter = (*vram)[i+1][j].letter;
