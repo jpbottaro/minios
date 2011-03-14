@@ -153,8 +153,8 @@ static int fs_readwrite(int fd, char *buf, unsigned int n, int flag)
 }
 
 /* read/write (flag) to 'buf' 'n' bytes from position 'pos' of the file 'ino' */
-unsigned int copy_file(char *buf, unsigned int n, unsigned int pos,
-                       struct inode_s *ino, int flag)
+int copy_file(char *buf, unsigned int n, unsigned int pos, struct inode_s *ino,
+                                                                          int flag)
 {
     unsigned int size, off;
     block_t blocknr;
@@ -165,7 +165,7 @@ unsigned int copy_file(char *buf, unsigned int n, unsigned int pos,
      * altogether; I prefer small n clean code in this project
      */
     while (n > 0) {
-        if ( (blocknr = read_map(ino, pos)) == NO_BLOCK)
+        if ( (blocknr = read_map(ino, pos, flag)) == NO_BLOCK)
             return ERROR;
         block = (char *) get_block(blocknr);
 
@@ -361,11 +361,13 @@ struct dir_entry_s *next_entry(struct inode_s *dir, unsigned int *p)
 {
     unsigned int pos;
     struct dir_entry_s *dentry, *begin, *end;
+    block_t blocknr;
 
     pos = *p;
     while (pos < dir->i_size) {
-        begin = (struct dir_entry_s *) (get_block(read_map(dir, pos)) +
-                                        pos % BLOCK_SIZE);
+        if ( (blocknr = read_map(dir, pos, FS_READ)) == NO_BLOCK)
+            return NULL;
+        begin = (struct dir_entry_s *) (get_block(blocknr) + pos % BLOCK_SIZE);
         end = begin + (BLOCK_SIZE - pos % BLOCK_SIZE) / DIRENTRY_SIZE;
 
         for (dentry = begin; dentry < end; dentry++) {

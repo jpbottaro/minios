@@ -17,7 +17,7 @@ struct dir_entry_s {
     char name[MAX_NAME];
 };
 
-block_t read_map(struct inode_s *ino, unsigned int pos);
+block_t read_map(struct inode_s *ino, unsigned int pos, int flag);
 struct dir_entry_s *search_inode(struct inode_s *dir, const char *path);
 
 #endif /* __INODE_H__ */

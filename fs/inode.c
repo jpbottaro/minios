@@ -136,8 +136,12 @@ struct dir_entry_s *search_inode(struct inode_s *dir, const char *name)
     empty = NULL;
     for (pos = 0; pos < dir->i_size; pos += BLOCK_SIZE) {
         /* get the block with the files/subdirectories */
-        dentry = (struct dir_entry_s *) get_block(read_map(dir, pos));
+        dentry = (struct dir_entry_s *) get_block(read_map(dir, pos, FS_READ));
         end = dentry + NR_DIR_ENTRIES;
+
+        /* if there are no more entries.. */
+        if (dentry == NULL)
+            return empty;
 
         /* cycle through the dir entries and search for the required name */
         for (; dentry < end; dentry++) {
@@ -185,6 +189,9 @@ struct inode_s *get_inode(ino_t num)
 /* get the pointer for the start of a block based on its number */
 void *get_block(zone_t num)
 {
+    if (num == NO_BLOCK)
+        return NULL;
+
     /* get starting point of the memory mapped file system */
     char *p = fs_offset;
 
@@ -198,14 +205,18 @@ void *get_block(zone_t num)
  * return it; we assume 1 block zones
  */
 /* XXX I could improve this to support indirect blocks if its necessary */
-block_t read_map(struct inode_s *ino, unsigned int pos)
+block_t read_map(struct inode_s *ino, unsigned int pos, int flag)
 {
     unsigned int block;
 
     block = pos / BLOCK_SIZE;
 
-    if (block < DIRECT_ZONES)
-        return ino->i_zone[block];
+    if (block < DIRECT_ZONES) {
+        if (ino->i_zone[block] == NO_BLOCK && flag == FS_WRITE)
+            return (ino->i_zone[block] = empty_block());
+        else
+            return ino->i_zone[block];
+    }
 
     return NO_BLOCK;
 }

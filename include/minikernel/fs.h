@@ -59,8 +59,8 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag);
 #define FS_READ  0
 #define FS_WRITE 1
 
-unsigned int copy_file(char *buf, unsigned int n, unsigned int pos,
-                       struct inode_s *ino, int flag);
+int copy_file(char *buf, unsigned int n, unsigned int pos, struct inode_s *ino,
+                                                                         int flag);
 
 #define NO_BLOCK ((block_t) 0)
 #define NO_INODE ((ino_t)   0)
