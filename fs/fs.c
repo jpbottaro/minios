@@ -44,11 +44,10 @@ int init_fs(char *fs_start)
 }
 
 /* fill inode information */
-/* FIXME MODIFICARRRRRR */
 static void fill_inode(struct inode_s *ino, int mode)
 {
     int i;
-    ino->i_mode   = mode;
+    ino->i_mode   = (mode & I_TYPE) ? mode : mode | I_FILE;
     ino->i_nlinks = 1;
     ino->i_uid    = current_uid();
     ino->i_gid    = current_gid();
@@ -75,7 +74,7 @@ int sys_open(const char *filename, int flags, int mode)
 
     ino = get_inode(ino_num);
 
-    if (flag & O_CREAT)
+    if (flags & O_CREAT)
         fill_inode(ino, mode);
 
     if (flags & O_TRUNC)
@@ -142,6 +141,10 @@ static int fs_readwrite(int fd, char *buf, unsigned int n, int flag)
 
     /* check how much did we read/write */
     n = pos - file_pos(fd);
+    
+    /* update inode size */
+    if (pos > ino->i_size)
+        ino->i_size = pos;
 
     /* set new filepos */
     set_file_pos(fd, pos);

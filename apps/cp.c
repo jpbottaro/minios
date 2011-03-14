@@ -18,7 +18,7 @@ void main(int argc, char *argv[])
         _exit(-1);
     }
 
-    if ( (to = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0)) < 0) {
+    if ( (to = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 744)) < 0) {
         write(STDOUT_FILENO, ERR_OPEN, sizeof(ERR_OPEN));
         _exit(-1);
     }
