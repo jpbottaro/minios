@@ -47,6 +47,7 @@ extern uid_t getuid(void);
 extern off_t lseek(int _fd, off_t _offset, int _whence);
 extern int read(int _fd, void *_buf, size_t _n);
 extern int rmdir(const char *_path);
+extern int mkdir(const char *_path, mode_t mode);
 extern unsigned int sleep(unsigned int _seconds);
 extern int unlink(const char *_path);
 extern int write(int _fd, const void *_buf, size_t _n);

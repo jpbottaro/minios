@@ -372,7 +372,7 @@ struct dir_entry_s *next_entry(struct inode_s *dir, unsigned int *p)
 
         for (dentry = begin; dentry < end; dentry++) {
             if (dentry->num != 0) {
-                *p = pos + (begin - dentry + 1) * DIRENTRY_SIZE;
+                *p = pos + ((begin - dentry) + 1) * DIRENTRY_SIZE;
                 return dentry;
             }
         }
