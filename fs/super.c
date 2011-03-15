@@ -1,4 +1,5 @@
 #include "fs.h"
+#include <minikernel/misc.h>
 
 struct superblock_s *sb;
 bitchunk_t *imap_origin;
@@ -70,7 +71,11 @@ ino_t empty_inode()
 /* return an unused block (and mark it as used) */
 block_t empty_block()
 {
-    return alloc_bit(ZMAP);
+    block_t block = alloc_bit(ZMAP);
+
+    mymemset((char *) get_block(block), 0, BLOCK_SIZE);
+    
+    return block;
 }
 
 /* free bit in map (algo. idea taken heavily from minix) */

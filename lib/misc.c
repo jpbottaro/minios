@@ -37,6 +37,12 @@ int mystrncmp(const char *str1, const char *str2, int len)
     return 0;
 }
 
+void mymemset(char *to, char c, unsigned int size)
+{
+    while (size--)
+        *(to++) = c;
+}
+
 void mymemcpy(char *to, const char *from, unsigned int size)
 {
     while (size--)

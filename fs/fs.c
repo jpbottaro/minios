@@ -311,6 +311,9 @@ int sys_mkdir(const char *pathname, mode_t mode)
     fill_inode(ino, mode);
     ino->i_mode = (ino->i_mode & ~I_TYPE) | I_DIRECTORY;
 
+    /* set size so that search_inode gives us empty entries */
+    ino->i_size = DIRENTRY_SIZE * 2;
+
     /* add '.' and '..' */
     if ( (dentry = search_inode(ino, ".")) == NULL)
         return ERROR;
