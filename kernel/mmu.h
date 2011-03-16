@@ -4,10 +4,9 @@
 #define KERNEL_PAGES 0x300000
 #define PAGE_SIZE    0x1000
 
-extern unsigned int kFreePage;
-
 void init_mmu();
 unsigned int new_page();
+void free_page(unsigned int page);
 
 void map_page(unsigned int virtual, unsigned int cr3, unsigned int real);
 void umap_page(unsigned int virtual, unsigned int cr3);

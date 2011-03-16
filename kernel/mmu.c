@@ -1,23 +1,55 @@
 #include <minikernel/panic.h>
+#include <minikernel/sched.h>
 #include "i386.h"
 #include "mmu.h"
 
-unsigned int kFreePage = KERNEL_PAGES;
+#define PAGES_LEN ((CODE_OFFSET - KERNEL_PAGES) / PAGE_SIZE)
+#define hash_page(base) ((base - KERNEL_PAGES) / PAGE_SIZE)
+
+struct page_s {
+    /* starting address */
+    unsigned int base;
+
+    /* scheduler waiting list */
+    LIST_ENTRY(page_s) status;
+} __attribute__((__packed__)) ;
+
+struct page_s pages[PAGES_LEN];
+
+LIST_HEAD(free_pages_t, page_s) free_pages;
 
 void init_mmu()
 {
-    kFreePage = KERNEL_PAGES;
+    int i;
+
+    LIST_INIT(&free_pages);
+    for (i = PAGES_LEN - 1; i >= 0; --i) {
+        pages[i].base = KERNEL_PAGES + i * PAGE_SIZE;
+        LIST_INSERT_HEAD(&free_pages, &pages[i], status);
+    }
 }
 
 unsigned int new_page()
 {
+    struct page_s *page;
     unsigned int base;
 
-    for (base = kFreePage; base < kFreePage + PAGE_SIZE; base++)
-        *((unsigned int *) base) = 0;
-    kFreePage += PAGE_SIZE;
+    page = LIST_FIRST(&free_pages);
+    if (page == NULL)
+        panic("new_page: no more free pages!");
+    LIST_REMOVE(page, status);
 
-    return (kFreePage - PAGE_SIZE);
+    for (base = page->base; base < page->base + PAGE_SIZE; base++)
+        *((unsigned int *) base) = 0;
+
+    return page->base;
+}
+
+void free_page(unsigned int base)
+{
+    if (base < KERNEL_PAGES || base > CODE_OFFSET)
+        panic("free_page: page off limits");
+    LIST_INSERT_HEAD(&free_pages, &pages[hash_page(base)], status);
 }
 
 void map_page(unsigned int virtual, unsigned int cr3, unsigned int real)
