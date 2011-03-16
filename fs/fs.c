@@ -346,9 +346,9 @@ int sys_rmdir(const char *pathname)
     if ( (ino_num = find_inode(dir, name, FS_SEARCH_GET)) == NO_INODE)
         return ERROR;
     ino = get_inode(ino_num);
-
-    /* check if dir is empty */
-    if (search_inode(ino, NULL) != NULL)
+    
+    /* check if its a dir and it is empty */
+    if (!IS_DIR(ino->i_mode) || search_inode(ino, NULL) != NULL)
         return ERROR;
 
     /* this cant give an error */
@@ -375,7 +375,7 @@ struct dir_entry_s *next_entry(struct inode_s *dir, unsigned int *p)
 
         for (dentry = begin; dentry < end; dentry++) {
             if (dentry->num != 0) {
-                *p = pos + ((begin - dentry) + 1) * DIRENTRY_SIZE;
+                *p = pos + ((dentry - begin) + 1) * DIRENTRY_SIZE;
                 return dentry;
             }
         }
