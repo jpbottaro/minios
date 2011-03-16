@@ -137,7 +137,8 @@ static int fs_readwrite(int fd, char *buf, unsigned int n, int flag)
         n = MIN(n, ino->i_size - pos);
 
     /* read/write the buffer */
-    pos = copy_file(buf, n, pos, ino, flag);
+    if ( (pos = copy_file(buf, n, pos, ino, flag)) == ERROR)
+        return ERROR;
 
     /* check how much did we read/write */
     n = pos - file_pos(fd);
