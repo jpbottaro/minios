@@ -2,5 +2,3 @@
 
 - cat does not work right, in big files it throws #GP, now in newly created
   does not even print anything
-
-- free pages when process exit
