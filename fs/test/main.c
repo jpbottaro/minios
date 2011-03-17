@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <string.h>
 #include <minikernel/fs.h>
 #include "../inode.h"
 
@@ -12,6 +13,8 @@ struct process_state_s *current_process = NULL;
 struct process_state_s *ps = NULL;
 current_uid() {return 0;}
 current_gid() {return 0;}
+panic(char *b) {printf("%s\n", b);_exit(1);}
+int dev_io(int i, char* b, int j , int k) {printf("Dev io\n"); return 0;}
 
 int main(int argc, char *argv[])
 {
@@ -26,11 +29,22 @@ int main(int argc, char *argv[])
 
     printf("Leimos %ld bytes\n", p - fs);
 
+    /*
+    char *c = fs;
+    while (c < p) {
+        if (strncmp(c, "_^[]", 3) == 0) {
+            printf("Esta en el bloque %ld\n", (c - fs) / 1024);
+            return 0;
+        }
+        c++;
+    }
+    printf("No esta\n");
+    return 0;
+    */
+
     init_fs(fs);
 
-//    find_inode(NULL, argv[1], FS_SEARCH_REMOVE);
-
-    printf("ret: %d\n", ino_num = find_inode(NULL, argv[1], FS_SEARCH_LASTDIR));
+    printf("ret: %d\n", ino_num = find_inode(NULL, argv[1], FS_SEARCH_GET));
     inode = get_inode(ino_num);
 
     printf("Number of links: %d\n", inode->i_nlinks);
@@ -44,7 +58,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-#define DIR_MAXENTRIES 10
+#define DIR_MAXENTRIES 20
 
 int print_dir(struct inode_s *dir)
 {
