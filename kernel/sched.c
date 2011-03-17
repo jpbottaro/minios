@@ -145,6 +145,10 @@ void sys_exit(int status)
         CIRCLEQ_INSERT_HEAD(&ready_list, parent, ready);
     }
 
+    /* free process pages */
+    free_all_pages(current_process->i);
+
+    /* delete process */
     current_process->pid = 0;
     LIST_INSERT_HEAD(&unused_list, current_process, unused);
     CIRCLEQ_REMOVE(&ready_list, current_process, ready);
@@ -232,44 +236,46 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     process->waiting = NULL;
     process->parent = current_process;
     process->curr_dir = curr_dir;
+    LIST_INIT(&process->pages_list);
     init_fds(process->i);
 
     /* build directory table for new process (with kernel already mapped) */
-    dirbase = init_directory();
+    dirbase = init_directory(process->i);
     /* ident map the directory table (this way its 'user' and not 'system') */
-    map_page(dirbase, dirbase, dirbase);
+    map_page(process->i, dirbase, dirbase, dirbase);
 
     /* build code */
     for (i = 0; i < ino->i_size; i += PAGE_SIZE) {
         /* get new page for code */
-        page = new_page();
+        page = new_page(process->i);
 
         /* temporary map page to 0 to be able to copy the code */
-        map_page(0x0, rcr3(), page);
+        map_page(-1, 0x0, rcr3(), page);
 
         /* copy file from filesystem to the new page */
         size = MIN(PAGE_SIZE, ino->i_size - i);
         copy_file((char *) 0x0, size, i, ino, FS_READ);
 
         /* add the new code page to the page directory table */
-        map_page(i + CODE_OFFSET, dirbase, page);
+        map_page(process->i, i + CODE_OFFSET, dirbase, page);
 
         /* remove temporary ident mapping */
         umap_page(0x0, rcr3());
     }
 
     /* build user stack */
-    stack = new_page();
-    map_page(0xFFFFF000, dirbase, stack);
+    stack = new_page(process->i);
+    map_page(process->i, 0xFFFFF000, dirbase, stack);
 
     /* build kernel stack (we are not using this since everything is ring 0) */
-    page = new_page();
-    map_page(0xFFFFE000, dirbase, page);
+    page = new_page(process->i);
+    map_page(process->i, 0xFFFFE000, dirbase, page);
 
     /* add argc and argv to the new process (lets hope it only takes 1 page) */
-    page = new_page();
-    map_page(0xFFFFD000, dirbase, page);
-    map_page(0x0, rcr3(), page);
+    page = new_page(process->i);
+    map_page(process->i, 0xFFFFD000, dirbase, page);
+    map_page(-1, 0x0, rcr3(), page);
+
     /* put the arguments in the new page */
     for (i = 0, j = 0; i < MAX_ARG - 1 && argv[i] != NULL; ++i) {
         tmpargv[i] = (char *) (0xFFFFD000 + j);
@@ -282,7 +288,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     mymemcpy((char *) j, (char *) tmpargv, (i + 1) * 4);
     umap_page(0x0, rcr3());
     /* add the values to the stack so that main() can get them */
-    map_page(0x0, rcr3(), stack);
+    map_page(-1, 0x0, rcr3(), stack);
     *((unsigned int *) 0xFFC) = 0xFFFFD000 + j;
     *((unsigned int *) 0xFF8) = i;
     *((unsigned int *) 0xFF4) = 0;

@@ -29,7 +29,7 @@ void init_mmu()
     }
 }
 
-unsigned int new_page()
+unsigned int new_page(int process_num)
 {
     struct page_s *page;
     unsigned int base;
@@ -42,6 +42,9 @@ unsigned int new_page()
     for (base = page->base; base < page->base + PAGE_SIZE; base++)
         *((unsigned int *) base) = 0;
 
+    if (process_num != -1)
+        LIST_INSERT_HEAD(&ps[process_num].pages_list, page, status);
+
     return page->base;
 }
 
@@ -52,7 +55,16 @@ void free_page(unsigned int base)
     LIST_INSERT_HEAD(&free_pages, &pages[hash_page(base)], status);
 }
 
-void map_page(unsigned int virtual, unsigned int cr3, unsigned int real)
+void free_all_pages(int num)
+{
+    struct page_s *page, *next;
+
+    LIST_FOREACH_SAFE(page, &ps[num].pages_list, status, next)
+        free_page(page->base);
+}
+
+void map_page(int process_num, unsigned int virtual, unsigned int cr3,
+                                                                unsigned int real)
 {
     unsigned int dir_index   = (virtual >> 22);
     unsigned int table_index = (virtual >> 12) & 0x3FF;
@@ -61,9 +73,9 @@ void map_page(unsigned int virtual, unsigned int cr3, unsigned int real)
     unsigned int table_page;
     
     if (!(*dir_entry & 0x1)) { // table not present
-        table_page = new_page() | 0111;
+        table_page = new_page(process_num) | 0111;
         *dir_entry = table_page;
-        map_page(table_page, cr3, table_page);
+        map_page(process_num, table_page, cr3, table_page);
     }
 
     table_entry  = (unsigned int *) ((*dir_entry & ~0xFFF) + table_index * 4);
@@ -88,11 +100,11 @@ void umap_page(unsigned int virtual, unsigned int cr3)
 }
 
 /* make page directory table with first 0x0 to 0x3fffff ident mapping (kernel) */
-unsigned int init_directory()
+unsigned int init_directory(int process_num)
 {
     unsigned int base;
-    unsigned int *dirbase   = (unsigned int *) new_page();
-    unsigned int *tablebase = (unsigned int *) new_page();
+    unsigned int *dirbase   = (unsigned int *) new_page(process_num);
+    unsigned int *tablebase = (unsigned int *) new_page(process_num);
 
     /* 0111 means present, r/w and user */
     *dirbase = ((unsigned int) tablebase | 0111);

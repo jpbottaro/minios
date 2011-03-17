@@ -75,7 +75,9 @@ protectedmode:
     call init_mmu
 
     ; ident mapping
+    push -1
     call init_directory
+    add esp, 0x4
     mov  cr3, eax
 
     ; enable paging
