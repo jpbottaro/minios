@@ -64,21 +64,25 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
             return dentry->num;
     }
 
-    if ( (dentry = search_inode(r, begin)) == NULL)
-        return NO_INODE;
+    dentry = search_inode(r, begin);
 
     switch (flag) {
         case FS_SEARCH_GET:
-            return dentry->num;
+            if (dentry == NULL)
+                return NO_INODE;
+            else
+                return dentry->num;
 
         case FS_SEARCH_CREAT:
-            if (dentry->num != 0)
+            if (dentry != NULL)
                 return dentry->num;
 
             /* CREAT keeps going... */
         case FS_SEARCH_ADD:
-            if (dentry->num != 0)
+            if (dentry != NULL)
                 return NO_INODE;
+
+            dentry = empty_entry(r);
 
             if ( (tmp = empty_inode()) == NO_INODE)
                 return NO_INODE;
@@ -88,14 +92,15 @@ ino_t find_inode(struct inode_s *dir, const char *user_path, int flag)
             return dentry->num;
 
         case FS_SEARCH_REMOVE:
+            if (dentry == NULL)
+                return NO_INODE;
+
             tmp = dentry->num;
-            if (tmp != NO_INODE) {
-                dentry->num = NO_INODE;
-                //r->i_size -= DIRENTRY_SIZE;
-                if (IS_DIR(get_inode(tmp)->i_mode)) {
-                    /* we assume the directory is already empty */
-                    r->i_nlinks--;
-                }
+            dentry->num = NO_INODE;
+            r->i_size -= DIRENTRY_SIZE;
+            if (IS_DIR(get_inode(tmp)->i_mode)) {
+                /* we assume the directory is already empty */
+                r->i_nlinks--;
             }
             return tmp;
     }
@@ -117,6 +122,57 @@ static char *parse_path(char *path)
     return path;
 }
 
+/* get an empty directory entry */
+struct dir_entry_s *empty_entry(struct inode_s *dir)
+{
+    unsigned int pos;
+    struct dir_entry_s *dentry, *begin, *end;
+    block_t blocknr;
+
+    pos = 0;
+    while ( (blocknr = read_map(dir, pos, FS_READ)) != NO_BLOCK) {
+        begin = (struct dir_entry_s *) get_block(blocknr);
+        end = begin + BLOCK_SIZE / DIRENTRY_SIZE;
+
+        for (dentry = begin; dentry < end; dentry++)
+            if (dentry->num == 0)
+                return dentry;
+
+        pos += BLOCK_SIZE;
+    }
+
+    return NULL;
+}
+
+/* get next directory entry of a directory. *p is a pointer to the starting
+ * position, and it gets updated with the search
+ */
+struct dir_entry_s *next_entry(struct inode_s *dir, unsigned int *p)
+{
+    unsigned int pos;
+    struct dir_entry_s *dentry, *begin, *end;
+    block_t blocknr;
+
+    pos = *p;
+    while ( (blocknr = read_map(dir, pos, FS_READ)) != NO_BLOCK) {
+        begin = (struct dir_entry_s *) (get_block(blocknr) + pos % BLOCK_SIZE);
+        end = begin + (BLOCK_SIZE - pos % BLOCK_SIZE) / DIRENTRY_SIZE;
+
+        for (dentry = begin; dentry < end; dentry++) {
+            if (dentry->num != 0) {
+                *p = pos + ((dentry - begin) + 1) * DIRENTRY_SIZE;
+                return dentry;
+            }
+        }
+
+        pos += (BLOCK_SIZE - pos % BLOCK_SIZE);
+    }
+
+    *p = pos;
+    return NULL;
+}
+
+
 /* search an inode in a directory based on its name, return a pointer to it
  * if it is found, or an empty entry otherwise
  *
@@ -124,8 +180,8 @@ static char *parse_path(char *path)
  */
 struct dir_entry_s *search_inode(struct inode_s *dir, const char *name)
 {
-    struct dir_entry_s *dentry, *end, *empty;
-    unsigned int pos;
+    struct dir_entry_s *dentry;
+    unsigned int pos, i, entries;
 
     if (name != NULL && *name == '\0')
         return NULL;
@@ -133,36 +189,24 @@ struct dir_entry_s *search_inode(struct inode_s *dir, const char *name)
     if (dir == NULL)
         return NULL;
 
-    empty = NULL;
-    for (pos = 0; pos < dir->i_size; pos += BLOCK_SIZE) {
-        /* get the block with the files/subdirectories */
-        dentry = (struct dir_entry_s *) get_block(read_map(dir, pos, FS_READ));
-        end = dentry + NR_DIR_ENTRIES;
+    pos = 0;
+    entries = dir->i_size / DIRENTRY_SIZE;
+    for (i = 0; i < entries; ++i) {
+        if ( (dentry = next_entry(dir, &pos)) == NULL)
+            break;
 
-        /* if there are no more entries.. */
-        if (dentry == NULL)
-            return empty;
-
-        /* cycle through the dir entries and search for the required name */
-        for (; dentry < end; dentry++) {
-            if (name != NULL && empty == NULL && dentry->num == 0)
-                empty = dentry;
-
-            /* pretty ugly but well... */
-            if (dentry->num != 0) {
-                if (name == NULL) {
-                    if (mystrncmp(".",  dentry->name, 2) != 0 &&
-                        mystrncmp("..", dentry->name, 3) != 0)
-                        return dentry;
-                } else if (mystrncmp(name, dentry->name, MAX_NAME) == 0) {
+        if (dentry->num != 0) {
+            if (name == NULL) {
+                if (mystrncmp(".",  dentry->name, 2) != 0 &&
+                    mystrncmp("..", dentry->name, 3) != 0)
                     return dentry;
-                }
+            } else if (mystrncmp(name, dentry->name, MAX_NAME) == 0) {
+                return dentry;
             }
-
         }
     }
 
-    return empty;
+    return NULL;
 }
 
 /* get the pointer of an inode based on its number */

@@ -312,20 +312,20 @@ int sys_mkdir(const char *pathname, mode_t mode)
     fill_inode(ino, mode);
     ino->i_mode = (ino->i_mode & ~I_TYPE) | I_DIRECTORY;
 
-    /* set size so that search_inode gives us empty entries */
-    ino->i_size = DIRENTRY_SIZE * 2;
-
-    /* add '.' and '..' */
-    if ( (dentry = search_inode(ino, ".")) == NULL)
-        return ERROR;
+    /* add '.' */
+    dentry = empty_entry(ino);
     dentry->num = ino_num;
     mystrncpy(dentry->name, ".", 2);
     ino->i_nlinks++;
-    if ( (dentry = search_inode(ino, "..")) == NULL)
-        return ERROR;
+
+    /* and '..' */
+    dentry = empty_entry(ino);
     dentry->num = parent_num;
     mystrncpy(dentry->name, "..", 3);
     dir->i_nlinks++;
+
+    /* update dir size */
+    ino->i_size = DIRENTRY_SIZE * 2;
 
     return OK;
 }
@@ -359,33 +359,6 @@ int sys_rmdir(const char *pathname)
     rm_inode(ino_num);
 
     return OK;
-}
-
-struct dir_entry_s *next_entry(struct inode_s *dir, unsigned int *p)
-{
-    unsigned int pos;
-    struct dir_entry_s *dentry, *begin, *end;
-    block_t blocknr;
-
-    pos = *p;
-    while (pos < dir->i_size) {
-        if ( (blocknr = read_map(dir, pos, FS_READ)) == NO_BLOCK)
-            return NULL;
-        begin = (struct dir_entry_s *) (get_block(blocknr) + pos % BLOCK_SIZE);
-        end = begin + (BLOCK_SIZE - pos % BLOCK_SIZE) / DIRENTRY_SIZE;
-
-        for (dentry = begin; dentry < end; dentry++) {
-            if (dentry->num != 0) {
-                *p = pos + ((dentry - begin) + 1) * DIRENTRY_SIZE;
-                return dentry;
-            }
-        }
-
-        pos += (BLOCK_SIZE - pos % BLOCK_SIZE);
-    }
-
-    *p = dir->i_size;
-    return NULL;
 }
 
 int sys_getdents(int fd, char *buf, size_t n)

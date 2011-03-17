@@ -18,6 +18,8 @@ struct dir_entry_s {
 };
 
 block_t read_map(struct inode_s *ino, unsigned int pos, int flag);
+struct dir_entry_s *empty_entry(struct inode_s *dir);
+struct dir_entry_s *next_entry(struct inode_s *dir, unsigned int *p);
 struct dir_entry_s *search_inode(struct inode_s *dir, const char *path);
 
 #endif /* __INODE_H__ */
