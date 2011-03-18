@@ -217,37 +217,32 @@ detallaremos a continuación. El siguiente extracto de código de search\_inode(
 muestra el loop principal (simplificado):
 
 \begin{verbatim}
-for (pos = 0; pos < dir->i_size; pos += BLOCK_SIZE) {
-    /* get the block with the files/subdirectories */
-    dentry = (struct dir_entry_s *) get_block(read_map(dir, pos));
-    end = dentry + NR_DIR_ENTRIES;
+    pos = 0;
+    entries = dir->i_size / DIRENTRY_SIZE;
+    for (i = 0; i < entries; ++i) {
+        if ( (dentry = next_entry(dir, &pos)) == NULL)
+            break;
 
-    /* cycle through the dir entries and search for the required name */
-    for (; dentry < end; dentry++) {
-        if (empty == NULL && dentry->num == 0)
-            empty = dentry;
-        if (dentry->num != 0 && mystrncmp(name, dentry->name, MAX_NAME) == 0)
-            return dentry;
+        if (dentry->num != 0)
+            if (mystrncmp(name, dentry->name, MAX_NAME) == 0)
+                return dentry;
     }
-}
-
-return empty;
 \end{verbatim}
 
 La manera en que el código recorre las entradas del directorio es mediante la
 función read\_map(), que dado una posición de un archivo/carpeta, devuelve el
 bloque en que se encuentra (es decir, resuelve bloques
-directos/indirectos/etc.); get\_block() simplemente devuelve
-un puntero al inicio del bloque pedido. Así vamos bloque por bloque recorriendo
-todas las entradas del directorio, comparando una por una con la función
+directos/indirectos/etc.); esta es utilizada por next\_entry() para recorrer
+loss bloques del directorio. Así vamos bloque por bloque recorriendo
+todas las entradas, comparando una por una con la función
 mystrncmp (una imitación de strncmp de la biblioteca estandar, recordar que no
 contamos con ninguna de estas funciones). En el caso de que no se encuentre la
-entrada que se buscaba, search\_inode() devuelve una entrada vacía. Esto es muy
-util para implementar llamadas como rename(), pudiendo agregar un archivo a un
-directorio.
+entrada que se buscaba, search\_inode() devuelve NULL. En el caso de que
+necesite una entrada vacía, se provee la función empty\_entry().
 
 Es importante aclarar que hay una diferencia clave con la manera en que está
-implementado mfs en minix. Funciones como get\_block() requieren llamar al
+implementado mfs en minix. Funciones como get\_block(), que dado un número de
+bloque, devuelve el puntero al mismo,  requieren llamar al
 disco, recobrar el bloque en cuestión y guardarlo en memoria para poder
 utilizarlo. En cambio nosotros simplemente apuntamos a la posición de dicho
 bloque, ya que todo se encuentra pre-cargado. Lo mismo sucede con los inodos y
@@ -308,7 +303,10 @@ fs/fs.h. Veamos como se hicieron algunas de estas funciones.
 En el caso de read() y write(), comenzaron siendo funciones distintas, pero
 rápidamente me di cuenta que el código entre ellas era muy similar, por lo que
 decidí separarlo en la función fs\_readwrite(). Esta se encarga de leer o
-escribir un archivo, dependiendo de la flag que se le provee.
+escribir un archivo, dependiendo de la flag que se le provee. Hace algunos
+checkeos importantes (como por ejemplo fijarse si el archivo no es un
+dispositivo de caracteres), y luego llama a copy\_file que realiza el trabajo
+duro:
 
 \begin{verbatim}
 while (n > 0) {
@@ -319,10 +317,8 @@ while (n > 0) {
     off = pos % BLOCK_SIZE;
     size = MIN(n, BLOCK_SIZE - off);
 
-    if (flag == FS_WRITE)
-        mymemcpy(block + off, buf, size);
-    else
-        mymemcpy(buf, block + off, size);
+    if (flag == FS_WRITE) mymemcpy(block + off, buf, size);
+    else                  mymemcpy(buf, block + off, size);
 
     n -= size;
     pos += size;
@@ -330,7 +326,7 @@ while (n > 0) {
 }
 \end{verbatim}
 
-El loop principal de fs\_readwrite() va navegando los bloques del archivo con
+El loop principal de copy\_file() va navegando los bloques del archivo con
 read\_map() y, dependiendo si se busca leer o escribir, utiliza la función
 mymemcpy para realizar el trabajo (que es un clon de la función de mismo nombre
 de la biblioteca estándar).
@@ -361,5 +357,15 @@ contenidos de una a la otra, además debe fijarse si se trata de un directorio,
 para actualizar la referencia '..'; chdir() que cambia el directorio actual
 (el inodo del directorio actual se guarda en la tabla del proceso).
 
-Por último esta getdents(), que se utiliza para recorrer un directorio.
-COMPLETAR GETDENTS
+Por último esta getdents(), que se utiliza para recorrer un directorio. Esta
+llamada es media extraña (por esta razón se utiliza una mucho más amistosa en
+POSIX, readdir(), que a su vez llama a getdents()), dado un buffer y un tamaño,
+copia en este buffer la mayor cantidad de estructuras de entrada de directorio
+posibles. El problema es que estas estructuras no tienen un tamaño fijo,
+contienen el nombre del archivo que es variable. Por si esto no fuera poco,
+esta estructura evolucionó con el tiempo en linux, y se le agregó al final de
+todo, despues del nombre, un campo d\_type que dice si la entrada es un archivo
+regular/directorio/dispositivo etc. Para recobrar esta información es necesario
+calcular el tamaño de la estructura, sumarlo al inicio de la misma y castear el
+valor de d\_type. Luego recorrer el buffer para el usuario puede ser un poco
+trabajoso (ver la implementación del programa ls).
