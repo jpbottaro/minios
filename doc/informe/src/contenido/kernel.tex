@@ -180,6 +180,132 @@ comportamiento en la sección Teclado y Pantalla.
 
 \subsection{MMU}
 
+La implementación del manejo de memoria se encuentra en los archivos
+kernel/mmu.c y kernel/mmu.h.
+
+Por casi toda la vida del núcleo el mmu fue el más simple posible. Preferí no
+agregar complicaciones al resto del kernel, que ya era suficientemente frágil.
+Luego la función new_page(), que devolvía una página libre, nunca liberaba
+páginas, siempre daba nuevas. El problema de esto era obvio, era un enorme
+memory leak en el sistema.
+
+Sin embargo cuando ya tenía un sistema funcionando me propuse a implementar una
+forma simple de manejo de memoria, donde los procesos manienen una lista de las
+páginas que utilizan (ya sea para codigo/datos/stack o para las PDT/PTT), y
+estas son liberadas cuando el proceso termina. Nuevamente se utilizo
+sys/queue.h para armar estas listas.
+
+Además se proveen las funciónes init\_directory(), que crea un PDT inicual que
+solo tiene identity mapping en los primeros 4mb (la parte del kernel), y dos
+funciones claves: map\_page() agrega en un PDT la transformación de una
+dirección virtual en una física, y unmap\_page() remueve esta transformación.
+Estas son las funciones utilizadas para armar el directorio de páginas de un
+proceso.
+
 \subsection{Teclado y Pantalla, o el driver tty}
+
+El problema de implementar un file system es que este no se puede ver. En otras
+palabras, su funcionamiento se ve através de las aplicaciónes que lo usan. Y de
+la misma manera, no podemos ver estas aplicaciones sin una manera de
+interactuar con la pantalla. Es por esto que programe un driver tty para manejo
+de pantalla y teclado.
+
+El código de este driver se encuentra en kernel/keyboardscreen.c y
+kernel/keyboardscreen.h.
+
+Para el manejo de la pantalla se utilizó el modo SVGA estandar de todas las
+computadoras x86. Escibiendo bytes de caracteres ASCII y colores en posiciones
+de la RAM de la placa de video mapeadas en la memoria principal (en la
+dirección 0xB8000), se logra imprimir caracteres en la pantalla. De esta manera
+cree la función print\_key() que recibe un caracter ascii y lo imprime en la
+pantalla.
+
+Para lograr esto es necesario mantener un cursor a la ultima posición escrita,
+de manera que el texto sea continuo. Además hay que tratar a algunos caracteres
+de manera especial, por ejemplo si recibimos el caracter '\textbackslash n',
+actualizamos el puntero para que apunte a la siguiente linea. En caso de que
+nos quedemos sin lineas, se copian todas un espacio hacia arriba para hacer
+lugar a una linea nueva. Todo esto es manejado por print\_key().
+
+Luego se provee una función print() que recibe una cadena de caracteres y los
+imprime en la pantalla, uno por uno utilizando print\_key().
+
+La forma en que trabajan las consolas es que toda tecla presionada en el
+teclado debe reproducirse en la pantalla. Recibimos las teclas como
+interrupciones, y las atendemos con la función keyboard. El problema es que el
+estandar de IBM hace que recibamos teclas en modo scancode y no ASCII. Para
+esto cuento con un arreglo que sirve de traductor, para cada posición devuelve
+el ASCII correspondiente a un scancode. Luego keyboard() simplemente hace esta
+conversión y se la envía a print\_key() que la replica en la pantalla.
+
+Además, para agraciar un poco más la pantalla, agregé el manejo del cursor.
+Esto requiere actualizar unos registros de I/O (0x3D4 y 0x3D5) cada vez que se
+quiere cambiar la posición del mismo. Esto está implementado en la función
+move\_cursor().
+
+Así logramos el manejo del texto en la pantalla, pero además necesitamos una
+manera de recordar las teclas ingresadas por el usuario para luego darselas a
+la aplicación que intente leer STDIN. De esta manera keyboard() guarda todas
+las teclas ingresadas en un arreglo que hace las veces de buffer. En este caso
+opté por un buffer circular para ahorrarme los problemas de quedarme sin
+espacio (aunque con el tamaño elegido no parece ocurrir nunca). Utilizo como
+separador la tecla '\textbackslash n', y cada ves que se pide leer STDIN, se
+lee una linea de este buffer. Esto se logra llamando a la función get\_line().
+
+El 'desafío' en esta sección fue responder a una llamada del tipo
+"read(STDIN\_FILENO, buf, len);" satisfactoriamente. A continuación detallo los
+pasos que sigue el kernel para responder esta syscall (de paso se ve el proceso
+de atención de cualquier system call):
+
+- El proceso ejecuta "read(STDIN\_FILENO, buf, len)", que consiste en poner los
+valores correspondientes en ebx, ecx y edx, poner el número de la system call
+en eax, y realizar un "int 0x80". Más sobre esto en la sección "Utilidades".
+
+- Se atiende la interrupción en kernel/isr.asm, en la etiqueda \_isr128 (128
+= 0x80). Esta función se encarga de guardar el valor de los registros, armar
+la pila con los parametros y llamar a la rutina de atención correspondiente
+al número ingresado en eax.
+
+- En este caso caemos en sys\_read(), que se encuentra en fs/fs.c. Esta función
+recobra el inodo correspondiente al descriptor de archivo ingresado
+(STDIN\_FILENO = 0, que es un fd inicializado cuando se creo el proceso,
+apuntando al inodo /dev/stdin). Se pregunta si el inodo corresponde a un
+dispositivo de caracteres, que resulta ser verdadero en este caso, y en
+consecuencia llama a dev\_io(), la función que hace I/O de dispositivos.
+
+- dev\_io() se encuentra en kernel/dev.c. Actualmente esta función solo atiende
+peticiones para STDIN, STDOUT ó STDERR (aunque debería ser genérica y atender
+cualquier dispositivo de entrada/salida). En este caso el dispositivo es STDIN,
+y como se pide leer del mismo, se llama a la función block\_process().
+
+- block\_process() se encuentra en kernel/sched.c, proceso se bloquea en este
+punto, esperando la respuesta del teclado. Esto simplemente significa remover
+al processo de la lista ready, agregarlo a la lista wait, y llamar a schedule()
+para dar lugar a otro proceso. En nuestro sistema esto probablemente significa
+que pasamos al estado idle.
+
+- El proceso se mantiene bloqueado, hasta que por el teclado es enviada la
+tecla '\textbackslash n' (el enter). Esta es nuestra señal para enviar los
+datos al proceso que los pidio. Por ende la función keyboard() (que es la
+que recibió la interrupcion con el '\textbackslash n' del teclado) llama a
+unblock\_process(), que desbloquea al primer proceso que estuviese esperando
+un dispositivo, en este caso el teclado.
+
+- unblock\_process() tambien se encuentra en kernel/sched.c, busca en la lista
+de procesos bloqueados el primero correspondiente al dispositivo en cuestion
+(el teclado), y lo agrega nuevamente a la lista ready. Luego sigue la ejecución
+del proceso que fue interrumpido por el teclado.
+
+- Llega el momento en que el scheduler programa nuevamente al proceso que
+inició la llamada read(). Este vuelve al punto en donde se bloqueo, es decir en
+dev\_io(). La siguiente linea luego de la llamada block\_process() es una
+llamada a get\_line(), que esta garantizada que funcionará ya que fuimos
+despertados por el teclado por esta razón. Luego se llena el buffer con lo
+recibido por la consola, se recobra el estado de los registros y se realiza el
+anticipado iret de \_isr128().
+
+Esto concluye la atención a esta llamada al sistema. Se verá más adelante como
+es utilizada, en especial por "cash", la shell que creé para utilizar el
+sistema.
 
 \subsection{Resultado}
