@@ -4,11 +4,11 @@ El kernel o nucleo con el que contamos es muy limitado, únicamente se encarga d
 inicializar un sistema x86, setea ciertas estructuras necesarias para iniciar la
 ejecución de aplicaciones, y finaliza su ejecución.
 
-Las partes más importantes y desarrolladas de este kernel son el scheduler y la
+Las partes más importantes y desarrolladas de este kernel son el scheduler, la
 atención de algunas interrupciones de usuario que conforman la interfaz del
-núcleo con el resto del sistema.
+núcleo con el resto del sistema, y el manejo del teclado/pantalla.
 
-Esta interfaz esta basada en el estandar de POSIX y implementa llamadas como
+La interfaz esta basada en el estandar de POSIX y implementa llamadas como
 open/close/read/write etc., y de esta manera provee a las aplicaciones de
 herramientas para crear nuevos procesos, leer y modificar archivos, terminar
 la ejecución y demás. Estas rutinas estan implementadas en distintos lugares
@@ -21,9 +21,6 @@ y remover procesos de la lista de ejecución, y se encarga de alternar los mismo
 en el procesador para generar la ilución de multiprogramación. El algoritmo que
 elegí para desarrollarlo fue el round-robin, que tiene como ventajas su simpleza
 y escases de problemas graves como starvation.
-
-Además, el nucleo cuenta con manejo simple del teclado y video para poder
-interactuar con las aplicaciones en el sistema.
 
 Por supuesto el sistema no cuenta con una biblioteca estandar de C
 (implementaciones de la misma como glibc hacen \_extensivo\_ uso de todas las
