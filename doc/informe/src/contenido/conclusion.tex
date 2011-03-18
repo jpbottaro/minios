@@ -1,1 +1,58 @@
-COMPLETAR
+Es muy satisfactorio ver por primera vez la consola funcionar, enviarle
+mensajes y recibir las respuestas esperadas. Más aún cuando se conocen todas
+las complicaciones y ramificaciones que se disparan en cada comando.
+
+La primer conclusión que me gustaría compartir es más bien una crítica.
+Habiendo trabajado extensivamente con la arquitectura x86, es muy difícil que
+uno quede conforme con la misma. Creo que esta necesidad que se ha impuesto de
+mantener la compatibilidad hacia atrás ha perjudicado mucho el diseño de los
+sitemas modernos, y x86 es un ejemplo de esto. Cosas como el modo
+real/protegido no tienen más sentido y simplemente agregan complejidad y
+dificultades al programador de sistema. Lo mismo puede decirse de la
+segmentación, un modelo que no es utilizado por ninguno de los SO en la
+actualidad, pero aún hay que cargarlo y mantenerlo constantemente. Es una
+lástima que proyectos como Itanium que justamente intentaron curar estos
+problemas no hayan sido exitosos.
+
+A la hora de tener que programar en tan bajo nivel, es claro que es necesario
+tener mucha más atención al detalle. Tener un bit en 1 ó en 0 puede significar
+que el sistema bootee perfectamente o que no haga nada. Esto no es un problema
+tan grande en aplicaciones de usuario ya que estas pueden ser debuggeadas y
+estos errores corregidos con cierta eficacia. Sin embargo es muy difícil
+diagnosticar problemas en el sistema operativo, no contamos con tantas
+herramientas como para darnos cuenta cual es el inconveniente y muchas veces el
+proceso se reduce a colocar mensajes en lugares claves, y pensar mucho. El
+procesador a veces puede no ser nada descriptivo sobre el error, o podemos
+estar en una etapa del booteo donde no podemos ni escribir información en la
+pantalla para intentar entender la situación.
+
+En un principio, cuando todavía no pretendía bootear el kernel y solo me
+preocupaba por que el código compile y sea limpio, el desarrollo fue muy ágil.
+Esto me engaño en pensar que el proyecto no iba a ser demasiado extenso. Sin
+embargo, como en todo sistema de software, a la hora de pegar todos los
+distintos componentes y ver que nada funcionaba al l00\%, fue obvio que me
+esperaba la parte más dificil. Le dio un nuevo significado a la frase de Tom
+Cargill: "The first 90 percent of the code accounts for the first 90 percent
+of the development time... The remaining 10 percent of the code accounts for the
+other 90 percent of the development time." Creo que esto es más que cierto para
+programadores de sistemas en bajo nivel.
+
+Los manuales de intel fueron indispensables en todo el proceso. Si bien se les
+puede criticar seriamente muchas de las desiciones sobre la arquitectura o
+manejo de sus procesadores (A20 te estoy mirando a vos), la documentación de
+los mismos es excepcional, estan muy bien organizados y logran responder a casi
+todas las dudas que pueden surgir. Esto es muy meritorio considerando que la
+docuementación suele no ser el punto fuerte de la mayoría de los proyectos de
+software.
+
+Como último punto, quiero remarcar a algunas de las fuentes en las que me apoyé
+para realizar todo este desarrollo. La página osdev.org que contiene lindas
+wikis y un foro muy activo con gente dispuesta a responder cualquier pregunta.
+A los libros "Operating Systems: Desing and Implementation" de Tanenbaum y
+"Operating Systems Concepts" de Silberschatz, Galvin y Gagne, que utilicé
+para aprender y construir este mini SO. El código de linux, en donde conseguí
+autoresponderme preguntas sobre las estructuras en su implementación del fs
+Minix. Pero por sobre todo al SO Minix, que me sirvió como referencia a la hora
+de tomar decisiones del núcleo y fs, y aunque por motivos de simplicidad esta
+kernel terminó siendo monolítica, lo tuve siempre como objetivo a alcanzar (en
+especial en la implementacion del MinixFS).
