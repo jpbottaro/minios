@@ -121,7 +121,7 @@ Esto concluye la carga de un programa y este se encuentra listo para ejecución.
 El armado del PDT tiene un par de etapas, y es necesario saber algunas reglas
 que decidí para construirlo. Primero en principal, todo el código se carga a
 partir de la dirección 0x400000, es decir se copia el codigo en una serie de
-páginas que pueden estar fisicamente en cualquier lado, pero que deben mapearse
+páginas que pueden estar físicamente en cualquier lado, pero que deben mapearse
 en orden a partir de esta dirección. Esto evita tener que responder Page Faults
 (todo se copia de antemano). Luego la stack esta mapeada en la última posición
 posible, es decir la 0xFFFFF000, y le sigue la stack del kernel (necesaria para
@@ -185,7 +185,7 @@ kernel/mmu.c y kernel/mmu.h.
 
 Por casi toda la vida del núcleo el mmu fue el más simple posible. Preferí no
 agregar complicaciones al resto del kernel, que ya era suficientemente frágil.
-Luego la función new_page(), que devolvía una página libre, nunca liberaba
+Luego la función new\_page(), que devolvía una página libre, nunca liberaba
 páginas, siempre daba nuevas. El problema de esto era obvio, era un enorme
 memory leak en el sistema.
 
@@ -224,7 +224,7 @@ Para lograr esto es necesario mantener un cursor a la ultima posición escrita,
 de manera que el texto sea continuo. Además hay que tratar a algunos caracteres
 de manera especial, por ejemplo si recibimos el caracter '\textbackslash n',
 actualizamos el puntero para que apunte a la siguiente linea. En caso de que
-nos quedemos sin lineas, se copian todas un espacio hacia arriba para hacer
+nos quedemos sin lineas, se copian todas un linea hacia arriba para hacer
 lugar a una linea nueva. Todo esto es manejado por print\_key().
 
 Luego se provee una función print() que recibe una cadena de caracteres y los
@@ -232,7 +232,7 @@ imprime en la pantalla, uno por uno utilizando print\_key().
 
 La forma en que trabajan las consolas es que toda tecla presionada en el
 teclado debe reproducirse en la pantalla. Recibimos las teclas como
-interrupciones, y las atendemos con la función keyboard. El problema es que el
+interrupciones, y las atendemos con la función keyboard(). El problema es que el
 estandar de IBM hace que recibamos teclas en modo scancode y no ASCII. Para
 esto cuento con un arreglo que sirve de traductor, para cada posición devuelve
 el ASCII correspondiente a un scancode. Luego keyboard() simplemente hace esta
@@ -252,10 +252,13 @@ espacio (aunque con el tamaño elegido no parece ocurrir nunca). Utilizo como
 separador la tecla '\textbackslash n', y cada ves que se pide leer STDIN, se
 lee una linea de este buffer. Esto se logra llamando a la función get\_line().
 
-El 'desafío' en esta sección fue responder a una llamada del tipo
-"read(STDIN\_FILENO, buf, len);" satisfactoriamente. A continuación detallo los
-pasos que sigue el kernel para responder esta syscall (de paso se ve el proceso
-de atención de cualquier system call):
+\subsection{Resultado}
+
+El 'desafío' en esta sección es responder a una llamada del tipo
+"read(STDIN\_FILENO, buf, len)" satisfactoriamente. De esta manera se podrán
+ver muchos de los mecanismos que se describieron anteriormente. A continuación
+detallo los pasos que sigue el kernel para responder esta syscall (de paso se
+ve el proceso de atención de cualquier system call):
 
 - El proceso ejecuta "read(STDIN\_FILENO, buf, len)", que consiste en poner los
 valores correspondientes en ebx, ecx y edx, poner el número de la system call
@@ -279,10 +282,10 @@ cualquier dispositivo de entrada/salida). En este caso el dispositivo es STDIN,
 y como se pide leer del mismo, se llama a la función block\_process().
 
 - block\_process() se encuentra en kernel/sched.c, proceso se bloquea en este
-punto, esperando la respuesta del teclado. Esto simplemente significa remover
-al processo de la lista ready, agregarlo a la lista wait, y llamar a schedule()
-para dar lugar a otro proceso. En nuestro sistema esto probablemente significa
-que pasamos al estado idle.
+punto, esperando la respuesta del dispositivo en cuestion (el teclado). Esto
+simplemente significa remover al processo de la lista ready, agregarlo a la
+lista wait, y llamar a schedule() para dar lugar a otro proceso. En nuestro
+sistema esto probablemente significa que pasamos al estado idle.
 
 - El proceso se mantiene bloqueado, hasta que por el teclado es enviada la
 tecla '\textbackslash n' (el enter). Esta es nuestra señal para enviar los
@@ -293,8 +296,8 @@ un dispositivo, en este caso el teclado.
 
 - unblock\_process() tambien se encuentra en kernel/sched.c, busca en la lista
 de procesos bloqueados el primero correspondiente al dispositivo en cuestion
-(el teclado), y lo agrega nuevamente a la lista ready. Luego sigue la ejecución
-del proceso que fue interrumpido por el teclado.
+, y lo agrega nuevamente a la lista ready. Luego sigue la ejecución del proceso
+que fue interrumpido por el teclado.
 
 - Llega el momento en que el scheduler programa nuevamente al proceso que
 inició la llamada read(). Este vuelve al punto en donde se bloqueo, es decir en
@@ -304,8 +307,11 @@ despertados por el teclado por esta razón. Luego se llena el buffer con lo
 recibido por la consola, se recobra el estado de los registros y se realiza el
 anticipado iret de \_isr128().
 
-Esto concluye la atención a esta llamada al sistema. Se verá más adelante como
-es utilizada, en especial por "cash", la shell que creé para utilizar el
-sistema.
+Esto concluye la atención a esta llamada al sistema.
 
-\subsection{Resultado}
+Resumiendo, el kernel realiza en el booteo la inicialización de los siguiente
+componentes en orden (ver kernel/kernel.asm): A20, GDT, IDT, Modo Protegido,
+System calls, MMU, Paginación, Clock, File System, Scheduler y habilita
+interrupciones. Antes de habilitar interrupciones se agrega a la lista ready un
+proceso "cash" (crappy *** shell), la shell que termina manejando el hilo de
+ejecución. Luego el sistema esta en manos del usuario.
