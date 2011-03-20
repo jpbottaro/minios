@@ -5,7 +5,7 @@ FS y las utilidades.
 
 El kernel está basado en el utilizado en la cursada de Organización del
 Computador 2, 2do cuatrimestre del 2010. En este sistema armamos las
-estructuras necesarias para botear un sistema en modo protegido con paginación.
+estructuras necesarias para bootear un sistema en modo protegido con paginación.
 Esto incluye un bootloader que carge la imagen, el manejo del A20, y llenado de
 GDT/IDT/TSS etc. Esto permitía manejo de interrupciones y dio lugar a un simple
 scheduler que daba una forma primitiva de multiprogramación.
@@ -64,7 +64,7 @@ existía un set de funciones básicas que eran útiles en muchas parte del códi
 En su gran mayoría estas funciones eran imitaciones de aquellas en la
 biblioteca estándar de C.
 
-Es por esto que agrege el build la carpeta lib/, que contiene los archivos
+Es por esto que agregé al build la carpeta lib/, que contiene los archivos
 lib/misc.c y lib/misc.h. Aquí implementé algunas de las funciones de libc que
 necesitaba en más de un lugar, y eran lo suficientemente genéricas como para
 que se puedan reutilizar. Decidí mantenerles el nombre que tienen en libc,
@@ -107,10 +107,8 @@ consola para esperar a que un comando enviado termine de ejecutarse. Logra esto
 removiendo al proceso de la lista del scheduler, y apuntando en su estructura
 al proceso que espera que termine. Lo despierta exit(). La forma de encontrar
 al procesos hijo por su pid es mediante la función find\_pid(), que recorre la
-lista de procesos buscando el deseado (lo realiza con fuerza bruta, "A brute
-force solucion that works is better than an elegant one solution that does't
-work" - Steve McConnell, aunque también puedo traer a Ken Thompson para
-defenderme, When in doubt...).
+lista de procesos buscando el deseado (recordando a Ken Thompson, uno de los
+padres de Unix, When in doubt...).
 
 getpid() simplemente devuelve el pid de la estructura "ps".
 
@@ -129,24 +127,24 @@ execv() y se logra la compatibilidad.
 newprocess() es la llamada más complicada del manejo de procesos, y consiste en
 los siguientes pasos:
 
-- se consigue una entrada libre en el arreglo "ps"
+- consiguir una entrada libre en el arreglo "ps"
 
-- se busca en el sistema de archivos el inodo correspondiente al path pedido
+- buscar en el sistema de archivos el inodo correspondiente al path pedido
 por el usuario
 
-- se inicializa la estructura process\_state\_s con datos como pid/uid/gid,
+- inicializar la estructura process\_state\_s con datos como pid/uid/gid,
 parent, se inicializan los file descriptors del proceso y la lista de páginas
 utilizadas (todavía ninguna).
 
-- se arma el nuevo directorio de páginas o PDT del proceso. Esto implica armar
+- armar el nuevo directorio de páginas o PDT del proceso. Esto implica armar
 un PDT con los primeros 4mb con identity mapping (para el kernel). Además se
 arman todas las páginas de código/stack/argumentos necesarios, ver más abajo
 para la explicación.
 
-- se llena la entrada correspondiente en la tss para el proceso con esta nueva
+- llenar la entrada correspondiente en la tss para el proceso con esta nueva
 PDT
 
-- se agrega el proceso a la lista ready del scheduler
+- agregar el proceso a la lista ready del scheduler
 
 Esto concluye la carga de un programa y este se encuentra listo para ejecución.
 
@@ -192,7 +190,7 @@ necesarias para la programación de tareas (ready/waiting), inicializa los tss,
 y crea la tarea idle, que será ejecutada siempre que la lista ready este vacía.
 
 schedule() es la función más importante, es llamada siempre que ocurre la
-interrupción del clock y se encarga de decidir cual es el siguiente proceso a
+interrupción del clock y se encarga de decidir cuál es el siguiente proceso a
 ser ejecutado. Para simplificar la lógica de la misma decidí implementar la
 lista de procesos listos como una circular, eligiendo efectivamente el método
 round-robin para el scheduler. Esta función luego se fija si hay procesos
@@ -227,7 +225,7 @@ páginas que utilizan (ya sea para codigo/datos/stack o para las PDT/PTT), y
 estas son liberadas cuando el proceso termina. Nuevamente se utilizo
 sys/queue.h para armar estas listas.
 
-Además se proveen las funciónes init\_directory(), que crea un PDT inicual que
+Además se proveen las funciónes init\_directory(), que crea un PDT inicial que
 solo tiene identity mapping en los primeros 4mb (la parte del kernel), y dos
 funciones claves: map\_page() agrega en un PDT la transformación de una
 dirección virtual en una física, y unmap\_page() remueve esta transformación.
@@ -333,8 +331,8 @@ unblock\_process(), que desbloquea al primer proceso que estuviese esperando
 un dispositivo, en este caso el teclado.
 
 - unblock\_process() tambien se encuentra en kernel/sched.c, busca en la lista
-de procesos bloqueados el primero correspondiente al dispositivo en cuestion
-, y lo agrega nuevamente a la lista ready. Luego sigue la ejecución del proceso
+de procesos bloqueados el primero correspondiente al dispositivo en cuestion,
+y lo agrega nuevamente a la lista ready. Luego sigue la ejecución del proceso
 que fue interrumpido por el teclado.
 
 - Llega el momento en que el scheduler programa nuevamente al proceso que

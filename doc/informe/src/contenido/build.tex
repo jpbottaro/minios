@@ -32,7 +32,7 @@ interrupciones y hasta el scheduler)
 
 - lib: funciones varias de uso en general (ej mystrncpy, mystrncmp, etc)
 
-Cada directorio con algo código contiene su propio makefile que se
+Cada directorio con algo de código contiene su propio makefile que se
 encarga de compilar y armar todo lo que le corresponde. Luego en la carpeta
 'bin' se encuentra el makefile central que se encarga de llamar a todos los
 makefiles de las subcarpetas y linkear el kernel, finalizando con el armado del
@@ -42,7 +42,7 @@ Como el makefile central no sabe que es lo que hace cada sub-makefile (a
 propósito), y más importante no sabe que archivos objeto crean, cada
 sub-makefile se encarga de crear un archivo especial que especifica que es lo
 que crea (que denomine 'depend'). El central simplemente lee este archivo por
-cada sub-makefile y agrupa todos los archivos objeto para enviarselos al liker.
+cada sub-makefile y agrupa todos los archivos objeto para enviarselos al linker.
 
 De esta manera agregar algún nuevo componente al sistema es mucho más cómodo,
 solo es necesario avisarle al makefile central de la nueva carpeta, y luego
@@ -50,6 +50,13 @@ ocuparse de crear el sub-makefile únicamente para el nuevo código, sin tener q
 modificar nada del resto del sistema. Es una manera modular de construir el
 kernel, evitandose tener un mega-makefile complicado que este constantemente
 cambiando, siendo difícil entenderlo y editarlo.
+
+Como es costumbre en la mayoría de los proyectos de SO, se expone la carpeta
+include/ con muchos de los headers de los distintos componentes del núcleo. En
+particular se tiene include/minikernel/, que contiene las definiciones de
+estructuras, signaturas y algunos macros que deben ser accesibles desde más de
+1 componente (en nuestro caso es más bien para la interoperabilidad entre el
+kernel y el fs).
 
 Otro detalle del código es el idioma. En la actualidad el idioma predominante
 para desarrollar es obviamente el inglés, y cualquier aplicación que uno quiere
@@ -60,7 +67,7 @@ castellano al inglés, para mantener una consistencia con todo el projecto.
 
 Por último, si el lector se encuentra interesado en el ambiente de programación
 que se utilizo, la edición fue hecha exclusivamente con gvim/vim, la compilación
-con gcc/ld, como se explicó recien todo se pega con make, y para testear el
+con nasm/gcc/ld, como se explicó recien todo se pega con make, y para testear el
 sistema se utilizó la máquina virtual bochs. Si bien al principio el desarrollo
 fue todo local, cuando la base del código ya estaba ordenada la manejé con git,
 manteniendo una copia del repositorio en assembla.com (privado ya que el código
