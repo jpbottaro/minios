@@ -292,6 +292,12 @@ ver muchos de los mecanismos que se describieron anteriormente. A continuación
 detallo los pasos que sigue el kernel para responder esta syscall (de paso se
 ve el proceso de atención de cualquier system call):
 
+
+\begin{center}
+\includegraphics[scale=0.5]{../img/syscall.png}
+\end{center}
+
+
 - El proceso ejecuta "read(STDIN\_FILENO, buf, len)", que consiste en poner los
 valores correspondientes en ebx, ecx y edx, poner el número de la system call
 en eax, y realizar un "int 0x80". Más sobre esto en la sección "Utilidades".
