@@ -36,13 +36,13 @@ struct process_state_s {
     /* dev io data */
     unsigned int dev;
 
-    /* scheduler ready list */
+    /* scheduler ready list pointers */
     CIRCLEQ_ENTRY(process_state_s) ready;
 
-    /* scheduler waiting list */
+    /* scheduler waiting list pointers */
     LIST_ENTRY(process_state_s) wait;
 
-    /* unused list */
+    /* unused list pointers */
     LIST_ENTRY(process_state_s) unused;
 
     /* list of used pages */
