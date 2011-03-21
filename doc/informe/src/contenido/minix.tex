@@ -76,7 +76,7 @@ la distribución de la información en el bloque:
 La mayoría de los campos son suficientemente descriptivos como para explicarlos,
 basta con afirmar que los únicos que no utilizamos son "FS sub-version" que no
 juega ningun papel en la versión 2 de mfs, y "$Log_2 (block/zone)$" ya que no
-hacemos distinciones entre zonas y bloques (este valore debe ser 0).
+hacemos distinciones entre zonas y bloques (este valor debe ser 0).
 
 Todo el código de manejo del sb se encuentra en los archivos fs/super.c y
 fs/super.h.
@@ -151,7 +151,7 @@ necesario mirar a su inodo, éste tiene toda la información necesaria para
 leerlo. Esto es una mejora substancial comparado con sistemas del tipo FAT, que
 requieren de una tabla aparte con la información de todos los archivos. En este
 último caso una tabla de este estilo sería enorme para los tamaños de los discos
-en la actualidad, y ocuparia varios Mbyes en memoria constantemente. En cambio
+en la actualidad, y ocuparía varios Mbyes en memoria constantemente. En cambio
 con inodos solo es necesario mantener en memoria aquellos que se encuentran
 actualmente en uso, aprovechando mejor los recursos.
 
@@ -185,7 +185,7 @@ el siguiente gráfico:
 \includegraphics[scale=0.5]{../img/inode_links.png}
 \end{center}
 
-De esta manera se logra expandir el limite del tamaño de un archivo los
+De esta manera se logra expandir el límite del tamaño de un archivo los
 suficiente como para que no sea un problema. En el caso de mfs los bloques
 triple indirectos no son utilizados, pero el espacio en el inodo existe por si
 fueran a ser necesarios en el futuro.
@@ -233,7 +233,7 @@ La manera en que el código recorre las entradas del directorio es mediante la
 función read\_map(), que dado una posición de un archivo/carpeta, devuelve el
 bloque en que se encuentra (es decir, resuelve bloques
 directos/indirectos/etc.); esta es utilizada por next\_entry() para recorrer
-loss bloques del directorio. Así vamos bloque por bloque recorriendo
+los bloques del directorio. Así vamos bloque por bloque recorriendo
 todas las entradas, comparando una por una con la función
 mystrncmp (una imitación de strncmp de la biblioteca estandar, recordar que no
 contamos con ninguna de estas funciones). En el caso de que no se encuentre la
@@ -305,8 +305,8 @@ rápidamente me di cuenta que el código entre ellas era muy similar, por lo que
 decidí separarlo en la función fs\_readwrite(). Esta se encarga de leer o
 escribir un archivo, dependiendo de la flag que se le provee. Hace algunos
 checkeos importantes (como por ejemplo fijarse si el archivo no es un
-dispositivo de caracteres), y luego llama a copy\_file que realiza el trabajo
-duro:
+dispositivo de caracteres), y luego llama a copy\_file() que realiza el
+trabajo duro:
 
 \begin{verbatim}
 while (n > 0) {
