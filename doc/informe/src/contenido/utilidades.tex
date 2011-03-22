@@ -58,7 +58,8 @@ proceso con la aplicación deseada. La primera opción por ejemplo ocurre cuando
 se ejecuta el comando "cd". Esto implica realizar la llamada al sistema chdir()
 para cambiar el directorio actual, pero también requiere que se actualize el
 texto del directorio actual que se le presenta al usuario (esto se encuentra en
-la función updatepwd()).
+la función updatepwd()). Todo este manejo de comandos es realizado en la
+función execute().
 
 La segunda opción es más simple, solo requiere que se ejecute la llamada
 newprocess() con el programa y sus argumentos, y luego se bloquee esperando la
