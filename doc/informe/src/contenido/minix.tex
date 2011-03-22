@@ -2,7 +2,7 @@ El sistema de archivos conforma el componente más trabajado de este núcleo. Co
 ya fue explicado, elegí implementar el sistema de archivos MinixFS V2. A
 continuación daré una explicación a grandes razgos de todos las características
 de este FS (la mayor parte de este explicación esta basada en el libro de
-Tanenbaum REFERENCIAAA, capítulo 5)
+Tanenbaum "Operating Systems: Design and Implementation", capítulo 5)
 
 Comenzaré contando un poco la organización y distribución de la información en
 minix, el superblock y manejo de blockes, poniendo la mayor atención en la idea
@@ -163,7 +163,7 @@ mfs (similar a los inodos en ext2 o cualquier otro fs tipo unix):
 \end{center}
 
 Esta imagen (al igual que el resto de las utilizadas en esta sección MinixFS)
-fue tomada del libro de Tanembaum REFERENCIA, y contiene descripciones de los
+fue tomada del libro de Tanembaum, y contiene descripciones de los
 campos que conforman el inodo: 'mode' que nos da el tipo de archivo y sus
 atributos de lectura/escritura/ejecución; 'links' nos dice cuantos directorios
 contienen al archivo (es decir cuantos 'hard links' existen); 'uid/gid' el dueño
