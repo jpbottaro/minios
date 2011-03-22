@@ -1,4 +1,5 @@
 #include <minikernel/misc.h>
+#include <minikernel/panic.h>
 #include "sched.h"
 #include "tss.h"
 #include "mmu.h"
@@ -223,7 +224,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     /* get process entry for child */
     process = LIST_FIRST(&unused_list);
     if (process == NULL)
-        return -1;
+        panic("No space for new process in ps array!");
 
     curr_dir = (current_process == NULL) ? 1 : current_process->curr_dir;
 
