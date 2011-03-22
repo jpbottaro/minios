@@ -263,7 +263,8 @@ int sys_rename(const char *oldpath, const char *newpath)
 
     /* new entry in the last directory of path (or old one if file exists) */
     if ( (dentry = search_inode(last_dir, name)) == NULL)
-        return ERROR;
+        if ( (dentry = empty_entry(last_dir)) == NULL)
+            return ERROR;
 
     /* error if file is actually a dir */
     if (dentry->num != 0 && IS_DIR(get_inode(dentry->num)->i_mode))
