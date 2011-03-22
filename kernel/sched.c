@@ -36,6 +36,7 @@ void init_timer(unsigned int frequency)
    outb(0x40, h);
 }
 
+/* intialize scheduler, must be called before any function */
 void init_scheduler()
 {
     int i;
@@ -69,6 +70,7 @@ void init_scheduler()
     pid = 2;
 }
 
+/* unblock first process waiting for 'dev' */
 void unblock_process(unsigned int dev)
 {
     struct process_state_s *process;
@@ -85,6 +87,7 @@ void unblock_process(unsigned int dev)
     }
 }
 
+/* block a process waiting for device 'dev' */
 void block_process(struct process_state_s *process, unsigned int dev)
 {
     /* remove from list */
@@ -101,6 +104,7 @@ void block_process(struct process_state_s *process, unsigned int dev)
     }
 }
 
+/* schedule next ready process (or go idle if no procesess ready) */
 void schedule()
 {
     struct process_state_s *process;
@@ -170,6 +174,7 @@ struct process_state_s *find_pid(pid_t pid)
     return NULL;
 }
 
+/* block process until child with 'pid' exits; return its value in status */
 pid_t sys_waitpid(pid_t pid, int *status, int options)
 {
     struct process_state_s *process;
@@ -204,6 +209,9 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
     return current_process->child_pid;
 }
 
+/* create a new process, with binary filename, and arguments argv.
+ * this is a merge of fork() and execv()
+ */
 pid_t sys_newprocess(const char *filename, char *const argv[])
 {
     unsigned int i, j, size, page, stack, dirbase;
@@ -303,6 +311,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     return process->pid;
 }
 
+/* get current process' pid */
 pid_t sys_getpid(void)
 {
     return current_process->pid;
