@@ -91,10 +91,52 @@ estructura contiene información como el pid/uid/gid del proceso, un puntero al
 padre, la información del fs (directorio actual, descriptores de archivo
 abiertos, etc), una serie de entradas de manejo de listas, y una lista de
 páginas utilizadas. Toda esta información, más el estado del proceso guardado
-en su respectivo TSS, define el estado de cualquier proceso en el sistema.
+en su respectivo TSS, define el estado de cualquier proceso en el sistema:
 
-Aquí son definidas los handlers de todas las llamadas al sistema que manejan
-procesos. Estas incluyen exit()/waitpid()/getpid() entre otras.
+\begin{verbatim}
+struct process_state_s {
+    /* number */
+    int i;
+
+    /* process id */
+    pid_t pid;
+
+    /* parent */
+    struct process_state_s *parent;
+
+    /* process owner's uid and gid */
+    pid_t uid;
+    pid_t gid;
+
+    /* data to keep track of waitpid sys call */
+    struct process_state_s *waiting;
+    int *status;
+    pid_t child_pid;
+
+    /* fs data */
+    struct unused_fd_t unused_fd;
+    struct file_s files[MAX_FILES];
+    unsigned int curr_dir;
+
+    /* dev io data */
+    unsigned int dev;
+
+    /* scheduler ready list pointers */
+    CIRCLEQ_ENTRY(process_state_s) ready;
+
+    /* scheduler waiting list pointers */
+    LIST_ENTRY(process_state_s) wait;
+
+    /* unused list pointers */
+    LIST_ENTRY(process_state_s) unused;
+
+    /* list of used pages */
+    LIST_HEAD(pages_list_t, page_s) pages_list;
+} __attribute__((__packed__)) ;
+\end{verbatim}
+
+En este archivo son definidas los handlers de todas las llamadas al sistema
+que manejan procesos. Estas incluyen exit()/waitpid()/getpid() entre otras.
 
 La llamada exit() se encarga de liberar todas las páginas pedidas por el
 proceso, removerlo de la lista de procesos listos del scheduler, despertar al
@@ -189,13 +231,44 @@ iterrupciones en el sistema. Esta se encarga de inicializar las listas
 necesarias para la programación de tareas (ready/waiting), inicializa los tss,
 y crea la tarea idle, que será ejecutada siempre que la lista ready este vacía.
 
-schedule() es la función más importante, es llamada siempre que ocurre la
-interrupción del clock y se encarga de decidir cuál es el siguiente proceso a
-ser ejecutado. Para simplificar la lógica de la misma decidí implementar la
-lista de procesos listos como una circular, eligiendo efectivamente el método
-round-robin para el scheduler. Esta función luego se fija si hay procesos
-listos, y en caso de haberlos los ejecuta uno por uno. En caso contrario vuelve
-al estado idle. Todo es logrado con sys/queue.h.
+schedule() es la función más importante en el scheduler, es llamada siempre
+que ocurre la interrupción del clock y se encarga de decidir cuál es el
+siguiente proceso a ser ejecutado. Para simplificar la lógica de la misma
+decidí implementar la lista de procesos listos como una circular, eligiendo
+efectivamente el método round-robin para el scheduler. Esta función luego se
+fija si hay procesos listos, y en caso de haberlos los ejecuta uno por uno. En
+caso contrario vuelve al estado idle. Todo es logrado con sys/queue.h.
+Básicamente hay 3 posibilidades, que se pida un cambio de contexto (que en
+nuestro sistema es inferido por current\_process siendo NULL), que no halla
+procesos para ser ejecutados, o que haya más de uno (current\_process denota el
+proceso que se esta ejecutando actualmente, el que fue interrumpido):
+
+\begin{verbatim}
+/* no process running */
+if (current_process == NULL) {
+    /* if any process ready then execute, otherwise go idle */
+    if (!CIRCLEQ_EMPTY(&ready_list)) {
+        process = CIRCLEQ_FIRST(&ready_list);
+        current_process = process;
+        load_process(process->i);
+    } else {
+        current_process = IDLE;
+        load_process(1);
+    }
+/* if we are idle, check for new processes */
+} else if (current_process == IDLE) {
+    if (!CIRCLEQ_EMPTY(&ready_list)) {
+        process = CIRCLEQ_FIRST(&ready_list);
+        current_process = process;
+        load_process(process->i);
+    }
+/* if there are more than 1 process ready */
+} else if (CIRCLEQ_NEXT(current_process, ready) !=
+           CIRCLEQ_PREV(current_process, ready)) {
+    current_process = CIRCLEQ_NEXT(current_process, ready);
+    load_process(current_process->i);
+}
+\end{verbatim}
 
 Por último las funciones block/unblock\_process() fueron creadas para bloquear
 procesos en espera de dispositivos. Como ya fue explicado no se hace uso de
@@ -223,7 +296,9 @@ Sin embargo cuando ya tenía un sistema funcionando me propuse a implementar una
 forma simple de manejo de memoria, donde los procesos manienen una lista de las
 páginas que utilizan (ya sea para codigo/datos/stack o para las PDT/PTT), y
 estas son liberadas cuando el proceso termina. Nuevamente se utilizo
-sys/queue.h para armar estas listas.
+sys/queue.h para armar estas listas. La función new\_page() recibe el número de
+proceso pidiendo la página, y la agrega a su lista de páginas usadas (en el
+arreglo de process\_state\_s).
 
 Además se proveen las funciónes init\_directory(), que crea un PDT inicial que
 solo tiene identity mapping en los primeros 4mb (la parte del kernel), y dos
@@ -250,12 +325,57 @@ dirección 0xB8000), se logra imprimir caracteres en la pantalla. De esta manera
 cree la función print\_key() que recibe un caracter ascii y lo imprime en la
 pantalla.
 
-Para lograr esto es necesario mantener un cursor a la ultima posición escrita,
+Para lograr esto es necesario mantener un cursor a la última posición escrita,
 de manera que el texto sea continuo. Además hay que tratar a algunos caracteres
 de manera especial, por ejemplo si recibimos el caracter '\textbackslash n',
 actualizamos el puntero para que apunte a la siguiente linea. En caso de que
 nos quedemos sin lineas, se copian todas un linea hacia arriba para hacer
 lugar a una linea nueva. Todo esto es manejado por print\_key().
+
+Además, para agraciar un poco más la pantalla, agregé el manejo del cursor.
+Esto requiere actualizar unos registros de I/O (0x3D4 y 0x3D5) cada vez que se
+quiere cambiar la posición del mismo. Esto está implementado en la función
+move\_cursor(). Uniendo todo esto tenemos (vram apunta a 0xB8000):
+
+\begin{verbatim}
+void print_key(char key)
+{
+    switch (key) {
+        case '\n':
+            x = xlimit = 0;
+            if (y == 24)
+                scroll_up_vram();
+            else
+                y++;
+            break;
+        case '\b':
+            if (x > xlimit) {
+                x--;
+                (*vram)[y][x].letter = 0;
+            }
+            break;
+        case '\t':
+            key = ' ';
+        default:
+            (*vram)[y][x].letter = key;
+            (*vram)[y][x].color = WHITE;
+            x++;
+            if (x == 80) {
+                x = xlimit = 0;
+                if (y == 24)
+                    scroll_up_vram();
+                else
+                    y++;
+            }
+    }
+    move_cursor(x, y);
+}
+\end{verbatim}
+
+En el código, x e y dan la posicion actual del puntero, y xlimit es una manera
+de marcar el último lugar en la linea actual que puede ser borrado. Esto es
+para evitar por ejemplo en la consola que el usuario borre el PS1, solo puede
+borrarse lo que se ingresó por el teclado.
 
 Luego se provee una función print() que recibe una cadena de caracteres y los
 imprime en la pantalla, uno por uno utilizando print\_key().
@@ -267,11 +387,6 @@ estándar de IBM hace que recibamos teclas en modo scancode y no ASCII. Para
 esto cuento con un arreglo que sirve de traductor, para cada posición devuelve
 el ASCII correspondiente a un scancode. Luego keyboard() simplemente hace esta
 conversión y se la envía a print\_key() que la replica en la pantalla.
-
-Además, para agraciar un poco más la pantalla, agregé el manejo del cursor.
-Esto requiere actualizar unos registros de I/O (0x3D4 y 0x3D5) cada vez que se
-quiere cambiar la posición del mismo. Esto está implementado en la función
-move\_cursor().
 
 Así logramos el manejo del texto en la pantalla, pero además necesitamos una
 manera de recordar las teclas ingresadas por el usuario para luego darselas a
