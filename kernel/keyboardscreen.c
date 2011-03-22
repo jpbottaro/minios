@@ -131,7 +131,7 @@ void print_key(char key)
             (*vram)[y][x].color = WHITE;
             x++;
             if (x == 80) {
-                x = 0;
+                x = xlimit = 0;
                 if (y == 24)
                     scroll_up_vram();
                 else
