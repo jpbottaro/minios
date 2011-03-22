@@ -11,5 +11,6 @@ sudo cp ../apps/mkdir tmp/bin/ && \
 sudo cp ../apps/rmdir tmp/bin/ && \
 sudo cp ../apps/cat tmp/bin/ && \
 sudo cp ../apps/cp tmp/bin/ && \
+sudo cp ../apps/mv tmp/bin/ && \
 sudo umount tmp
 
