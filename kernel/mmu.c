@@ -39,7 +39,7 @@ unsigned int new_page(int process_num)
         panic("new_page: no more free pages!");
     LIST_REMOVE(page, status);
 
-    for (base = page->base; base < page->base + PAGE_SIZE; base++)
+    for (base = page->base; base < page->base + PAGE_SIZE; base += 4)
         *((unsigned int *) base) = 0;
 
     if (process_num != -1)
