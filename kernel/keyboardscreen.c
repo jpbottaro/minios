@@ -178,12 +178,15 @@ int get_line(char *line, unsigned int n)
     i = 0;
     j = pos;
     max = MIN(MAX_LINE - 1, n);
-    while (i < max && (j % MAX_KEYS) != end && kbd_buffer[j % MAX_KEYS] != '\0')
+    while (i < max && j != end && kbd_buffer[j] != '\0') {
         line[i++] = kbd_buffer[j++];
+        j %= MAX_KEYS;
+    }
 
     line[i] = '\0';
 
-    pos = (j % MAX_KEYS != end && kbd_buffer[j % MAX_KEYS] == '\0') ? j + 1: j;
+    pos = (j != end && kbd_buffer[j] == '\0') ? j + 1: j;
+    pos %= MAX_KEYS;
 
     return i + 1;
 }
