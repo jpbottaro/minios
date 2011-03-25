@@ -1,4 +1,4 @@
-ODIR=$(CURDIR)/obj
+ODIR=../fs/obj
 _OBJ=fs.o inode.o super.o file.o
 OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
 

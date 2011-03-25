@@ -1,4 +1,4 @@
-ODIR=$(CURDIR)/obj
+ODIR=../apps/obj
 _OBJ=misc.o scall.o lineecho.o echo.o argc.o ls.o cat.o cp.o rm.o cash.o mkdir.o rmdir.o mv.o
 OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
 

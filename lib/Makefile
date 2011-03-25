@@ -1,4 +1,4 @@
-ODIR=$(CURDIR)/obj
+ODIR=../lib/obj
 _OBJ=misc.o
 OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
 

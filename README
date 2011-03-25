@@ -22,6 +22,7 @@ La carpeta bin contiene los elementos para compilar/testear el kernel
 make            - crea kernel.bin y imagen de diskette para bootear en bochs
 make kernel.bin - crea kernel.bin
 make clean      - limpia el ambiente
+make test       - limpia, crea todo y lanza bochs con la nueva imagen
 
 El archivo 'fsimage' corresponde a una imagen de un Minix FS, que es el 
 utilizado por el kernel al bootear. Tener en cuenta que esta imagen no
@@ -37,3 +38,19 @@ mkfs.minix -v NOMBRE CANTIDAD_BLOQUES
 
 Es importante que sea MinixFS v2, las versiones 1 y 3 no estan soportadas (esto
 se logra con la flag -v)
+
+Aplicaciones
+============
+
+En la carpeta apps se encuentran las aplicaciones. Estas ya estan compiladas y
+introducidas en la carpeta bin/ de la imagen fsimage. En caso de que se desee
+cambiar alguna, los pasos son:
+
+- Modificar lo que se desee en apps/, y realizar make.
+- En la carpeta bin/, ejecutar sh.sh (un script que monta la imagen fsimage, y
+  copia los binarios generados de apps). Esto requiere contraseña del root para
+  poder montar la imagen.
+
+En caso de que no quiera dar esta contraseña a un script que no conoce (yo no
+lo haría), puede o abrirlo y ver lo que hace (son solo un par de lineas), o
+montar la imagen y copiar la/las aplicaciones manualmente.
