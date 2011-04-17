@@ -1,6 +1,6 @@
-#include <minikernel/misc.h>
-#include <minikernel/dev.h>
-#include <minikernel/sched.h>
+#include <minios/misc.h>
+#include <minios/dev.h>
+#include <minios/sched.h>
 #include "keyboardscreen.h"
 #include "i386.h"
 

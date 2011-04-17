@@ -1,10 +1,10 @@
 #include <unistd.h> /* get constants for sys calls */
 #include <fcntl.h>  /* get constants for sys calls */
-#include <minikernel/misc.h>
-#include <minikernel/sched.h> /* get uid and gid of process */
-#include <minikernel/dev.h>
-#include <minikernel/panic.h>
-#include <minikernel/dirent.h>
+#include <minios/misc.h>
+#include <minios/sched.h> /* get uid and gid of process */
+#include <minios/dev.h>
+#include <minios/panic.h>
+#include <minios/dirent.h>
 #include "fs.h"
 
 char *fs_offset;

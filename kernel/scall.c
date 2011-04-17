@@ -1,6 +1,6 @@
-#include <minikernel/panic.h>
-#include <minikernel/fs.h>
-#include <minikernel/sched.h>
+#include <minios/panic.h>
+#include <minios/fs.h>
+#include <minios/sched.h>
 
 void *system_calls[255] = {};
 

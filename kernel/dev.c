@@ -1,6 +1,6 @@
-#include <minikernel/sched.h>
-#include <minikernel/dev.h>
-#include <minikernel/fs.h>
+#include <minios/sched.h>
+#include <minios/dev.h>
+#include <minios/fs.h>
 #include "keyboardscreen.h"
 
 int dev_io(unsigned int dev, char *buf, unsigned int n, int flag)

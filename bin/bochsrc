@@ -221,7 +221,7 @@ vga: extension=vbe
 # and status specified. Usually the drive type is set up based on the media type.
 #=======================================================================
 #floppya: 1_44=/dev/fd0, status=inserted
-floppya: image=./diskette.img, status=inserted
+floppya: image=./floppy.img, status=inserted
 #floppya: 1_44=/dev/fd0H1440, status=inserted
 #floppya: 1_2=../1_2, status=inserted
 #floppya: 1_44=a:, status=inserted

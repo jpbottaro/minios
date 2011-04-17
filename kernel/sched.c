@@ -1,5 +1,5 @@
-#include <minikernel/misc.h>
-#include <minikernel/panic.h>
+#include <minios/misc.h>
+#include <minios/panic.h>
 #include "sched.h"
 #include "tss.h"
 #include "mmu.h"

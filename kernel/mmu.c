@@ -1,5 +1,5 @@
-#include <minikernel/panic.h>
-#include <minikernel/sched.h>
+#include <minios/panic.h>
+#include <minios/sched.h>
 #include "i386.h"
 #include "mmu.h"
 

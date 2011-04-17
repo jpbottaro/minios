@@ -2,7 +2,7 @@
 #define _SCHED_H
 
 #include <sys/types.h>
-#include <minikernel/fs.h>
+#include <minios/fs.h>
 
 #define MAX_PROCESSES 20
 

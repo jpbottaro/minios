@@ -5,7 +5,7 @@
  * external sources
  */
 
-#include <minikernel/fs.h> /* file_s struct */
+#include <minios/fs.h> /* file_s struct */
 
 int get_fd(ino_t ino_num, unsigned int pos);
 int release_fd(int fd);

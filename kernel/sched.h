@@ -1,7 +1,7 @@
 #ifndef __SCHED_H__
 #define __SCHED_H__
 
-#include <minikernel/sched.h>
+#include <minios/sched.h>
 
 #define MAX_ARG 10
 

@@ -1,7 +1,7 @@
 #include "fs.h"
-#include <minikernel/sched.h> /* process table (needed for process fd's) */
+#include <minios/sched.h> /* process table (needed for process fd's) */
+#include <minios/panic.h>
 #include <sys/queue.h>
-#include <minikernel/panic.h>
 
 /* init fds for a process */
 void init_fds(unsigned int id)

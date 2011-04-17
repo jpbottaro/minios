@@ -6,7 +6,7 @@
  * limited subset of the standards, things like permissions/ownership are left
  * out, along with obscure flags and the like */
 
-#include <minikernel/fs.h>
+#include <minios/fs.h>
 #include "super.h"
 #include "inode.h"
 #include "file.h"

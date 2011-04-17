@@ -1,5 +1,5 @@
 #include "fs.h"
-#include <minikernel/misc.h>
+#include <minios/misc.h>
 
 struct superblock_s *sb;
 bitchunk_t *imap_origin;
