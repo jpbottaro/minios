@@ -1,8 +1,8 @@
 #include <minios/misc.h>
 #include <minios/dev.h>
 #include <minios/sched.h>
+#include <minios/i386.h>
 #include "keyboardscreen.h"
-#include "i386.h"
 
 /* array taken from http://www.osdever.net/bkerndev/Docs/keyboard.htm */
 unsigned char kbdus[128] =

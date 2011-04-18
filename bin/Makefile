@@ -46,7 +46,7 @@ $(IMG_FLOPPY): $(BIN_BOOT) $(BIN_KERN)
 	mcopy -obi $@ $(BIN_KERN) ::kernel.bin
 	for T in $(TASKS); do mcopy -obi $@ $$T ::`basename $$T`; done;
 
-$(BIN_KERN):
+$(BIN_KERN)::
 	@echo Building kernel
 	@$(MAKE) -C ../kernel
 	@echo Building file system

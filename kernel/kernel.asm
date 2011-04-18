@@ -13,11 +13,11 @@ extern GDT_DESC
 extern IDT_DESC
 extern init_idt
 extern init_scall
-extern init_mmu
-extern init_directory
+extern init_mm
 extern init_timer
 extern init_scheduler
 extern init_fs
+extern mm_dir_new
 extern reset_pic
 extern enable_pic
 extern disable_pic
@@ -72,13 +72,11 @@ protectedmode:
     call init_scall
 
     ; MMU
-    call init_mmu
+    call init_mm
 
     ; ident mapping
-    push -1
-    call init_directory
-    add esp, 0x4
-    mov  cr3, eax
+    call mm_dir_new
+    mov cr3, eax
 
     ; enable paging
     mov eax, cr0

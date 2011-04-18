@@ -1,7 +1,7 @@
+#include <minios/mm.h>
+#include <minios/i386.h>
 #include "tss.h"
 #include "gdt.h"
-#include "mmu.h"
-#include "i386.h"
 #include "sched.h"
 
 #define EFLAGS_MASK 0x00000202

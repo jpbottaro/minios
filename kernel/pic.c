@@ -1,5 +1,5 @@
+#include <minios/i386.h>
 #include "pic.h"
-#include "i386.h"
 
 #define PIC1_PORT 0x20
 #define PIC2_PORT 0xA0

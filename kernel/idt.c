@@ -1,14 +1,14 @@
+#include <minios/i386.h>
 #include "isr.h"
 #include "idt.h"
-#include "i386.h"
-
 
 #define IDT_ENTRY(number) \
-	idt[number].offset_0_15 = (unsigned short) ((unsigned int)(&_isr ## number) & (unsigned int) 0xFFFF); \
-	idt[number].segsel = (unsigned short) 0x0008; \
-	idt[number].attr = (unsigned short) 0x8E00; \
-	idt[number].offset_16_31 = (unsigned short) ((unsigned int)(&_isr ## number) >> 16 & (unsigned int) 0xFFFF);
-
+    idt[number].offset_0_15 = (unsigned short) \
+            ((unsigned int)(&_isr ## number) & (unsigned int) 0xFFFF); \
+    idt[number].segsel = (unsigned short) 0x0008; \
+    idt[number].attr = (unsigned short) 0x8E00; \
+    idt[number].offset_16_31 = (unsigned short) \
+            ((unsigned int)(&_isr ## number) >> 16 & (unsigned int) 0xFFFF);
 
 void init_idt() {
     IDT_ENTRY(0);   // Divide Error

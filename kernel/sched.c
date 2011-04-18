@@ -1,9 +1,9 @@
 #include <minios/misc.h>
 #include <minios/panic.h>
+#include <minios/i386.h>
+#include <minios/mm.h>
 #include "sched.h"
 #include "tss.h"
-#include "mmu.h"
-#include "i386.h"
 
 #define IDLE (&ps[1])
 
@@ -136,6 +136,11 @@ void schedule()
     }
 }
 
+void free_all_pages(u32_t process_num)
+{
+    //XXX
+}
+
 void sys_exit(int status)
 {
     struct process_state_s *parent = current_process->parent;
@@ -215,10 +220,12 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
  */
 pid_t sys_newprocess(const char *filename, char *const argv[])
 {
-    unsigned int i, j, size, page, stack, dirbase;
-    struct process_state_s *process;
-    struct inode_s *ino, *dir;
+    u32_t i, j, size;
+    mm_page *dirbase;
+    void *page, *stack;
     ino_t curr_dir, ino_num;
+    struct inode_s *ino, *dir;
+    struct process_state_s *process;
     char *tmpargv[MAX_ARG];
 
     /* get process entry for child */
@@ -249,41 +256,41 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     init_fds(process->i);
 
     /* build directory table for new process (with kernel already mapped) */
-    dirbase = init_directory(process->i);
+    dirbase = mm_dir_new();
     /* ident map the directory table (this way its 'user' and not 'system') */
-    map_page(process->i, dirbase, dirbase, dirbase);
+    mm_map_page(dirbase, dirbase, dirbase);
 
     /* build code */
     for (i = 0; i < ino->i_size; i += PAGE_SIZE) {
         /* get new page for code */
-        page = new_page(process->i);
+        page = mm_mem_alloc();
 
         /* temporary map page to 0 to be able to copy the code */
-        map_page(-1, 0x0, rcr3(), page);
+        mm_map_page((mm_page *) rcr3(), 0x0, page);
 
         /* copy file from filesystem to the new page */
         size = MIN(PAGE_SIZE, ino->i_size - i);
         copy_file((char *) 0x0, size, i, ino, FS_READ);
 
         /* add the new code page to the page directory table */
-        map_page(process->i, i + CODE_OFFSET, dirbase, page);
+        mm_map_page(dirbase, (void *) (i + CODE_OFFSET), page);
 
         /* remove temporary ident mapping */
-        umap_page(0x0, rcr3());
+        mm_umap_page((mm_page *) rcr3(), 0x0);
     }
 
     /* build user stack */
-    stack = new_page(process->i);
-    map_page(process->i, 0xFFFFF000, dirbase, stack);
+    stack = mm_mem_alloc();
+    mm_map_page(dirbase, (void *) 0xFFFFF000, stack);
 
     /* build kernel stack (we are not using this since everything is ring 0) */
-    page = new_page(process->i);
-    map_page(process->i, 0xFFFFE000, dirbase, page);
+    page = mm_mem_alloc();
+    mm_map_page(dirbase, (void *) 0xFFFFE000, page);
 
     /* add argc and argv to the new process (lets hope it only takes 1 page) */
-    page = new_page(process->i);
-    map_page(process->i, 0xFFFFD000, dirbase, page);
-    map_page(-1, 0x0, rcr3(), page);
+    page = mm_mem_alloc();
+    mm_map_page(dirbase, (void *) 0xFFFFD000, page);
+    mm_map_page((mm_page *) rcr3(), (void *) 0x0, page);
 
     /* put the arguments in the new page */
     for (i = 0, j = 0; i < MAX_ARG - 1 && argv[i] != NULL; ++i) {
@@ -295,16 +302,16 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     /* copy the tmpargv array of pointers to the arguments */
     tmpargv[i] = NULL;
     mymemcpy((char *) j, (char *) tmpargv, (i + 1) * 4);
-    umap_page(0x0, rcr3());
+    mm_umap_page((mm_page *) rcr3(), 0x0);
     /* add the values to the stack so that main() can get them */
-    map_page(-1, 0x0, rcr3(), stack);
+    mm_map_page((mm_page *) rcr3(), 0x0, stack);
     *((unsigned int *) 0xFFC) = 0xFFFFD000 + j;
     *((unsigned int *) 0xFF8) = i;
     *((unsigned int *) 0xFF4) = 0;
-    umap_page(0x0, rcr3());
+    mm_umap_page((mm_page *) rcr3(), 0x0);
 
     /* add tss for the new task, using the created page directory table */
-    add_tss(process->i, dirbase);
+    add_tss(process->i, (u32_t) dirbase);
 
     /* add to scheduler */
     CIRCLEQ_INSERT_HEAD(&ready_list, process, ready);

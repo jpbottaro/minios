@@ -1,7 +1,7 @@
-#ifndef __MM_H__
-#define __MM_H__
+#ifndef _MM_H
+#define _MM_H
 
-#include <tipos.h>
+#include <sys/types.h>
 
 #define MM_ATTR_P     0x001 // Present
 #define MM_ATTR_RW    0x002 // Read/Write
@@ -44,21 +44,26 @@
 #define CR4_VME		0x00000001	// V86 Mode Extensions
 
 #define PAGE_SIZE 4096
+#define KERNEL_PAGES 0x300000
+
 typedef struct str_mm_page {
-	uint_32 attr:12;
-	uint_32 base:20;
+	u32_t attr:12;
+	u32_t base:20;
 }  __attribute__((__packed__, aligned (4))) mm_page;
 
-#define make_mm_entry(base, attr) (mm_page){(uint_32)(attr), (uint_32)(base)}
-#define make_mm_entry_addr(addr, attr) (mm_page){(uint_32)(attr), (uint_32)(addr) >> 12}
+#define make_mm_entry(base, attr) (mm_page){(u32_t) (attr), (u32_t) (base)}
+#define make_mm_entry_addr(addr, attr) (mm_page){(u32_t) (attr), \
+                                                 (u32_t) (addr) >> 12}
 
-void mm_init(void);
+void init_mm();
 void* mm_mem_alloc();
-void* mm_mem_kalloc();
-void mm_mem_free(void* page);
+//void* mm_mem_kalloc();
+void mm_mem_free(void *page);
 
 /* Manejador de directorios de página */
-mm_page* mm_dir_new(void);
+mm_page* mm_dir_new();
+void mm_map_page(mm_page *dir, void *vir, void *phy);
+void mm_umap_page(mm_page *dir, void *vir);
 void mm_dir_free(mm_page* d);
 
 /* Syscalls */
