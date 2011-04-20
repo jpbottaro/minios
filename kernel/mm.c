@@ -1,7 +1,7 @@
+#include <minios/mm.h>
+#include <minios/i386.h>
 #include <minios/panic.h>
 #include <minios/sched.h>
-#include <minios/i386.h>
-#include <minios/mm.h>
 #include <sys/types.h>
 
 #define PAGES_LEN ((CODE_OFFSET - KERNEL_PAGES) / PAGE_SIZE)

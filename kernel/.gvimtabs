@@ -1,4 +1,5 @@
-kernel.asm
+kinit.asm
+kernel.c
 sched.c
 keyboardscreen.c
-mmu.c
+mm.c

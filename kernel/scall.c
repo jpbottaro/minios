@@ -1,5 +1,5 @@
-#include <minios/panic.h>
 #include <minios/fs.h>
+#include <minios/panic.h>
 #include <minios/sched.h>
 
 void *system_calls[255] = {};

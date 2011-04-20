@@ -15,7 +15,7 @@ CFLAGS=-m32 -g -ggdb -Wall -Werror -O0 -I ../include\
   -fno-zero-initialized-in-bss -fno-stack-protector -ffreestanding
 
 # floppy image
-DISK_LABEL="PSO"
+DISK_LABEL="MINIOS"
 IMG_BASE=base.img
 IMG_FLOPPY=floppy.img
 BIN_BOOT=../boot/floppyboot.bin
@@ -30,7 +30,7 @@ KERNELMEM=126464	# 0x20000 - 0x1200
 all: $(IMG_FLOPPY)
 
 test:
-	make clean && make && bochs
+	make clean && make && bochs -q
 
 $(ODIR)/%.o: $(SRC)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $^

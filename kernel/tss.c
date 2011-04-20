@@ -6,7 +6,6 @@
 
 #define EFLAGS_MASK 0x00000202
 #define TSS_SIZE    0x68
-#define KSTACKSIZE  0x1FF0
 
 #define tss_gdt_entry(entry, tss_addr) \
     entry->limit_0_15  = TSS_SIZE - 1; \
@@ -25,7 +24,8 @@
 
 /* label from kernel.asm, just a jmp $ */
 extern void idle();
-extern unsigned int *KSTACK;
+extern unsigned char KSTACK;
+extern unsigned int KSTACKSIZE;
 
 struct tss_s tss[MAX_PROCESSES];
 unsigned short first;
@@ -60,8 +60,8 @@ int add_idle(unsigned int pos)
     tss[pos].cr3    = (unsigned int) rcr3();
     tss[pos].eip    = (unsigned int) idle;
     tss[pos].eflags = EFLAGS_MASK;
-    tss[pos].esp    = ((unsigned int) KSTACK) + KSTACKSIZE;
-    tss[pos].ebp    = ((unsigned int) KSTACK) + KSTACKSIZE;
+    tss[pos].esp    = (unsigned int) (&KSTACK + KSTACKSIZE);
+    tss[pos].ebp    = (unsigned int) (&KSTACK + KSTACKSIZE);
     tss[pos].cs     = SEG_DESC_KCODE;
     tss[pos].ds     = SEG_DESC_KDATA;
     tss[pos].ss     = SEG_DESC_KDATA;

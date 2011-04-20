@@ -1,14 +1,15 @@
-#include <minios/misc.h>
-#include <minios/panic.h>
-#include <minios/i386.h>
 #include <minios/mm.h>
-#include "sched.h"
+#include <minios/misc.h>
+#include <minios/i386.h>
+#include <minios/panic.h>
 #include "tss.h"
+#include "sched.h"
 
 #define IDLE (&ps[1])
 
+char tmpmem[PAGE_SIZE] __attribute__((aligned(PAGE_SIZE)));
+
 struct process_state_s ps[MAX_PROCESSES];
-struct process_state_s *current_process;
 CIRCLEQ_HEAD(ready_list_t, process_state_s) ready_list;
 LIST_HEAD(waiting_list_t, process_state_s) waiting_list;
 LIST_HEAD(unused_list_t, process_state_s) unused_list;
@@ -17,13 +18,13 @@ unsigned int pid;
 /* init_timer taken from James Molly in
  * http://www.jamesmolloy.co.uk/tutorial_html/5.-IRQs%20and%20the%20PIT.html
  */
-void init_timer(unsigned int frequency)
+void init_timer(u32_t frequency)
 {
    /* The value we send to the PIT is the value to divide it's input clock
     * (1193180 Hz) by, to get our required frequency. Important to note is
     * that the divisor must be small enough to fit into 16-bits.
     */
-   unsigned int divisor = 1193180 / frequency;
+   u32_t divisor = 1193180 / frequency;
 
    /* Send the command byte */
    outb(0x43, 0x36);
@@ -265,18 +266,18 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         /* get new page for code */
         page = mm_mem_alloc();
 
-        /* temporary map page to 0 to be able to copy the code */
-        mm_map_page((mm_page *) rcr3(), 0x0, page);
+        /* temporary map page to temmem to be able to copy the code */
+        mm_map_page((mm_page *) rcr3(), tmpmem, page);
 
         /* copy file from filesystem to the new page */
         size = MIN(PAGE_SIZE, ino->i_size - i);
-        copy_file((char *) 0x0, size, i, ino, FS_READ);
+        copy_file((char *) tmpmem, size, i, ino, FS_READ);
 
         /* add the new code page to the page directory table */
         mm_map_page(dirbase, (void *) (i + CODE_OFFSET), page);
 
         /* remove temporary ident mapping */
-        mm_umap_page((mm_page *) rcr3(), 0x0);
+        mm_umap_page((mm_page *) rcr3(), tmpmem);
     }
 
     /* build user stack */
@@ -287,28 +288,31 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     page = mm_mem_alloc();
     mm_map_page(dirbase, (void *) 0xFFFFE000, page);
 
-    /* add argc and argv to the new process (lets hope it only takes 1 page) */
-    page = mm_mem_alloc();
-    mm_map_page(dirbase, (void *) 0xFFFFD000, page);
-    mm_map_page((mm_page *) rcr3(), (void *) 0x0, page);
+    i = j = 0;
+    if (argv != NULL) {
+        /* add argc and argv to the new process (lets hope it only takes 1 page) */
+        page = mm_mem_alloc();
+        mm_map_page(dirbase, (void *) 0xFFFFD000, page);
+        mm_map_page((mm_page *) rcr3(), (void *) tmpmem, page);
 
-    /* put the arguments in the new page */
-    for (i = 0, j = 0; i < MAX_ARG - 1 && argv[i] != NULL; ++i) {
-        tmpargv[i] = (char *) (0xFFFFD000 + j);
-        size = mystrlen(argv[i]);
-        mymemcpy((char *) j, argv[i], size + 1);
-        j += size + 1;
+        /* put the arguments in the new page */
+        for (i = j = 0; i < MAX_ARG - 1 && argv[i] != NULL; ++i) {
+            tmpargv[i] = (char *) (0xFFFFD000 + j);
+            size = mystrlen(argv[i]);
+            mymemcpy(tmpmem + j, argv[i], size + 1);
+            j += size + 1;
+        }
+        /* copy the tmpargv array of pointers to the arguments */
+        tmpargv[i] = NULL;
+        mymemcpy((char *) tmpmem + j, (char *) tmpargv, (i + 1) * 4);
+        mm_umap_page((mm_page *) rcr3(), tmpmem);
     }
-    /* copy the tmpargv array of pointers to the arguments */
-    tmpargv[i] = NULL;
-    mymemcpy((char *) j, (char *) tmpargv, (i + 1) * 4);
-    mm_umap_page((mm_page *) rcr3(), 0x0);
     /* add the values to the stack so that main() can get them */
-    mm_map_page((mm_page *) rcr3(), 0x0, stack);
-    *((unsigned int *) 0xFFC) = 0xFFFFD000 + j;
-    *((unsigned int *) 0xFF8) = i;
-    *((unsigned int *) 0xFF4) = 0;
-    mm_umap_page((mm_page *) rcr3(), 0x0);
+    mm_map_page((mm_page *) rcr3(), tmpmem, stack);
+    *((unsigned int *) (tmpmem + 0xFFC)) = 0xFFFFD000 + j;
+    *((unsigned int *) (tmpmem + 0xFF8)) = i;
+    *((unsigned int *) (tmpmem + 0xFF4)) = 0;
+    mm_umap_page((mm_page *) rcr3(), tmpmem);
 
     /* add tss for the new task, using the created page directory table */
     add_tss(process->i, (u32_t) dirbase);

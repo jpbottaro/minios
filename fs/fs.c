@@ -14,11 +14,11 @@ static int fs_readwrite(int fd, char *buf, unsigned int n, int flag);
 static void fill_inode(struct inode_s *ino, int mode);
 
 /* initialize fs, needs to be ALL mapped in memory, fs_start being first byte */
-int init_fs(char *fs_start)
+int init_fs(u32_t fs_start)
 {
     struct inode_s *ino, *dev;
     ino_t ino_num;
-    fs_offset = fs_start;
+    fs_offset = (char *) fs_start;
     read_super();
     root = (struct inode_s *) (fs_offset + INODE_OFFSET);
 

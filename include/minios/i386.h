@@ -19,6 +19,8 @@ LS_INLINE void ltr(unsigned short sel);
 LS_INLINE unsigned short rtr(void);
 LS_INLINE void hlt(void);
 
+LS_INLINE void sti(void);
+
 LS_INLINE void breakpoint(void);
 
 LS_INLINE void outb(int port, unsigned char data) {
@@ -93,6 +95,10 @@ LS_INLINE unsigned short rtr(void) {
 
 LS_INLINE void hlt(void) {
 	__asm __volatile("hlt" : : );
+}
+
+LS_INLINE void sti(void) {
+	__asm __volatile("sti" : : );
 }
 
 LS_INLINE void breakpoint(void) {

@@ -6,6 +6,8 @@
 #define MAX_ARG 10
 
 void init_scheduler();
+void init_timer(u32_t frequency);
 void schedule();
 
+struct process_state_s *current_process;
 #endif
