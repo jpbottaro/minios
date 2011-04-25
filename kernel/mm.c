@@ -1,7 +1,6 @@
 #include <minios/mm.h>
 #include <minios/i386.h>
 #include <minios/panic.h>
-#include <minios/sched.h>
 #include <sys/types.h>
 
 struct page_s pages[PAGES_LEN];
