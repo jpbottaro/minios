@@ -48,3 +48,43 @@ void mymemcpy(char *to, const char *from, unsigned int size)
     while (size--)
         *(to++) = *(from++);
 }
+
+/* taken from http://www.velocityreviews.com/forums/t317059-itoa-in-pure-c.html */
+/* made by user Peter Nilsson */
+char *myitoa(int i, char *to)
+{
+    char *p = to;
+    char *q = to;
+
+    if (i >= 0) {
+        do {
+            *q++ = '0' + (i % 10);
+        } while (i /= 10);
+    }
+    else if (-1 % 2 < 0) {
+        *q++ = '-';
+        p++;
+
+        do {
+            *q++ = '0' - i % 10;
+        } while (i /= 10);
+    } else {
+        *q++ = '-';
+        p++;
+
+        do {
+            int d = i % 10;
+            i = i / 10;
+            if (d) { i++; d = 10 - d; }
+            *q++ = '0' + d;
+        } while (i);
+    }
+
+    for (*q = 0; p < --q; p++) {
+        char c = *p;
+        *p = *q;
+        *q = c;
+    }
+
+    return to;
+}

@@ -1,9 +1,10 @@
-#include <minios/sched.h>
-#include <minios/dev.h>
 #include <minios/fs.h>
-#include "keyboardscreen.h"
+#include <minios/vga.h>
+#include <minios/dev.h>
+#include <minios/sched.h>
+#include "keyboard.h"
 
-int dev_io(unsigned int dev, char *buf, unsigned int n, int flag)
+int dev_io(unsigned int dev, char *buf, int n, int flag)
 {
     switch (dev) {
         case DEV_STDIN:
@@ -15,7 +16,7 @@ int dev_io(unsigned int dev, char *buf, unsigned int n, int flag)
         case DEV_STDOUT:
         case DEV_STDERR:
             if (flag == FS_WRITE)
-                return print(buf, n);
+                return vga_write(buf, n);
             break;
         default:
             break;

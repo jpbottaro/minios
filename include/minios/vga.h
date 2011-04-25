@@ -1,16 +1,15 @@
-#ifndef __VGA_H__
-#define __VGA_H__
+#ifndef _VGA_H
+#define _VGA_H
 
-#include <tipos.h>
-
-extern uint_8* vga_addr;
-extern const uint_16 vga_cols;
-extern const uint_16 vga_rows;
+#include <sys/types.h>
 
 void vga_init(void);
 
-void vga_write(uint_16 f, uint_16 c, const char* msg, uint_8 attr);
-void vga_printf(uint_16 f, uint_16 c, const char* format, uint_8 attr, ...) __attribute__ ((format (printf, 3, 5)));
+int vga_pwrite(u16_t f, u16_t c, const char* msg,  u8_t attr);
+int vga_write(const char* msg, int n);
+int vga_pprintf(u16_t f, u16_t c, const char* format, u8_t attr, ...)
+                                        __attribute__ ((format (printf, 3, 5)));
+int vga_printf(const char* format, ...);
 
 /* Paleta de 16 colores */
 #define VGA_FC_BLACK   0x00
@@ -35,4 +34,3 @@ void vga_printf(uint_16 f, uint_16 c, const char* format, uint_8 attr, ...) __at
 #define VGA_BC_WHITE   0x70
 
 #endif
-

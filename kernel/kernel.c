@@ -1,18 +1,18 @@
 #include <minios/mm.h>
 #include <minios/fs.h>
+#include <minios/vga.h>
 #include <minios/i386.h>
 #include "idt.h"
 #include "pic.h"
 #include "scall.h"
 #include "sched.h"
-#include "keyboardscreen.h"
 
 #define FS_INITIAL_POS 0x20000
 
 void kernel_init()
 {
     /* clear the screen */
-    clear_screen();
+    vga_init();
 
     /* initialize memory managment unit */
     init_mm();
