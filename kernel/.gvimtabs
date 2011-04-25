@@ -1,5 +1,6 @@
 kinit.asm
 kernel.c
-sched.c
-keyboardscreen.c
 mm.c
+sched.c
+vga.c
+keyboard.c

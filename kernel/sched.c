@@ -139,7 +139,9 @@ void schedule()
 
 void free_all_pages(u32_t process_num)
 {
-    //XXX
+    struct page_s *p, *n;
+    LIST_FOREACH_SAFE(p, &ps[process_num].pages_list, status, n)
+        mm_mem_free(p->base);
 }
 
 void sys_exit(int status)
@@ -158,6 +160,7 @@ void sys_exit(int status)
 
     /* free process pages */
     free_all_pages(current_process->i);
+    mm_dir_free(current_process->pages_dir);
 
     /* delete process */
     current_process->pid = 0;
@@ -216,6 +219,12 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
     return current_process->child_pid;
 }
 
+/* add a page to the processes' list of used pages */
+void add_process_page(struct process_state_s *process, void *page)
+{
+    LIST_INSERT_HEAD(&process->pages_list, &pages[hash_page(page)], status);
+}
+
 /* create a new process, with binary filename, and arguments argv.
  * this is a merge of fork() and execv()
  */
@@ -258,6 +267,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
 
     /* build directory table for new process (with kernel already mapped) */
     dirbase = mm_dir_new();
+    process->pages_dir = dirbase;
     /* ident map the directory table (this way its 'user' and not 'system') */
     mm_map_page(dirbase, dirbase, dirbase);
 
@@ -265,6 +275,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     for (i = 0; i < ino->i_size; i += PAGE_SIZE) {
         /* get new page for code */
         page = mm_mem_alloc();
+        add_process_page(process, page);
 
         /* temporary map page to temmem to be able to copy the code */
         mm_map_page((mm_page *) rcr3(), tmpmem, page);
@@ -282,16 +293,19 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
 
     /* build user stack */
     stack = mm_mem_alloc();
+    add_process_page(process, stack);
     mm_map_page(dirbase, (void *) 0xFFFFF000, stack);
 
     /* build kernel stack (we are not using this since everything is ring 0) */
     page = mm_mem_alloc();
+    add_process_page(process, page);
     mm_map_page(dirbase, (void *) 0xFFFFE000, page);
 
     i = j = 0;
     if (argv != NULL) {
         /* add argc and argv to the new process (lets hope it only takes 1 page) */
         page = mm_mem_alloc();
+        add_process_page(process, page);
         mm_map_page(dirbase, (void *) 0xFFFFD000, page);
         mm_map_page((mm_page *) rcr3(), (void *) tmpmem, page);
 

@@ -1,13 +1,11 @@
 #ifndef _SCHED_H
 #define _SCHED_H
 
-#include <sys/types.h>
 #include <minios/fs.h>
+#include <minios/mm.h>
+#include <sys/types.h>
 
 #define MAX_PROCESSES 20
-
-/* this is where processes start, not at 0x0 */
-#define CODE_OFFSET 0x400000
 
 struct process_state_s {
     /* number */
@@ -15,6 +13,9 @@ struct process_state_s {
 
     /* process id */
     pid_t pid;
+
+    /* directory of pages */
+    mm_page *pages_dir;
 
     /* parent */
     struct process_state_s *parent;

@@ -4,21 +4,11 @@
 #include <minios/sched.h>
 #include <sys/types.h>
 
-#define PAGES_LEN ((CODE_OFFSET - KERNEL_PAGES) / PAGE_SIZE)
-#define hash_page(base) ((((u32_t) (base)) - KERNEL_PAGES) / PAGE_SIZE)
-
-struct page_s {
-    /* starting address */
-    void *base;
-
-    /* scheduler waiting list */
-    LIST_ENTRY(page_s) status;
-} __attribute__((__packed__)) ;
-
 struct page_s pages[PAGES_LEN];
 
 LIST_HEAD(free_pages_t, page_s) free_pages;
 
+/* init memory manager */
 void init_mm()
 {
     int i;

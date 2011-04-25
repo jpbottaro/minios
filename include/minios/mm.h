@@ -55,6 +55,22 @@ typedef struct str_mm_page {
 #define make_mm_entry_addr(addr, attr) (mm_page){(u32_t) (attr), \
                                                  (u32_t) (addr) >> 12}
 
+#include <sys/queue.h>
+#include <minios/const.h>
+
+#define PAGES_LEN ((CODE_OFFSET - KERNEL_PAGES) / PAGE_SIZE)
+#define hash_page(base) ((((u32_t) (base)) - KERNEL_PAGES) / PAGE_SIZE)
+
+struct page_s {
+    /* starting address */
+    void *base;
+
+    /* free pages list */
+    LIST_ENTRY(page_s) status;
+} __attribute__((__packed__));
+
+extern struct page_s pages[PAGES_LEN];
+
 void init_mm();
 void* mm_mem_alloc();
 //void* mm_mem_kalloc();
