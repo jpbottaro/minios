@@ -78,11 +78,13 @@ void block_process(struct process_state_s *process, unsigned int dev)
     }
 }
 
+/* put a process in the ready list */
 void sched_ready(struct process_state_s *process)
 {
     CIRCLEQ_INSERT_HEAD(&ready_list, process, ready);
 }
 
+/* remove a process from the ready list */
 void sched_uready(struct process_state_s *process)
 {
     CIRCLEQ_REMOVE(&ready_list, process, ready);
