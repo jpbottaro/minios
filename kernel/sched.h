@@ -9,5 +9,9 @@ void init_scheduler();
 void init_timer(u32_t frequency);
 void schedule();
 
-struct process_state_s *current_process;
+void sched_ready(struct process_state_s *process);
+void sched_uready(struct process_state_s *process);
+
+extern struct process_state_s *current_process;
+
 #endif

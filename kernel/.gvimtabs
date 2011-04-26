@@ -2,5 +2,6 @@ kinit.asm
 kernel.c
 mm.c
 sched.c
+proc.c
 vga.c
 keyboard.c
