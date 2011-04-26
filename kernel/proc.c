@@ -27,6 +27,9 @@ void init_proc()
         LIST_INSERT_HEAD(&unused_list, process, unused);
     }
 
+    /* init tss array */
+    init_tss();
+
     /* add idle task */
     process = IDLE;
     process->i = 1;

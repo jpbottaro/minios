@@ -39,10 +39,6 @@ void init_scheduler()
 
     /* init scheduler's ready list */
     CIRCLEQ_INIT(&ready_list);
-
-    /* init tss array */
-    init_tss();
-
     /* start with no current process */
     current_process = NULL;
 }
