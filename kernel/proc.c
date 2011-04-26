@@ -12,6 +12,7 @@ LIST_HEAD(unused_list_t, process_state_s) unused_list;
 struct process_state_s ps[MAX_PROCESSES];
 unsigned int pid = 2;
 
+/* initialize process manager, list of processes, tss, and add idle */
 void init_proc()
 {
     int i;
@@ -39,6 +40,13 @@ void init_proc()
     add_idle(1);
 }
 
+/* add a page to the processes' list of used pages */
+void add_process_page(struct process_state_s *process, void *page)
+{
+    LIST_INSERT_HEAD(&process->pages_list, &pages[hash_page(page)], status);
+}
+
+/* free all pages assigned to a process */
 void free_all_pages(u32_t process_num)
 {
     struct page_s *p, *n;
@@ -46,6 +54,7 @@ void free_all_pages(u32_t process_num)
         mm_mem_free(p->base);
 }
 
+/* end a process, wake parent if needed, free its pages and reschedule */
 void sys_exit(int status)
 {
     struct process_state_s *parent = current_process->parent;
@@ -119,12 +128,6 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
     schedule();
 
     return current_process->child_pid;
-}
-
-/* add a page to the processes' list of used pages */
-void add_process_page(struct process_state_s *process, void *page)
-{
-    LIST_INSERT_HEAD(&process->pages_list, &pages[hash_page(page)], status);
 }
 
 /* create a new process, with binary filename, and arguments argv.

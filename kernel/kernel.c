@@ -9,6 +9,7 @@
 
 #define FS_INITIAL_POS 0x20000
 
+/* here is where the magic starts */
 void kernel_init()
 {
     /* clear the screen */
