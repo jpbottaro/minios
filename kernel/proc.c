@@ -196,24 +196,24 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     /* build user stack */
     stack = mm_mem_alloc();
     add_process_page(process, stack);
-    mm_map_page(dirbase, (void *) 0xFFFFF000, stack);
+    mm_map_page(dirbase, (void *) STACK_PAGE, stack);
 
     /* build kernel stack (we are not using this since everything is ring 0) */
     page = mm_mem_alloc();
     add_process_page(process, page);
-    mm_map_page(dirbase, (void *) 0xFFFFE000, page);
+    mm_map_page(dirbase, (void *) KSTACK_PAGE, page);
 
     i = j = 0;
     if (argv != NULL) {
         /* add argc and argv to the new process (lets hope it only takes 1 page) */
         page = mm_mem_alloc();
         add_process_page(process, page);
-        mm_map_page(dirbase, (void *) 0xFFFFD000, page);
+        mm_map_page(dirbase, (void *) ARG_PAGE, page);
         mm_map_page((mm_page *) rcr3(), (void *) tmpmem, page);
 
         /* put the arguments in the new page */
         for (i = j = 0; i < MAX_ARG - 1 && argv[i] != NULL; ++i) {
-            tmpargv[i] = (char *) (0xFFFFD000 + j);
+            tmpargv[i] = (char *) (ARG_PAGE + j);
             size = mystrlen(argv[i]);
             mymemcpy(tmpmem + j, argv[i], size + 1);
             j += size + 1;
@@ -225,7 +225,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     }
     /* add the values to the stack so that main() can get them */
     mm_map_page((mm_page *) rcr3(), tmpmem, stack);
-    *((unsigned int *) (tmpmem + 0xFFC)) = 0xFFFFD000 + j;
+    *((unsigned int *) (tmpmem + 0xFFC)) = ARG_PAGE + j;
     *((unsigned int *) (tmpmem + 0xFF8)) = i;
     *((unsigned int *) (tmpmem + 0xFF4)) = 0;
     mm_umap_page((mm_page *) rcr3(), tmpmem);
