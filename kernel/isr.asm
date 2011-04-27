@@ -2,7 +2,7 @@ BITS 32
 
 extern reset_intr_pic1
 extern sched_schedule
-extern keyboard
+extern kbd_key
 extern print_msg
 extern system_calls
 
@@ -141,7 +141,7 @@ _isr33:
     xor eax, eax
     in al, 0x60
     push eax
-    call keyboard
+    call kbd_key
     add esp, 4
     call reset_intr_pic1
     popad

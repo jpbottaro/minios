@@ -2,7 +2,7 @@
 #include <minios/vga.h>
 #include <minios/dev.h>
 #include <minios/sched.h>
-#include "keyboard.h"
+#include "kbd.h"
 
 int dev_io(unsigned int dev, char *buf, int n, int flag)
 {
@@ -10,7 +10,7 @@ int dev_io(unsigned int dev, char *buf, int n, int flag)
         case DEV_STDIN:
             if (flag == FS_READ) {
                 sched_block(current_process, dev);
-                return get_line(buf, n);
+                return kbd_getline(buf, n);
             }
             break;
         case DEV_STDOUT:

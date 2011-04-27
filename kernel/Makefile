@@ -1,5 +1,5 @@
 ODIR=../kernel/obj
-_OBJ=kinit.o temp.o kernel.o gdt.o pic.o idt.o isr.o mm.o vga.o keyboard.o sched.o pm.o clock.o scall.o tssasm.o tss.o dev.o
+_OBJ=kinit.o temp.o kernel.o gdt.o pic.o idt.o isr.o mm.o vga.o kbd.o sched.o pm.o clock.o scall.o tssasm.o tss.o dev.o
 OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
 
 CC=gcc

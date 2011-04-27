@@ -1,7 +1,7 @@
 #include <minios/dev.h>
 #include <minios/misc.h>
 #include <minios/sched.h>
-#include "keyboard.h"
+#include "kbd.h"
 #include "vga.h"
 
 /* array taken from http://www.osdever.net/bkerndev/Docs/keyboard.htm */
@@ -64,7 +64,7 @@ void buffer_key(char key)
 }
 
 /* get a line from the screen */
-int get_line(char *line, unsigned int n)
+int kbd_getline(char *line, unsigned int n)
 {
     unsigned int i, j, max;
 
@@ -85,7 +85,7 @@ int get_line(char *line, unsigned int n)
 }
 
 /* manage keyboard interruptions */
-void keyboard(unsigned char scancode)
+void kbd_key(unsigned char scancode)
 {
     char key;
 
