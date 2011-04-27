@@ -1,7 +1,7 @@
 #ifndef __IDT_H__
 #define __IDT_H__
 
-void init_idt();
+void idt_init();
 
 typedef struct str_idt_descriptor {
 	unsigned short idt_length;

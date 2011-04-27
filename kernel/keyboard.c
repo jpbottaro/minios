@@ -98,6 +98,6 @@ void keyboard(unsigned char scancode)
         print_key(key);
         buffer_key(key);
         if (key == '\n')
-            unblock_process(DEV_STDIN);
+            sched_unblock(DEV_STDIN);
     }
 }

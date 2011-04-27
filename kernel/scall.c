@@ -9,7 +9,7 @@ void sys_nocall()
     panic("unknown syscall");
 }
 
-void init_scall()
+void scall_init()
 {
     int i;
 

@@ -71,9 +71,9 @@ struct page_s {
 
 extern struct page_s pages[PAGES_LEN];
 
-void init_mm();
+void mm_init();
 void* mm_mem_alloc();
-//void* mm_mem_kalloc();
+void* mm_mem_kalloc();
 void mm_mem_free(void *page);
 
 /* Manejador de directorios de página */

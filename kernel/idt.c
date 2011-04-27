@@ -10,7 +10,7 @@
     idt[number].offset_16_31 = (unsigned short) \
             ((unsigned int)(&_isr ## number) >> 16 & (unsigned int) 0xFFFF);
 
-void init_idt() {
+void idt_init() {
     IDT_ENTRY(0);   // Divide Error
     IDT_ENTRY(1);   // Debug  
     IDT_ENTRY(2);   // NMI Interrupt

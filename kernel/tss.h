@@ -1,7 +1,7 @@
 #ifndef __TSS_H__
 #define __TSS_H__
 
-#include "sched.h"
+#include <minios/pm.h>
 
 struct tss_s {
 	unsigned short ptl;

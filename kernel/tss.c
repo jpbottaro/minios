@@ -1,8 +1,8 @@
 #include <minios/mm.h>
 #include <minios/i386.h>
+#include <minios/pm.h>
 #include "tss.h"
 #include "gdt.h"
-#include "sched.h"
 
 #define EFLAGS_MASK 0x00000202
 #define TSS_SIZE    0x68

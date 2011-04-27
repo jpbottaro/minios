@@ -2,8 +2,9 @@
 #include <minios/misc.h>
 #include <minios/i386.h>
 #include <minios/panic.h>
+#include <minios/sched.h>
 #include "tss.h"
-#include "proc.h"
+#include "pm.h"
 
 /* this page resides in the ident. mapped kernel, used to copy things */
 char tmpmem[PAGE_SIZE] __attribute__((aligned(PAGE_SIZE)));
@@ -13,7 +14,7 @@ struct process_state_s ps[MAX_PROCESSES];
 unsigned int pid = 2;
 
 /* initialize process manager, list of processes, tss, and add idle */
-void init_proc()
+void pm_init()
 {
     int i;
     struct process_state_s *process;
@@ -38,6 +39,13 @@ void init_proc()
     process->uid = 0;
     process->gid = 0;
     add_idle(1);
+}
+
+/* do a context switch to process number 'process_num' */
+void pm_switchto(u32_t process_num)
+{
+    /* FIXME !!! */
+    load_process(process_num);
 }
 
 /* add a page to the processes' list of used pages */
@@ -66,7 +74,7 @@ void sys_exit(int status)
         if (parent->status != NULL)
             *(parent->status) = status;
         parent->child_pid = current_process->pid;
-        sched_ready(parent);
+        sched_enqueue(parent);
     }
 
     /* free process pages */
@@ -76,10 +84,10 @@ void sys_exit(int status)
     /* delete process */
     current_process->pid = 0;
     LIST_INSERT_HEAD(&unused_list, current_process, unused);
-    sched_uready(current_process);
+    sched_unqueue(current_process);
 
     current_process = NULL;
-    schedule();
+    sched_schedule();
 }
 
 /* find process by pid. bruteforce!! probably would be better if parent would
@@ -123,9 +131,9 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
         *status = -1;
 
     /* remove from list */
-    sched_uready(current_process);
+    sched_unqueue(current_process);
     current_process = NULL;
-    schedule();
+    sched_schedule();
 
     return current_process->child_pid;
 }
@@ -237,7 +245,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     add_tss(process->i, (u32_t) dirbase);
 
     /* add to scheduler */
-    sched_ready(process);
+    sched_enqueue(process);
 
     return process->pid;
 }

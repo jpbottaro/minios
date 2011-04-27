@@ -8,7 +8,7 @@ struct page_s pages[PAGES_LEN];
 LIST_HEAD(free_pages_t, page_s) free_pages;
 
 /* init memory manager */
-void init_mm()
+void mm_init()
 {
     int i;
 
@@ -92,7 +92,12 @@ mm_page* mm_dir_new()
 
     /* 0111 means present, r/w and user */
     *dirbase = make_mm_entry_addr(tablebase, 0111);
-    for (base = 0; base < 0x400000; base += PAGE_SIZE) {
+
+    /* mark first page as not present, to catch NULL pointers */
+    *tablebase = make_mm_entry_addr(0, 011);
+    tablebase++;
+
+    for (base = PAGE_SIZE; base < 0x400000; base += PAGE_SIZE) {
         /* 011 means present, r/w and supervisor */
         *tablebase = make_mm_entry_addr(base, 011);
         tablebase++;

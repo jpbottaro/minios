@@ -9,7 +9,7 @@ int dev_io(unsigned int dev, char *buf, int n, int flag)
     switch (dev) {
         case DEV_STDIN:
             if (flag == FS_READ) {
-                block_process(current_process, dev);
+                sched_block(current_process, dev);
                 return get_line(buf, n);
             }
             break;

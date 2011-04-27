@@ -1,7 +1,7 @@
 BITS 32
 
 extern reset_intr_pic1
-extern schedule
+extern sched_schedule
 extern keyboard
 extern print_msg
 extern system_calls
@@ -133,7 +133,7 @@ _isr19:
 _isr32:
     pushad
     call reset_intr_pic1
-    call schedule
+    call sched_schedule
     popad
     iret
 _isr33:
