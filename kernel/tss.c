@@ -30,7 +30,7 @@ extern unsigned int KSTACKSIZE;
 struct tss_s tss[MAX_PROCESSES];
 unsigned short first;
 
-void init_tss()
+void tss_init()
 {
     struct tss_s *t;
     gdt_entry *entry;

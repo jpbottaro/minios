@@ -4,4 +4,4 @@ mm.c
 sched.c
 pm.c
 vga.c
-keyboard.c
+kbd.c

@@ -44,7 +44,7 @@ struct tss_s {
 	unsigned short  iomap;
 } __attribute__((__packed__, aligned (8)));
 
-void init_tss();
+void tss_init();
 int add_idle(unsigned int pos);
 int add_tss(unsigned int pos, unsigned int user_cr3);
 void load_process(unsigned int num);

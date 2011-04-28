@@ -29,8 +29,8 @@ void pm_init()
         LIST_INSERT_HEAD(&unused_list, process, unused);
     }
 
-    /* init tss array */
-    init_tss();
+    /* init needed tss */
+    tss_init();
 
     /* add idle task */
     process = IDLE;
