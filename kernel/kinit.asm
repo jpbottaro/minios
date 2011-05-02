@@ -2,7 +2,7 @@ bits 16
 section .text
 
 global start
-global idle
+global idle_startpoint
 global KSTACK
 global KSTACKSIZE
 
@@ -36,7 +36,7 @@ modo_protegido:
 
     jmp kernel_init
 
-idle:
+idle_startpoint:
     jmp $
 
 %include "a20.asm"

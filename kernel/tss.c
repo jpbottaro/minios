@@ -1,10 +1,9 @@
-#include <minios/mm.h>
 #include <minios/i386.h>
+#include <minios/mm.h>
 #include <minios/pm.h>
-#include "tss.h"
 #include "gdt.h"
+#include "tss.h"
 
-#define EFLAGS_MASK 0x00000202
 #define TSS_SIZE    0x68
 
 #define tss_gdt_entry(entry, tss_addr) \
@@ -22,82 +21,61 @@
     entry->db          = 0x0; \
     entry->g           = 0x1;
 
-/* label from kernel.asm, just a jmp $ */
-extern void idle();
-extern unsigned char KSTACK;
-extern unsigned int KSTACKSIZE;
+struct tss_s {
+	unsigned short ptl;
+	unsigned short unused0;
+	unsigned int   esp0;
+	unsigned short ss0;
+	unsigned short unused1;
+	unsigned int   esp1;
+	unsigned short ss1;
+	unsigned short unused2;
+	unsigned int   esp2;
+	unsigned short ss2;
+	unsigned short unused3;
+	unsigned int   cr3;
+	unsigned int   eip;
+	unsigned int   eflags;
+	unsigned int   eax;
+	unsigned int   ecx;
+	unsigned int   edx;
+	unsigned int   ebx;
+	unsigned int   esp;
+	unsigned int   ebp;
+	unsigned int   esi;
+	unsigned int   edi;
+	unsigned short es;
+	unsigned short unused4;
+	unsigned short cs;
+	unsigned short unused5;
+	unsigned short ss;
+	unsigned short unused6;
+	unsigned short ds;
+	unsigned short unused7;
+	unsigned short fs;
+	unsigned short unused8;
+	unsigned short gs;
+	unsigned short unused9;
+	unsigned short ldt;
+	unsigned short unused10;
+	unsigned short dtrap;
+	unsigned short iomap;
+} __attribute__((__packed__, aligned (8)));
 
-struct tss_s tss[MAX_PROCESSES];
-unsigned short first;
+struct tss_s tss[1];
 
 void tss_init()
 {
-    struct tss_s *t;
     gdt_entry *entry;
 
-    /* fill gdt with tss entries */
-    for (t = &tss[0]; t < &tss[MAX_PROCESSES]; t++) {
-        entry = (gdt_entry *) gdt_free_entry();
-        if (t == &tss[0])
-            first = gdt_desc((unsigned int) entry);
-        tss_gdt_entry(entry, t);
-    }
+    entry = (gdt_entry *) gdt_free_entry();
+    tss_gdt_entry(entry, tss);
 
-    /* Initial task, we wont use this again */
     tss[0].cr3    = rcr3();
+    tss[0].ss0    = SEG_DESC_KDATA;
+    tss[0].esp0   = KSTACK_PAGE + PAGE_SIZE - 0x10;
     tss[0].dtrap  = 0x0;
     tss[0].iomap  = 0xFFFF;
-    ltr(first);
-}
 
-unsigned int task_desc(unsigned int pos)
-{
-    return first + pos * sizeof(gdt_entry);
-}
-
-int add_idle(unsigned int pos)
-{
-    tss[pos].cr3    = (unsigned int) rcr3();
-    tss[pos].eip    = (unsigned int) idle;
-    tss[pos].eflags = EFLAGS_MASK;
-    tss[pos].esp    = (unsigned int) (&KSTACK + KSTACKSIZE);
-    tss[pos].ebp    = (unsigned int) (&KSTACK + KSTACKSIZE);
-    tss[pos].cs     = SEG_DESC_KCODE;
-    tss[pos].ds     = SEG_DESC_KDATA;
-    tss[pos].ss     = SEG_DESC_KDATA;
-    tss[pos].fs     = SEG_DESC_KDATA;
-    tss[pos].gs     = SEG_DESC_KDATA;
-    tss[pos].es     = SEG_DESC_VIDEO;
-    tss[pos].dtrap  = 0x0;
-    tss[pos].iomap  = 0xFFFF;
-
-    return 0;   
-}
-
-int add_tss(unsigned int pos, unsigned int user_cr3)
-{
-    tss[pos].cr3    = user_cr3;
-    tss[pos].eip    = CODE_OFFSET;
-    tss[pos].eflags = EFLAGS_MASK;
-    tss[pos].esp    = 0xFFFFFFF4;
-    tss[pos].ebp    = 0xFFFFFFF4;
-    tss[pos].cs     = SEG_DESC_KCODE;
-    tss[pos].ds     = SEG_DESC_KDATA;
-    tss[pos].ss     = SEG_DESC_KDATA;
-    tss[pos].fs     = SEG_DESC_KDATA;
-    tss[pos].gs     = SEG_DESC_KDATA;
-    tss[pos].es     = SEG_DESC_KDATA;
-    tss[pos].ss0    = SEG_DESC_KDATA;
-    tss[pos].esp0   = 0xFFFFEFE0;
-    tss[pos].dtrap  = 0x0;
-    tss[pos].iomap  = 0xFFFF;
-
-    return 0;
-}
-
-/* the mmu is so simple that it does not free up memory, so nothing to see
- * here, move along
- */
-void free_tss(unsigned int pos)
-{
+    ltr(gdt_desc((unsigned int) entry));
 }

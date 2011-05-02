@@ -5,13 +5,14 @@
 #include <minios/mm.h>
 #include <sys/types.h>
 
-#define IDLE        (&ps[1])
-#define IDLE_NUM    1
-#define STACK_PAGE  0xFFFFF000
-#define KSTACK_PAGE 0xFFFFE000
-#define ARG_PAGE    0xFFFFD000
-#define MAX_PROCESSES 20
+#define IDLE          (&ps[1])
+#define IDLE_NUM      1
+#define STACK_PAGE    0xFFFFF000
+#define KSTACK_PAGE   0xFFFFE000
+#define ARG_PAGE      0xFFFFD000
+#define EFLAGS_MASK   0x00000202
 #define MAX_ARG       10
+#define MAX_PROCESSES 20
 
 struct process_state_s {
     /* number */
@@ -19,6 +20,14 @@ struct process_state_s {
 
     /* process id */
     pid_t pid;
+
+    /* run = 0 means the process was never run */
+    u32_t run;
+
+    /* process data */
+    u32_t eip;
+    u32_t esp;
+    u32_t ebp;
 
     /* directory of pages */
     mm_page *pages_dir;

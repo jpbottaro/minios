@@ -1,7 +1,8 @@
 #include <minios/i386.h>
 #include <minios/sched.h>
-#include "pm.h"
+#include <minios/pm.h>
 
+struct process_state_s *last_process;
 struct process_state_s *current_process;
 
 CIRCLEQ_HEAD(ready_list_t, process_state_s) ready_list;
@@ -17,7 +18,7 @@ void sched_init()
     CIRCLEQ_INIT(&ready_list);
 
     /* start with no current process */
-    current_process = NULL;
+    last_process = current_process = NULL;
 }
 
 /* unblock first process waiting for 'dev' */
@@ -48,10 +49,8 @@ void sched_block(struct process_state_s *process, unsigned int dev)
     LIST_INSERT_HEAD(&waiting_list, process, wait);
 
     /* if caller is the current process, schedule to next one */
-    if (process == current_process) {
-        current_process = NULL;
-        sched_schedule();
-    }
+    if (process == current_process)
+        sched_schedule(1);
 }
 
 /* put a process in the ready list */
@@ -67,31 +66,37 @@ void sched_unqueue(struct process_state_s *process)
 }
 
 /* schedule next ready process (or go idle if no procesess ready) */
-void sched_schedule()
+void sched_schedule(int force_sched)
 {
     struct process_state_s *process;
 
-    /* no process running */
-    if (current_process == NULL) {
+    /* if we are idle, check for new processes */
+    if (current_process == IDLE) {
+        if (!CIRCLEQ_EMPTY(&ready_list)) {
+            process = CIRCLEQ_FIRST(&ready_list);
+            last_process = current_process;
+            current_process = process;
+            pm_switchto(process->i);
+        }
+    /* no process running (or forced schedule) */
+    } else if (current_process == NULL || force_sched) {
         /* if any process ready then execute, otherwise go idle */
         if (!CIRCLEQ_EMPTY(&ready_list)) {
             process = CIRCLEQ_FIRST(&ready_list);
+            if (process == current_process)
+                return;
+            last_process = current_process;
             current_process = process;
             pm_switchto(process->i);
         } else {
+            last_process = current_process;
             current_process = IDLE;
             pm_switchto(IDLE_NUM);
-        }
-    /* if we are idle, check for new processes */
-    } else if (current_process == IDLE) {
-        if (!CIRCLEQ_EMPTY(&ready_list)) {
-            process = CIRCLEQ_FIRST(&ready_list);
-            current_process = process;
-            pm_switchto(process->i);
         }
     /* if there are more than 1 process ready */
     } else if (CIRCLEQ_NEXT(current_process, ready) !=
                CIRCLEQ_PREV(current_process, ready)) {
+        last_process = current_process;
         current_process = CIRCLEQ_NEXT(current_process, ready);
         pm_switchto(current_process->i);
     }

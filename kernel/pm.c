@@ -4,6 +4,7 @@
 #include <minios/panic.h>
 #include <minios/sched.h>
 #include "tss.h"
+#include "gdt.h"
 #include "pm.h"
 
 /* this page resides in the ident. mapped kernel, used to copy things */
@@ -12,6 +13,31 @@ char tmpmem[PAGE_SIZE] __attribute__((aligned(PAGE_SIZE)));
 LIST_HEAD(unused_list_t, process_state_s) unused_list;
 struct process_state_s ps[MAX_PROCESSES];
 unsigned int pid = 2;
+
+/* label from kernel.asm, just a jmp $ */
+extern void idle();
+
+extern char KSTACK;
+extern u32_t KSTACKSIZE;
+extern u32_t idle_startpoint;
+
+void add_idle()
+{
+    struct process_state_s *process;
+
+    process = IDLE;
+    process->run = 0;
+    process->pid = 1;
+    process->uid = 1;
+    process->gid = 1;
+    process->pages_dir = (mm_page *) rcr3();
+    process->parent = NULL;
+    LIST_INIT(&process->pages_list);
+
+    process->eip = (u32_t) &idle_startpoint;
+    process->esp = (u32_t) (&KSTACK + KSTACKSIZE - 0x10);
+    process->ebp = (u32_t) (&KSTACK + KSTACKSIZE - 0x10);
+}
 
 /* initialize process manager, list of processes, tss, and add idle */
 void pm_init()
@@ -33,19 +59,15 @@ void pm_init()
     tss_init();
 
     /* add idle task */
-    process = IDLE;
-    process->i = 1;
-    process->pid = 1;
-    process->uid = 0;
-    process->gid = 0;
-    add_idle(1);
+    add_idle();
 }
 
 /* do a context switch to process number 'process_num' */
 void pm_switchto(u32_t process_num)
 {
-    /* FIXME !!! */
-    load_process(process_num);
+    if (last_process != NULL)
+        save_process_state(last_process);
+    load_process_state(&ps[process_num]);
 }
 
 /* add a page to the processes' list of used pages */
@@ -87,7 +109,7 @@ void sys_exit(int status)
     sched_unqueue(current_process);
 
     current_process = NULL;
-    sched_schedule();
+    sched_schedule(0);
 }
 
 /* find process by pid. bruteforce!! probably would be better if parent would
@@ -132,8 +154,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
 
     /* remove from list */
     sched_unqueue(current_process);
-    current_process = NULL;
-    sched_schedule();
+    sched_schedule(1);
 
     return current_process->child_pid;
 }
@@ -169,12 +190,16 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
 
     /* fill child entry */
     LIST_REMOVE(process, unused);
+    process->run = 0;
     process->pid = pid++;
-    process->uid = 0;
-    process->gid = 0;
+    process->uid = 1;
+    process->gid = 1;
     process->waiting = NULL;
     process->parent = current_process;
     process->curr_dir = curr_dir;
+    process->eip = CODE_OFFSET;
+    process->esp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);
+    process->ebp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);
     LIST_INIT(&process->pages_list);
     init_fds(process->i);
 
@@ -240,9 +265,6 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     *((unsigned int *) (tmpmem + 0xFF8)) = i;
     *((unsigned int *) (tmpmem + 0xFF4)) = 0;
     mm_umap_page((mm_page *) rcr3(), tmpmem);
-
-    /* add tss for the new task, using the created page directory table */
-    add_tss(process->i, (u32_t) dirbase);
 
     /* add to scheduler */
     sched_enqueue(process);
