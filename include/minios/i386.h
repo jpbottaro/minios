@@ -80,7 +80,7 @@ LS_INLINE unsigned int rcr4(void) {
  LS_INLINE void tlbflush(void) {
 	unsigned int cr3;
 	__asm __volatile("movl %%cr3,%0" : "=r" (cr3));
-	 __asm __volatile("movl %0,%%cr3" : : "r" (cr3));
+	__asm __volatile("movl %0,%%cr3" : : "r" (cr3));
 }
 
 LS_INLINE void ltr(unsigned short sel) {
@@ -104,6 +104,5 @@ LS_INLINE void sti(void) {
 LS_INLINE void breakpoint(void) {
 	__asm __volatile("xchg %%bx, %%bx" : :);
 }
-
 
 #endif

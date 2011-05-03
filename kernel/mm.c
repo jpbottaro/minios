@@ -61,7 +61,7 @@ void mm_map_page(mm_page *dir, void *vir, void *phy)
     }
 
     table_entry = (mm_page *) (dir_entry->base << 12) +
-                                                (((u32_t) vir >> 12) & 0x3FF);
+                              (((u32_t) vir >> 12) & 0x3FF);
     *table_entry = make_mm_entry_addr(phy,  0111);
     tlbflush();
 }
@@ -94,12 +94,13 @@ mm_page* mm_dir_new()
     *dirbase = make_mm_entry_addr(tablebase, 0111);
 
     /* mark first page as not present, to catch NULL pointers */
-    *tablebase = make_mm_entry_addr(0, 011);
+    /* XXX see why it does not work */
+    *tablebase = make_mm_entry_addr(0, 0111);
     tablebase++;
 
     for (base = PAGE_SIZE; base < 0x400000; base += PAGE_SIZE) {
         /* 011 means present, r/w and supervisor */
-        *tablebase = make_mm_entry_addr(base, 011);
+        *tablebase = make_mm_entry_addr(base, 0111);
         tablebase++;
     }
 

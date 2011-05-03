@@ -71,11 +71,13 @@ void tss_init()
     entry = (gdt_entry *) gdt_free_entry();
     tss_gdt_entry(entry, tss);
 
-    tss[0].cr3    = rcr3();
-    tss[0].ss0    = SEG_DESC_KDATA;
-    tss[0].esp0   = KSTACK_PAGE + PAGE_SIZE - 0x10;
-    tss[0].dtrap  = 0x0;
-    tss[0].iomap  = 0xFFFF;
+    tss[0].cr3   = rcr3();
+    tss[0].ss0   = SEG_DESC_KDATA;
+    tss[0].esp0  = KSTACK_PAGE + PAGE_SIZE - 0x10;
+    tss[0].dtrap = 0x0;
+    tss[0].iomap = 0xFFFF;
+    tss[0].cs = 0x0b;
+    tss[0].ss = tss[0].ds = tss[0].es = tss[0].fs = tss[0].gs = 0x13;
 
-    ltr(gdt_desc((unsigned int) entry));
+    ltr(gdt_desc((unsigned int) entry) | 0x3);
 }

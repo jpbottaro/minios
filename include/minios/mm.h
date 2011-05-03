@@ -43,7 +43,7 @@
 #define CR4_PVI		0x00000002	// Protected-Mode Virtual Interrupts
 #define CR4_VME		0x00000001	// V86 Mode Extensions
 
-#define PAGE_SIZE 4096
+#define PAGE_SIZE    0x1000
 #define KERNEL_PAGES 0x300000
 
 typedef struct str_mm_page {

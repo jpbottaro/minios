@@ -215,7 +215,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         page = mm_mem_alloc();
         add_process_page(process, page);
 
-        /* temporary map page to temmem to be able to copy the code */
+        /* temporary map page to tmpmem to be able to copy the code */
         mm_map_page((mm_page *) rcr3(), tmpmem, page);
 
         /* copy file from filesystem to the new page */

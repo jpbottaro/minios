@@ -39,6 +39,7 @@ user:
     mov edx, USER_DATA
     mov ds, edx
     mov es, edx
+    mov fs, edx
     mov gs, edx
     push edx
     push dword [eax + DATA_ESP]
@@ -49,6 +50,7 @@ root:
     mov edx, KERN_DATA
     mov ds, edx
     mov es, edx
+    mov fs, edx
     mov gs, edx
     mov esp, [eax + DATA_ESP]
     push dword EFLAGS_MASK
