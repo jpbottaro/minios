@@ -15,13 +15,29 @@ LS_INLINE void lcr4(unsigned int val);
 LS_INLINE unsigned int rcr4(void);
 LS_INLINE void tlbflush(void);
 
+LS_INLINE unsigned int resp(void);
+
 LS_INLINE void ltr(unsigned short sel);
 LS_INLINE unsigned short rtr(void);
 LS_INLINE void hlt(void);
 
+LS_INLINE void cli(void);
 LS_INLINE void sti(void);
 
 LS_INLINE void breakpoint(void);
+
+LS_INLINE unsigned int reax(void);
+LS_INLINE unsigned int rebx(void);
+LS_INLINE unsigned int recx(void);
+LS_INLINE unsigned int redx(void);
+LS_INLINE unsigned int res(void);
+LS_INLINE unsigned int rds(void);
+LS_INLINE unsigned int rfs(void);
+LS_INLINE unsigned int rgs(void);
+LS_INLINE unsigned int rss(void);
+LS_INLINE unsigned int redi(void);
+LS_INLINE unsigned int resi(void);
+LS_INLINE unsigned int rebp(void);
 
 LS_INLINE void outb(int port, unsigned char data) {
 	__asm __volatile("outb %0,%w1" : : "a" (data), "d" (port));
@@ -77,7 +93,13 @@ LS_INLINE unsigned int rcr4(void) {
 	return cr4;
 }
  
- LS_INLINE void tlbflush(void) {
+LS_INLINE unsigned int resp(void) {
+	unsigned int esp;
+	__asm __volatile("movl %%esp,%0" : "=r" (esp));
+	return esp;
+}
+
+LS_INLINE void tlbflush(void) {
 	unsigned int cr3;
 	__asm __volatile("movl %%cr3,%0" : "=r" (cr3));
 	__asm __volatile("movl %0,%%cr3" : : "r" (cr3));
@@ -97,12 +119,89 @@ LS_INLINE void hlt(void) {
 	__asm __volatile("hlt" : : );
 }
 
+LS_INLINE void cli(void) {
+	__asm __volatile("cli" : : );
+}
+
+
 LS_INLINE void sti(void) {
 	__asm __volatile("sti" : : );
 }
 
 LS_INLINE void breakpoint(void) {
 	__asm __volatile("xchg %%bx, %%bx" : :);
+}
+
+LS_INLINE unsigned int reax(void) {
+	unsigned int val;
+	__asm __volatile("movl %%eax,%0" : "=r" (val));
+	return val;
+}
+
+LS_INLINE unsigned int rebx(void) {
+	unsigned int val;
+	__asm __volatile("movl %%ebx,%0" : "=r" (val));
+	return val;
+}
+
+LS_INLINE unsigned int recx(void) {
+	unsigned int val;
+	__asm __volatile("movl %%ecx,%0" : "=r" (val));
+	return val;
+}
+
+LS_INLINE unsigned int redx(void) {
+	unsigned int val;
+	__asm __volatile("movl %%edx,%0" : "=r" (val));
+	return val;
+}
+
+LS_INLINE unsigned int res(void) {
+	unsigned int val;
+	__asm __volatile("movl %%es,%0" : "=r" (val));
+	return val;
+}
+
+LS_INLINE unsigned int rds(void) {
+	unsigned int val;
+	__asm __volatile("movl %%ds,%0" : "=r" (val));
+	return val;
+}
+
+LS_INLINE unsigned int rfs(void) {
+	unsigned int val;
+	__asm __volatile("movl %%fs,%0" : "=r" (val));
+	return val;
+}
+
+LS_INLINE unsigned int rgs(void) {
+	unsigned int val;
+	__asm __volatile("movl %%gs,%0" : "=r" (val));
+	return val;
+}
+
+LS_INLINE unsigned int rss(void) {
+	unsigned int val;
+	__asm __volatile("movl %%ss,%0" : "=r" (val));
+	return val;
+}
+
+LS_INLINE unsigned int redi(void) {
+	unsigned int val;
+	__asm __volatile("movl %%edi,%0" : "=r" (val));
+	return val;
+}
+
+LS_INLINE unsigned int resi(void) {
+	unsigned int val;
+	__asm __volatile("movl %%esi,%0" : "=r" (val));
+	return val;
+}
+
+LS_INLINE unsigned int rebp(void) {
+	unsigned int val;
+	__asm __volatile("movl %%ebp,%0" : "=r" (val));
+	return val;
 }
 
 #endif

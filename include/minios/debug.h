@@ -1,15 +1,14 @@
-#ifndef __DEBUG_H__
-#define __DEBUG_H__
+#ifndef _DEBUG_H
+#define _DEBUG_H
 
-#include <isr.h>
+#include <minios/isr.h>
 
 void debug_init(void);
 
-void debug_kernelpanic(const uint_32* stack, const exp_state* expst);
+void debug_kernelpanic(const u32_t* stack, const exp_state* expst);
 
-
-#include <vga.h>
-#include <i386.h>
+#include <minios/vga.h>
+#include <minios/i386.h>
 
 #ifndef NDEBUG
 #define __mac_xstr(s) #s
