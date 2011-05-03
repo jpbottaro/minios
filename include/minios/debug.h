@@ -2,9 +2,10 @@
 #define _DEBUG_H
 
 #include <minios/isr.h>
+#include <sys/types.h>
 
 void debug_init(void);
-
+void debug_panic(const char *msg);
 void debug_kernelpanic(const u32_t* stack, const exp_state* expst);
 
 #include <minios/vga.h>

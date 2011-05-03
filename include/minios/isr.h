@@ -1,5 +1,5 @@
-#ifndef __ISR_H__
-#define __ISR_H__
+#ifndef _ISR_H
+#define _ISR_H
 
 #include <sys/types.h>
 
@@ -27,4 +27,4 @@ typedef struct str_exp_state {
 	u32_t org_ss;
 } __attribute__((__packed__)) exp_state;
 
-#endif
+#endif /* _ISR_H */

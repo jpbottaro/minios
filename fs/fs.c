@@ -1,10 +1,11 @@
 #include <unistd.h> /* get constants for sys calls */
 #include <fcntl.h>  /* get constants for sys calls */
-#include <minios/misc.h>
-#include <minios/sched.h> /* get uid and gid of process */
-#include <minios/dev.h>
-#include <minios/panic.h>
 #include <minios/dirent.h>
+#include <minios/sched.h>
+#include <minios/scall.h>
+#include <minios/debug.h>
+#include <minios/misc.h>
+#include <minios/dev.h>
 #include "fs.h"
 
 char *fs_offset;
@@ -14,7 +15,7 @@ static int fs_readwrite(int fd, char *buf, unsigned int n, int flag);
 static void fill_inode(struct inode_s *ino, int mode);
 
 /* initialize fs, needs to be ALL mapped in memory, fs_start being first byte */
-int init_fs(u32_t fs_start)
+int fs_init(u32_t fs_start)
 {
     struct inode_s *ino, *dev;
     ino_t ino_num;
@@ -24,7 +25,7 @@ int init_fs(u32_t fs_start)
 
     /* make stdin, stdout, stderr */
     if ( (ino_num = find_inode(NULL, "/dev", FS_SEARCH_GET)) == NO_INODE)
-        panic("No /dev folder!!");
+        debug_panic("fs_init: no /dev folder!!");
     dev = get_inode(ino_num);
 
     ino_num = find_inode(dev, "stdin", FS_SEARCH_ADD);
@@ -39,6 +40,19 @@ int init_fs(u32_t fs_start)
     ino = get_inode(ino_num);
     fill_inode(ino, I_SPECIAL);
     ino->i_zone[0] = DEV_STDERR;
+
+    /* register sys calls */
+    SCALL_REGISTER(3, sys_read);
+    SCALL_REGISTER(4, sys_write);
+    SCALL_REGISTER(5, sys_open);
+    SCALL_REGISTER(6, sys_close);
+    SCALL_REGISTER(10, sys_unlink);
+    SCALL_REGISTER(12, sys_chdir);
+    SCALL_REGISTER(19, sys_lseek);
+    SCALL_REGISTER(38, sys_rename);
+    SCALL_REGISTER(39, sys_mkdir);
+    SCALL_REGISTER(40, sys_rmdir);
+    SCALL_REGISTER(141, sys_getdents);
 
     return OK;
 }

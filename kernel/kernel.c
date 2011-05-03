@@ -14,6 +14,9 @@
 /* here is where the magic starts */
 void kernel_init()
 {
+    /* this has to come first, as it clears all system calls */
+    scall_init();
+
     /* clear the screen */
     vga_init();
 
@@ -27,21 +30,20 @@ void kernel_init()
     /* initialize interrupt table */
     idt_init();
 
+    /* initialize debug info (and indirectly most exception handlers) */
+    debug_init();
+
     /* set hw clock to 50hz */
     clock_init(50);
 
     /* initialize our memory mapped file system */
-    init_fs(FS_INITIAL_POS);
+    fs_init(FS_INITIAL_POS);
 
-    /* initialize scheduler and add the shell as first program */
+    /* initialize scheduler */
     sched_init();
+
+    /* add the shell as first program */
     sys_newprocess("/bin/cash", NULL);
-
-    /* initialize system calls */
-    scall_init();
-
-    /* initialize debug info (and indirectly most exception handlers) */
-    debug_init();
 
     /* enable interruptions (and therefore scheduler) */
     sti();

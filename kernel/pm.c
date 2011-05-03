@@ -1,8 +1,9 @@
 #include <minios/mm.h>
 #include <minios/misc.h>
 #include <minios/i386.h>
-#include <minios/panic.h>
+#include <minios/debug.h>
 #include <minios/sched.h>
+#include <minios/scall.h>
 #include "tss.h"
 #include "gdt.h"
 #include "pm.h"
@@ -60,6 +61,12 @@ void pm_init()
 
     /* add idle task */
     add_idle();
+
+    /* register sys calls */
+    SCALL_REGISTER(1, sys_exit);
+    SCALL_REGISTER(7, sys_waitpid);
+    SCALL_REGISTER(11, sys_newprocess);
+    SCALL_REGISTER(20, sys_getpid);
 }
 
 /* do a context switch to process number 'process_num' */
@@ -175,7 +182,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     /* get process entry for child */
     process = LIST_FIRST(&unused_list);
     if (process == NULL)
-        panic("No space for new process in ps array!");
+        debug_panic("No space for new process in ps array!");
 
     curr_dir = (current_process == NULL) ? 1 : current_process->curr_dir;
 

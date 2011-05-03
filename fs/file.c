@@ -1,7 +1,7 @@
-#include "fs.h"
 #include <minios/sched.h> /* process table (needed for process fd's) */
-#include <minios/panic.h>
+#include <minios/debug.h>
 #include <sys/queue.h>
+#include "fs.h"
 
 /* init fds for a process */
 void init_fds(unsigned int id)
@@ -13,7 +13,7 @@ void init_fds(unsigned int id)
     struct unused_fd_t *unused_fd;
 
     if ( (ino_num = find_inode(NULL, "/dev", FS_SEARCH_GET)) == NO_INODE)
-        panic("No /dev folder (init_fds)");
+        debug_panic("init_fds: no /dev folder (init_fds)");
     dev = get_inode(ino_num);
 
     file->ino = find_inode(dev, "stdin", FS_SEARCH_GET);

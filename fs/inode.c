@@ -1,6 +1,5 @@
-#include "fs.h"
 #include <minios/misc.h>
-#include <minios/panic.h>
+#include "fs.h"
 
 static char *parse_path(char *path);
 

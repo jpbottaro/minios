@@ -48,6 +48,12 @@ INTR_FUNC("ALIGNMENT", 17, 1);
 INTR_FUNC("MACHINE CHECK", 18, 0);
 INTR_FUNC("SIMD", 19, 0);
 
+void debug_panic(const char *msg)
+{
+    vga_pprintf(24, 0, "PANIC! %s", msg);
+    for (;;) {}
+}
+
 void debug_init()
 {
     idt_register(1, isr1, DEFAULT_PL);

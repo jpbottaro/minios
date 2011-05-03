@@ -30,7 +30,7 @@ struct file_s {
 
 LIST_HEAD(unused_fd_t, file_s);
 
-int init_fs(u32_t fs_start);
+int fs_init(u32_t fs_start);
 int sys_open(const char *filename, int flags, int mode);
 int sys_close(int fd);
 int sys_lseek(int fd, off_t offset, int whence);

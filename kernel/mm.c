@@ -1,6 +1,7 @@
-#include <minios/mm.h>
+#include <minios/debug.h>
+#include <minios/scall.h>
 #include <minios/i386.h>
-#include <minios/panic.h>
+#include <minios/mm.h>
 #include <sys/types.h>
 #include "pm.h"
 
@@ -18,6 +19,9 @@ void mm_init()
         pages[i].base = (void *) KERNEL_PAGES + i * PAGE_SIZE;
         LIST_INSERT_HEAD(&free_pages, &pages[i], status);
     }
+
+    /* register sys calls */
+    SCALL_REGISTER(45, sys_palloc);
 }
 
 /* alloc page */
@@ -28,7 +32,7 @@ void *mm_mem_alloc()
 
     page = LIST_FIRST(&free_pages);
     if (page == NULL)
-        panic("mm_mem_alloc: no more free pages");
+        debug_panic("mm_mem_alloc: no more free pages");
     LIST_REMOVE(page, status);
 
     start = (u32_t *) page->base;
@@ -43,7 +47,7 @@ void *mm_mem_alloc()
 void mm_mem_free(void *page)
 {
     if (page < (void *) KERNEL_PAGES || page > (void *) CODE_OFFSET)
-        panic("mm_mem_free: page off limits");
+        debug_panic("mm_mem_free: page off limits");
     LIST_INSERT_HEAD(&free_pages, &pages[hash_page(page)], status);
 }
 
@@ -78,7 +82,7 @@ void mm_umap_page(mm_page *dir, void *vir)
 
     /* page not mapped? */
     if (!(dir_entry->attr & MM_ATTR_P) || !(table_entry->attr & MM_ATTR_P))
-        panic("mm_umap_page: page not mapped");
+        debug_panic("mm_umap_page: page not mapped");
 
     table_entry->attr = 0;
     tlbflush();
