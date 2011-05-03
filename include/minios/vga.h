@@ -5,10 +5,10 @@
 
 void vga_init(void);
 
-int vga_pwrite(u16_t f, u16_t c, const char* msg,  u8_t attr);
+int vga_pwrite(u16_t r, u16_t c, const char* msg, int n);
 int vga_write(const char* msg, int n);
-int vga_pprintf(u16_t f, u16_t c, const char* format, u8_t attr, ...)
-                                        __attribute__ ((format (printf, 3, 5)));
+int vga_pprintf(u16_t r, u16_t c, const char* format, ...);
+//                                        __attribute__ ((format (printf, 3, 4)));
 int vga_printf(const char* format, ...);
 
 /* Paleta de 16 colores */

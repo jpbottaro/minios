@@ -51,34 +51,38 @@ void mymemcpy(char *to, const char *from, unsigned int size)
 
 /* taken from http://www.velocityreviews.com/forums/t317059-itoa-in-pure-c.html */
 /* made by user Peter Nilsson */
-char *myitoa(int i, char *to)
+char *myitoa(unsigned int i, char *to, int base)
 {
+    static const char symb[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                                'A', 'B', 'C', 'D', 'E', 'F'};
     char *p = to;
     char *q = to;
 
     if (i >= 0) {
         do {
-            *q++ = '0' + (i % 10);
-        } while (i /= 10);
+            *q++ = symb[i % base];
+        } while (i /= base);
     }
+    /*
     else if (-1 % 2 < 0) {
         *q++ = '-';
         p++;
 
         do {
-            *q++ = '0' - i % 10;
-        } while (i /= 10);
+            *q++ = symb[i % base];
+        } while (i /= base);
     } else {
         *q++ = '-';
         p++;
 
         do {
-            int d = i % 10;
-            i = i / 10;
-            if (d) { i++; d = 10 - d; }
-            *q++ = '0' + d;
+            int d = i % base;
+            i = i / base;
+            if (d) { i++; d = base - d; }
+            *q++ = symb[d];
         } while (i);
     }
+    */
 
     for (*q = 0; p < --q; p++) {
         char c = *p;

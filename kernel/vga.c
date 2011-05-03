@@ -95,6 +95,19 @@ void print_key(char key)
     move_cursor(x, y);
 }
 
+int vga_pwrite(u16_t r, u16_t c, const char* msg, int n)
+{
+    int i;
+
+    x = c;
+    y = r;
+    for (i = 0; i < n; ++i)
+        print_key(msg[i]);
+    xlimit = x;
+
+    return i;
+}
+
 int vga_write(const char* msg, int n)
 {
     int i;
@@ -103,25 +116,35 @@ int vga_write(const char* msg, int n)
         print_key(msg[i]);
     xlimit = x;
 
-    return i;
+   return i;
 }
 
-/* print a null terminated string in the screen */
-int vga_printf(const char* format, ...)
-{
+int real_printf(const char* format, va_list ap)
+{   
     const char *p, *str;
     u32_t i, j, len;
+    int pad;
     char buf[30];
-    va_list ap;
-    
-    va_start(ap, format);
+
     p = format;
     len = 0;
     for (i = 0; i < MAX_LINE && p[i] != '\0'; ++i) {
         if (p[i] == '%') {
+            pad = 0;
+            again:
             switch (p[++i]) {
+                case '0': case '1': case '2': case '3': case '4':
+                case '5': case '6': case '7': case '8': case '9':
+                    pad = 10 * pad + p[i] - '0';
+                    goto again;
                 case 's':
                     str = va_arg(ap, const char *);
+                    if (pad > 0)
+                        pad -= mystrlen(str);
+                    while (pad-- > 0) {
+                        print_key(' ');
+                        ++len;
+                    }
                     for (j = 0; j < MAX_LINE && str[j] != '\0'; ++j) {
                         print_key(str[j]);
                         ++len;
@@ -129,7 +152,27 @@ int vga_printf(const char* format, ...)
                     break;
                 case 'i':
                     j = va_arg(ap, int);
-                    myitoa(j, buf);
+                    myitoa(j, buf, 10);
+                    if (pad > 0)
+                        pad -= mystrlen(buf);
+                    while (pad-- > 0) {
+                        print_key('0');
+                        ++len;
+                    }
+                    for (j = 0; j < MAX_LINE && buf[j] != '\0'; ++j) {
+                        print_key(buf[j]);
+                        ++len;
+                    }
+                    break;
+                case 'x':
+                    j = va_arg(ap, int);
+                    myitoa(j, buf, 16);
+                    if (pad > 0)
+                        pad -= mystrlen(buf);
+                    while (pad-- > 0) {
+                        print_key('0');
+                        ++len;
+                    }
                     for (j = 0; j < MAX_LINE && buf[j] != '\0'; ++j) {
                         print_key(buf[j]);
                         ++len;
@@ -148,6 +191,31 @@ int vga_printf(const char* format, ...)
     }
 
     xlimit = x;
+    return len;
+}
+
+int vga_pprintf(u16_t r, u16_t c, const char* format, ...)
+{
+    va_list ap;
+    int len;
+    
+    x = c;
+    y = r;
+    va_start(ap, format);
+    len = real_printf(format, ap);
+    va_end(ap);
+
+    return len;
+}
+
+/* print a null terminated string in the screen */
+int vga_printf(const char* format, ...)
+{
+    va_list ap;
+    int len;
+    
+    va_start(ap, format);
+    len = real_printf(format, ap);
     va_end(ap);
 
     return len;
