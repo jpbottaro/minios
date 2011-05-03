@@ -1,9 +1,10 @@
-#include <minios/mm.h>
-#include <minios/misc.h>
-#include <minios/i386.h>
-#include <minios/debug.h>
 #include <minios/sched.h>
 #include <minios/scall.h>
+#include <minios/misc.h>
+#include <minios/i386.h>
+#include <minios/mm.h>
+#include "debug.h"
+#include "idt.h"
 #include "tss.h"
 #include "gdt.h"
 #include "pm.h"
@@ -40,6 +41,16 @@ void add_idle()
     process->ebp = (u32_t) (&KSTACK + KSTACKSIZE - 0x10);
 }
 
+/* new handler for page fault to force exit of ring3 tasks who force it */
+void pf_handler()
+{
+    if (current_process == NULL || current_process->uid == 1) {
+        isr14();
+    } else {
+        sys_exit(-1);
+    }
+}
+
 /* initialize process manager, list of processes, tss, and add idle */
 void pm_init()
 {
@@ -67,6 +78,9 @@ void pm_init()
     SCALL_REGISTER(7, sys_waitpid);
     SCALL_REGISTER(11, sys_newprocess);
     SCALL_REGISTER(20, sys_getpid);
+
+    /* register page fault handler */
+    idt_register(14, pf_handler, DEFAULT_PL);
 }
 
 /* do a context switch to process number 'process_num' */

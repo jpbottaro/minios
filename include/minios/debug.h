@@ -21,4 +21,4 @@ void debug_kernelpanic(const u32_t* stack, const exp_state* expst);
 #define kassert(EXP) {}
 #endif
 
-#endif
+#endif /* _DEBUG_H */

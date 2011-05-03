@@ -1,9 +1,9 @@
-#ifndef __PSO_FILE_H__
-#define __PSO_FILE_H__
+#ifndef _PSO_FILE_H
+#define _PSO_FILE_H
 
-#include <tipos.h>
+#include <sys/types.h>
 
-typedef int(func_main)(void);
+typedef int (func_main)(void);
 
 typedef struct str_pso_file {
 	sint_8 signature[4];
@@ -14,4 +14,4 @@ typedef struct str_pso_file {
 	uint_8 data[0]; 
 } pso_file;
 
-#endif
+#endif /* _PSO_FILE_H */

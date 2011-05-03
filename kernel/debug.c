@@ -1,7 +1,7 @@
-#include <minios/debug.h>
 #include <minios/i386.h>
 #include <minios/pm.h>
 #include "idt.h"
+#include "debug.h"
 
 #define OPCODE_CALL_REL  0xE8
 #define OPCODE_CALL_ADDR 0xFF
