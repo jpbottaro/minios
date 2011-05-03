@@ -6,12 +6,12 @@
 typedef int (func_main)(void);
 
 typedef struct str_pso_file {
-	sint_8 signature[4];
-	uint_32 mem_start;
-	uint_32 mem_end_disk;
-	uint_32 mem_end;
+	i8_t signature[4];
+	u32_t mem_start;
+	u32_t mem_end_disk;
+	u32_t mem_end;
 	func_main* _main;
-	uint_8 data[0]; 
+	u8_t data[0]; 
 } pso_file;
 
 #endif /* _PSO_FILE_H */

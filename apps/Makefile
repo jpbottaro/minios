@@ -1,15 +1,13 @@
 ODIR=../apps/obj
-_OBJ=misc.o scall.o lineecho.o echo.o argc.o ls.o cat.o cp.o rm.o cash.o mkdir.o rmdir.o mv.o
-OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
+OBJ=lineecho.pso echo.pso argc.pso ls.pso cat.pso cp.pso rm.pso cash.pso \
+	mkdir.pso rmdir.pso mv.pso
 
 CC=gcc
-CFLAGS=-m32 -Wall -Werror -O0 -I ../include\
-  -fno-zero-initialized-in-bss -fno-stack-protector -ffreestanding
+CFLAGS=-m32 -Wall -Werror -O0 -I ../include -fno-zero-initialized-in-bss -fno-stack-protector -ffreestanding
 NASM=nasm
 NASMFLAGS=-felf32
 LD=ld
-LDFLAGS=-static -m elf_i386 --oformat binary -b elf32-i386 -e main \
-		-Ttext 0x400000
+LDFLAGS=-static -m elf_i386 --oformat binary -b elf32-i386 -e main -Ttext 0x400000
 
 .PHONY=all clean
 
@@ -21,19 +19,11 @@ $(ODIR)/%.o: %.asm
 	@mkdir -p $(ODIR)
 	$(NASM) $(NASMFLAGS) -o $@ $^
 
+%.pso: $(ODIR)/pso_head.o $(ODIR)/%.o $(ODIR)/misc.o $(ODIR)/scall.o $(ODIR)/pso_tail.o
+	$(LD) $(LDFLAGS) -o $@ $(ODIR)/pso_head.o  $(ODIR)/$(@:.pso=.o) $(ODIR)/misc.o $(ODIR)/scall.o $(ODIR)/pso_tail.o
+
 all: $(OBJ)
-	$(LD) $(LDFLAGS) -o lineecho obj/lineecho.o obj/scall.o obj/misc.o
-	$(LD) $(LDFLAGS) -o cash obj/cash.o obj/scall.o obj/misc.o
-	$(LD) $(LDFLAGS) -o echo obj/echo.o obj/scall.o obj/misc.o
-	$(LD) $(LDFLAGS) -o argc obj/argc.o obj/scall.o obj/misc.o
-	$(LD) $(LDFLAGS) -o ls obj/ls.o obj/scall.o obj/misc.o
-	$(LD) $(LDFLAGS) -o cat obj/cat.o obj/scall.o obj/misc.o
-	$(LD) $(LDFLAGS) -o cp obj/cp.o obj/scall.o obj/misc.o
-	$(LD) $(LDFLAGS) -o rm obj/rm.o obj/scall.o obj/misc.o
-	$(LD) $(LDFLAGS) -o mv obj/mv.o obj/scall.o obj/misc.o
-	$(LD) $(LDFLAGS) -o mkdir obj/mkdir.o obj/scall.o obj/misc.o
-	$(LD) $(LDFLAGS) -o rmdir obj/rmdir.o obj/scall.o obj/misc.o
 
 clean:
 	rm -rf $(ODIR)
-	rm -f lineecho cash echo argc ls cat cp rm mkdir rmdir mv
+	rm -f *.pso
