@@ -72,6 +72,7 @@ struct process_state_s {
 extern struct process_state_s ps[MAX_PROCESSES];
 extern struct process_state_s *current_process;
 
+unsigned int current_pid();
 unsigned int current_uid();
 unsigned int current_gid();
 

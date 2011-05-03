@@ -1,7 +1,10 @@
 #ifndef __IDT_H__
 #define __IDT_H__
 
+#define DEFAULT_PL 0x8E00
+
 void idt_init();
+void idt_register(int intr, void (*isr)(void), int pl);
 
 typedef struct str_idt_descriptor {
 	unsigned short idt_length;

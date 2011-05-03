@@ -9,6 +9,8 @@
 
 #define FS_INITIAL_POS 0x20000
 
+#include <minios/debug.h>
+
 /* here is where the magic starts */
 void kernel_init()
 {
@@ -37,6 +39,9 @@ void kernel_init()
 
     /* initialize system calls */
     scall_init();
+
+    /* initialize debug info (and indirectly most exception handlers) */
+    debug_init();
 
     /* enable interruptions (and therefore scheduler) */
     sti();

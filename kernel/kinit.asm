@@ -33,7 +33,6 @@ modo_protegido:
     mov eax, [KSTACKSIZE]
     lea ebp, [KSTACK + eax]
     lea esp, [KSTACK + eax]
-
     jmp kernel_init
 
 idle_startpoint:

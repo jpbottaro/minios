@@ -281,10 +281,21 @@ pid_t sys_getpid(void)
 
 unsigned int current_uid()
 {
+    if (current_process == NULL)
+        return 0;
     return current_process->uid;
 }
 
 unsigned int current_gid()
 {
+    if (current_process == NULL)
+        return 0;
     return current_process->gid;
+}
+
+unsigned int current_pid()
+{
+    if (current_process == NULL)
+        return 0;
+    return current_process->pid;
 }
