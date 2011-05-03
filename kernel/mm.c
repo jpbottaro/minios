@@ -2,6 +2,7 @@
 #include <minios/i386.h>
 #include <minios/panic.h>
 #include <sys/types.h>
+#include "pm.h"
 
 struct page_s pages[PAGES_LEN];
 
@@ -115,4 +116,20 @@ void mm_dir_free(mm_page* d)
     for (; d < end; ++d)
         if (d->attr & MM_ATTR_P)
             mm_mem_free((void *) ((u32_t) d->base << 12));
+}
+
+/* return a 4kb page to a process (fix this, the last_mem thing sucks) */
+void *sys_palloc()
+{
+    void *page, *virt;
+
+    page = mm_mem_alloc();
+    add_process_page(current_process, page);
+
+    virt = current_process->last_mem;
+    current_process->last_mem += PAGE_SIZE;
+
+    mm_map_page(current_process->pages_dir, virt, page);
+
+    return virt;
 }

@@ -4,7 +4,6 @@
 #include <minios/i386.h>
 #include <minios/sched.h>
 #include "idt.h"
-#include "pic.h"
 #include "scall.h"
 #include "clock.h"
 
@@ -25,11 +24,6 @@ void kernel_init()
 
     /* initialize interrupt table */
     idt_init();
-
-    /* enable pic */
-    disable_pic();
-    reset_pic();
-    enable_pic();
 
     /* set hw clock to 50hz */
     clock_init(50);

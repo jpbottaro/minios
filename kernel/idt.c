@@ -1,5 +1,6 @@
 #include <minios/i386.h>
 #include "isr.h"
+#include "pic.h"
 #include "idt.h"
 
 #define IDT_ENTRY(number) \
@@ -11,6 +12,12 @@
             ((unsigned int)(&_isr ## number) >> 16 & (unsigned int) 0xFFFF);
 
 void idt_init() {
+
+    /* enable pic */
+    disable_pic();
+    reset_pic();
+    enable_pic();
+
     IDT_ENTRY(0);   // Divide Error
     IDT_ENTRY(1);   // Debug  
     IDT_ENTRY(2);   // NMI Interrupt

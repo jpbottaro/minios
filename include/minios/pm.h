@@ -13,6 +13,7 @@
 #define EFLAGS_MASK   0x00000202
 #define MAX_ARG       10
 #define MAX_PROCESSES 20
+#define REQUESTED_MEMORY_START 0xE0000000
 
 struct process_state_s {
     /* number */
@@ -38,6 +39,9 @@ struct process_state_s {
     /* process owner's uid and gid */
     pid_t uid;
     pid_t gid;
+
+    /* where to map requested memory */
+    char *last_mem;
 
     /* data to keep track of waitpid sys call */
     struct process_state_s *waiting;

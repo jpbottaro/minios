@@ -197,6 +197,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     process->waiting = NULL;
     process->parent = current_process;
     process->curr_dir = curr_dir;
+    process->last_mem = (char *) REQUESTED_MEMORY_START;
     process->eip = CODE_OFFSET;
     process->esp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);
     process->ebp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);

@@ -1,6 +1,7 @@
-#include <minios/fs.h>
 #include <minios/panic.h>
 #include <minios/sched.h>
+#include <minios/mm.h>
+#include <minios/fs.h>
 
 void *system_calls[255] = {};
 
@@ -30,5 +31,6 @@ void scall_init()
     system_calls[38] = sys_rename;
     system_calls[39] = sys_mkdir;
     system_calls[40] = sys_rmdir;
+    system_calls[45] = sys_palloc;
     system_calls[141] = sys_getdents;
 }

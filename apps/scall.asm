@@ -15,6 +15,7 @@ global getpid
 global rename
 global mkdir
 global rmdir
+global palloc
 global getdents
 
 ; ------- code
@@ -61,6 +62,9 @@ mkdir:
     jmp next
 rmdir:
     mov eax, 40
+    jmp next
+palloc:
+    mov eax, 45
     jmp next
 getdents:
     mov eax, 141
