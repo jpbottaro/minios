@@ -1,3 +1,16 @@
 \section{GDT}
 
-COMPLETAR
+Como se ha decidido utilizar un manejo de memoria plano, es decir evitar el uso
+de segmentación en nuestro kernel (al igual que todo el resto de los sistemas
+operativos modernos), la gdt solo cuenta con un número reducido de entradas.
+Las definiciones de las mismas se pueden encontrar en kernel/gdt.c
+
+Definimos 5 entradas: la primera nula según lo indican los manuales de Intel;
+la segunda y tercera contienen los segmentos de código y datos del kernel
+respectivamente, siendo las entradas 0x8 y 0x10 de la gdt; por último tenemos 2
+entradas más similares a éstas, que solo modifican el campo dpl para ser de
+usuario, siendo las 0x18 y 0x20 (aunque al cargarlas en los registros de
+segmentos serán 0x1B y 0x23 para ajustar el RPL).
+
+Todas estas entradas tienen como base el 0x0 y como límite el máximo posible,
+ocupando de esta manera la totalidad de los 4GB direccionables.

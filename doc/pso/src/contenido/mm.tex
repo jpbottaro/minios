@@ -1,3 +1,30 @@
 \section{Manejo de memoria}
 
-COMPLETAR
+La implementación del manejo de memoria se encuentra en el archivo mm.c. Aquí
+aparece por primera vez el uso de sys/queue.h, una implementación de listas
+para C. Definí un arreglo conteniendo punteros a todas las páginas libres en el
+sistema, ordenadas en una lista. De esta manera pedir páginas o devolverlas no
+es más que quitarla o agregarla a dicha lista.
+
+Por ésto la función mm\_init() inicializa la lista y le agrega todas las
+páginas disponibles. Además registra la llamada al sistema palloc(), más de
+esto más adelante.
+
+La función mm\_mem\_alloc() simplemente toma la lista de páginas y recupera
+el primer elemento. Luego procede a inicializarlo en 0 y devolverlo. Por
+supuesto mm\_mem\_free() realiza lo contrario, vuelve a agregar la página en la
+lista.
+
+Tenemos las funciones mm\_dir\_new() y mm\_dir\_free() que crean y liberan
+un directorio de páginas. Al crearlo, nos aseguramos realizar el identity
+mapping de los primeros 4mb, donde reside el kernel, para que esté mapeado en
+los directorios de páginas de todas las tareas. Liberarlo consiste en recorrer
+el directorio y devolver las tablas de páginas, pero \_nada más\_. Esto se debe
+a que por cuestiones de performance preferí utilizar una lista de páginas
+usadas por proceso, para evitar tener que recorrer miles de tablas de páginas
+con miles de entradas para liberar unas pocas.
+
+Por último tenemos la llamada al sistema palloc, que la puse en el número 45
+(vendría a reemplazar a brk). Nuevamente la implementación es muy sencilla,
+toma una página de la lista de libres, la mapea en el directorio de páginas del
+proceso que la pidió, y la devuelve.

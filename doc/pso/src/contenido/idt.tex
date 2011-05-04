@@ -1,3 +1,13 @@
 \section{IDT}
 
-COMPLETAR
+El manejo de la idt no fue mayores problemas, se encuentra implementado en
+kernel/idt.c. Se definió una estructura que imita una entrada en la tabla y se
+creo la tabla completa.
+
+La función de inicialización de la idt se encarga de habilidar el pic (que
+reordena las interrupciones en la forma estándar de hoy en día), y agregar las
+interrupciones para algunas de las entradas más importantes.
+
+Luego se provee la función para registro de interrupción que permite agregar un
+handler a una número de interrupción dado (simplemente modificando la posición
+en el arreglo de idt).

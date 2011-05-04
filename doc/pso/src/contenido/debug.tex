@@ -1,3 +1,21 @@
 \section{Debugging}
 
-COMPLETAR
+La función debug\_kernelpanic() se encuentra implementada en kernel/debug.c, y
+se encarga de imprimir información sobre el estado del procesador y blokearlo
+indefinidamente.
+
+Aquí pagó el tiempo invertido en el clon de printf(), armar la pantalla para
+imprimir tanta información hubiese sido un gran problema de no tener una forma
+de formatear el texto fácilmente. La función se redujo a llamar repetidas veces
+a vga\_pprintf(), que es similar a vga\_printf() pero además recibe la
+ubicación en donde se desea poner el texto (es decir, se modifica el cursor de
+vga antes de escribir).
+
+HABLAR DEL BACKTRACE
+
+Por último tenemos la función debug\_init() que se encarga de definir para
+todas las exepciónes posibles un handler, que no es más que una llamada a
+debug\_kernelpanic(), armando la estructura que ésta pretende recibir
+previamente. Para ahorrar código y tiempo utilicé el preprocesador para
+realizar un macro que defina estos handlers automáticamente, luego solo bastó
+registrar estas funciones en la idt para cada exepción.

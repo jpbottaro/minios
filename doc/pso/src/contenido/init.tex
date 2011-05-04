@@ -1,3 +1,12 @@
 \section{Inicialización}
 
-COMPLETAR
+La inicialización del kernel ocurre en la función kernel\_init(), que se
+encuentra en kernel/kernel.c. Su único propósito es llamar a las rutinas de
+inicialización del resto de los componentes del sistema. Esto incluye
+inicializar: clock; vga; memory manager; idt; debug; scalls; scheduler/process
+manager.
+
+Una vez que todos estos componentes han sido llamados a iniciarse, solo resta
+habilitar interrupciones con la llamada a sti() y terminar en un loop infinito.
+Esto acabará rápidamente cuando el clock realize la primera interrupción y
+arranque el scheduler, dando inicio al sistema de tareas.

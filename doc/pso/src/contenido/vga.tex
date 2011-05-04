@@ -1,3 +1,27 @@
 \section{Manejo de pantalla (vga)}
 
-COMPLETAR
+El manejo de pantalla se encuentra implementado en el archivo vga.c.
+
+Para facilitar la programación del mismo definí una estructura que imita los
+pares color/letra de la vga de video. Luego bastó definir un puntero a arreglo
+de estas esctructuras, y apuntarlo a la dirección 0xB8000 (el arreglo se llama
+vram).
+
+La función más importante de este módulo es print\_key(). Dado un caracter en
+ascii, lo introduce en la pantalla segun la pocisión del cursor. Además
+interpreta una serie de caracteres especiales como el backspace y reproduce su
+funcionalidad. Entre estos caracteres se encuentra el de nueva linea, que
+únicamente modifica el cursor sin imprimir nada.
+
+En el caso en que el cursor llegue al final de la pantalla y reciba otra nueva
+linea, aparece la función scroll\_up\_vram(), que copia el contenido de la
+memoria de video una fila hacia arriba para hacer lugar a los nuevos
+caracteres.
+
+Por último tenemos real\_printf(), una función que imita a printf() de la
+biblioteca estándar de C. Simplemente parsea caracter por caracter el string de
+formato e imprime en la pantalla acorde a lo que recibe, llamando a
+print\_key(). Hace uso de funciones genéricas que pueden encontrarse en la
+carpeta lib/ (clones de funciones de la biblioteca de C).
+
+El resto de las funciones son en su mayoría wrappers de las ya descriptas.
