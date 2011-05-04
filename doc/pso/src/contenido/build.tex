@@ -1,0 +1,69 @@
+\section{Build system}
+
+El proyecto del nucleo que se nos presentó en la cursada se basa en un único
+makefile que se encarga de compilar todo el código, crear la imagen y armar
+un diskette booteable.
+Este diskette contiene un boot loader que simplemente carga toda la imagen en
+la memoria y comienza la ejecución del mismo.
+
+El problema de esta organización es que no escala bien. Habiendo usado un
+makefile similar para Orga2, preferí evitar usar un makefile monolítico, y
+separar el trabajo en partes más chicas.
+Por esto es que se me ocurrió jugar un poco con Make y generar un simple build
+system para poder imitar el manejo de directorios de projectos como linux o
+minix.
+
+El codigo en los siguientes directorios:
+
+- apps: algunas aplicaciones para utilizar en el entorno de Mini-Kernel 0.01
+
+- bin: elementos para compilar/testear kernel
+
+- doc: documentacion del trabajo
+
+- fs: codigo del file system
+
+- include: algunos archivos .h utiles
+
+- kernel: el codigo del kernel
+
+- lib: funciones varias de uso en general (ej mystrncpy, mystrncmp, etc)
+
+Cada directorio con algo de código contiene su propio makefile que se
+encarga de compilar y armar todo lo que le corresponde. Luego en la carpeta
+'bin' se encuentra el makefile central que se encarga de llamar a todos los
+makefiles de las subcarpetas y linkear el kernel, finalizando con el armado del
+diskette booteable.
+
+Como el makefile central no sabe que es lo que hace cada sub-makefile (a
+propósito), y más importante no sabe que archivos objeto crean, cada
+sub-makefile se encarga de crear un archivo especial que especifica que es lo
+que crea (que denomine 'depend'). El central simplemente lee este archivo por
+cada sub-makefile y agrupa todos los archivos objeto para enviarselos al linker.
+
+De esta manera agregar algún nuevo componente al sistema es mucho más cómodo,
+solo es necesario avisarle al makefile central de la nueva carpeta, y luego
+ocuparse de crear el sub-makefile únicamente para el nuevo código, sin tener que
+modificar nada del resto del sistema. Es una manera modular de construir el
+kernel, evitandose tener un mega-makefile complicado que este constantemente
+cambiando, siendo difícil entenderlo y editarlo.
+
+Como es costumbre en la mayoría de los proyectos de SO, se expone la carpeta
+include/ con muchos de los headers de los distintos componentes del núcleo. En
+particular se tiene include/minikernel/, que contiene las definiciones de
+estructuras, signaturas y algunos macros que deben ser accesibles desde más de
+1 componente (en nuestro caso es más bien para la interoperabilidad entre el
+kernel y el fs).
+
+Otro detalle del código es el idioma. En la actualidad el idioma predominante
+para desarrollar es obviamente el inglés, y cualquier aplicación que uno quiere
+compartir con el mundo por convensión se implementa en inglés, incluyendo nombre
+de rutinas/variables/comentarios/etc. Es por ésto que antes de comenzar a
+codificar nada nuevo me aseguré de modificar todo lo que se encuentra en
+castellano al inglés, para mantener una consistencia con todo el projecto.
+
+Para probar el kernel, simplemente ir al directorio 'bin', armar el diskette
+booteable con 'make', y ejecutarlo en una máquina virtual con 'bochs'.
+
+Disclamer: esta sección está basada en la explicación para la entrega de este
+trabajo como final del orga2.

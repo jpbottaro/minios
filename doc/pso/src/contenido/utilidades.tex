@@ -1,0 +1,81 @@
+\section{Aplicaciones}
+
+Tome todas las medidas necesarias para que este kernel sea compatible con C,
+con la interfaz POSIX y GCC. Más aún mi objetivo desde un principio fue que las
+aplicaciones programadas para este núcleo funcionen sin cambios en linux.
+Salvando las distancias, y reduciendose a utilizar únicamente el set pequeño
+de funciones que nos da el sistema, proveo una serie aplicaciones que cualquier
+usuario de un sistema GNU/Linux va a conocer de inmediato (todas se encuentran
+en el directorio apps):
+
+- cash: un "clon" de sh, una consola que recibe comandos y los ejecuta.
+
+- cp: copia un archivo
+
+- echo: imprime una linea en stdout
+
+- ls: lista las entradas de un directorio
+
+- rm: remueve un archivo
+
+- mv: mueve un archivo
+
+- mkdir: crea un directorio
+
+- rmdir: remueve un directorio
+
+- cat: imprime en stdout los contenidos de un archivo
+
+- argc: imprime en stdout la cantidad de argumentos que recibió
+
+- lineecho: recibe lineas en stdin y las reproduce en stdout
+
+Estas aplicaciones demuestran todo el funcionamiento del núcleo, y dejan al
+usuario en un sistema que simula las consolas modernas de hoy en día. Para
+poder implementar estos programas fue necesario crear un archivo aparte,
+apps/scall.asm, que es el puente entre las llamadas al sistema en C, que llaman
+a una función con los parametros en la pila, y la verdadera llamada al sistema,
+que pone los parametros en los registros de la CPU y genera la interrupción
+0x80.
+
+Luego el archivo apps/scall.asm es simplemente una colección de etiquetas de
+todas las llamadas soportadas, que elige para cada una su respectivo número de
+system call y lo coloca en eax. Luego se completan ebx, ecx y edx y se lanza la
+interrupción.
+
+En general todas las aplicaciones son bastante simples, como no les agregé
+soporte a flags ni parametros raros por consola, solo realizan un trabajo
+concreto (por ejemplo cp copia \_un\_ archivo de un lugar a otro). Entre todas
+las aplicaciones, las más interesante es cash, en apps/cash.c.
+
+Cash intenta de emular una consola moderna de un sistema tipo *nix. Presenta
+información como el usuario y la carpeta actuales, y luego se queda
+esperando a que se ingrese un comando. Luego pueden pasar una de dos cosas,
+este comando puede ser manejado directamente por cash, o cash crea un nuevo
+proceso con la aplicación deseada. La primera opción por ejemplo ocurre cuando
+se ejecuta el comando "cd". Esto implica realizar la llamada al sistema chdir()
+para cambiar el directorio actual, pero también requiere que se actualize el
+texto del directorio actual que se le presenta al usuario (esto se encuentra en
+la función updatepwd()). Todo este manejo de comandos es realizado en la
+función execute().
+
+La segunda opción es más simple, solo requiere que se ejecute la llamada
+newprocess() con el programa y sus argumentos, y luego se bloquee esperando la
+terminación del proceso hijo con waitpid().
+
+Cash luego entra en un ciclo infinito en donde espera comandos del usuario, los
+atiende y vuelve nuevamente al principio.
+
+Como fue anticipado, todas las aplicaciones compilan sin modificaciones en
+linux, ejecutando por ejemplo "gcc cp.c" para obtener cp. Hay 2 excepciones,
+cash y ls. El problema con ls es que la llamada getdents() de linux no tiene un
+wrapper en glibc (proveen readdir()), luego no puede ser llamada directamente
+desde C de esta manera. La forma de solucionar esto es utilizar la función
+syscall() con el número de getdents(), llamando indirectamente al kernel.
+
+El problema con cash es de diseño, y ya fue explicado un poco anterioremente.
+Para simplificar la implementación del kernel decidi reemplazar las llamadas
+fork() y execv() por una unión de ambas, newprocess(). Por supuesto esto no
+existe en linux ni en ningún sistema *nix, luego para que cash pueda ser
+compilado por gcc para linux es necesario reemplazar esta llamada por un
+fork() y seguido por un execv() inmediatamente, logrando el mismo resultado.
