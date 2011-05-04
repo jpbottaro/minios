@@ -3,7 +3,7 @@
 
 #include <minios/pm.h>
 
-#define C_PARAMS_SIZE 0xC
+#define C_PARAMS_SIZE 0x8
 
 void add_process_page(struct process_state_s *process, void *page);
 

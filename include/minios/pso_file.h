@@ -3,14 +3,12 @@
 
 #include <sys/types.h>
 
-typedef int (func_main)(void);
-
 typedef struct str_pso_file {
 	i8_t signature[4];
 	u32_t mem_start;
 	u32_t mem_end_disk;
 	u32_t mem_end;
-	func_main* _main;
+	u32_t _main;
 	u8_t data[0]; 
 } pso_file;
 

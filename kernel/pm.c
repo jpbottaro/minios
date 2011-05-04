@@ -1,3 +1,4 @@
+#include <minios/pso_file.h>
 #include <minios/sched.h>
 #include <minios/scall.h>
 #include <minios/misc.h>
@@ -185,13 +186,15 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
  */
 pid_t sys_newprocess(const char *filename, char *const argv[])
 {
-    u32_t i, j, size;
+    u32_t i, j, size, max;
     mm_page *dirbase;
     void *page, *stack;
     ino_t curr_dir, ino_num;
     struct inode_s *ino, *dir;
     struct process_state_s *process;
     char *tmpargv[MAX_ARG];
+    pso_file pso_header;
+    u32_t mem_offset;
 
     /* get process entry for child */
     process = LIST_FIRST(&unused_list);
@@ -219,7 +222,6 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     process->parent = current_process;
     process->curr_dir = curr_dir;
     process->last_mem = (char *) REQUESTED_MEMORY_START;
-    process->eip = CODE_OFFSET;
     process->esp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);
     process->ebp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);
     LIST_INIT(&process->pages_list);
@@ -231,8 +233,16 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     /* ident map the directory table (this way its 'user' and not 'system') */
     mm_map_page(dirbase, dirbase, dirbase);
 
+    /* get header */
+    copy_file((char *) &pso_header, sizeof(pso_header), 0, ino, FS_READ);
+    if (mystrncmp((char *) pso_header.signature, "PSO", 3) != 0)
+        debug_panic("newprocess: see what to do with tasks with wrong magic");
+    mem_offset = pso_header.mem_start;
+    process->eip = pso_header._main;
+
     /* build code */
-    for (i = 0; i < ino->i_size; i += PAGE_SIZE) {
+    max = MIN(ino->i_size, pso_header.mem_end_disk - pso_header.mem_start);
+    for (i = 0; i < max; i += PAGE_SIZE) {
         /* get new page for code */
         page = mm_mem_alloc();
         add_process_page(process, page);
@@ -245,10 +255,21 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         copy_file((char *) tmpmem, size, i, ino, FS_READ);
 
         /* add the new code page to the page directory table */
-        mm_map_page(dirbase, (void *) (i + CODE_OFFSET), page);
+        mm_map_page(dirbase, (void *) (i + mem_offset), page);
 
         /* remove temporary ident mapping */
         mm_umap_page((mm_page *) rcr3(), tmpmem);
+    }
+
+    /* reserve uninitialized space */
+    max = pso_header.mem_end - pso_header.mem_start;
+    for (; i < max; i += PAGE_SIZE) {
+        /* get new page for code */
+        page = mm_mem_alloc();
+        add_process_page(process, page);
+
+        /* add the new code page to the page directory table */
+        mm_map_page(dirbase, (void *) (i + mem_offset), page);
     }
 
     /* build user stack */
@@ -285,7 +306,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     mm_map_page((mm_page *) rcr3(), tmpmem, stack);
     *((unsigned int *) (tmpmem + 0xFFC)) = ARG_PAGE + j;
     *((unsigned int *) (tmpmem + 0xFF8)) = i;
-    *((unsigned int *) (tmpmem + 0xFF4)) = 0;
+    //*((unsigned int *) (tmpmem + 0xFF4)) = 0;
     mm_umap_page((mm_page *) rcr3(), tmpmem);
 
     /* add to scheduler */
