@@ -1,3 +1,63 @@
 \section{Manejo de Procesos (pm o loader)}
 
-COMPLETAR
+El manejador de procesos o pm se encuentra implementado en kernel/pm.c. Compone
+todo lo relacionado a la creación, mantenimiento de estado, cambio y terminado
+de procesos.
+
+Se inicializa con la función pm\_init(), que se encarga de agregar todas las
+entradas vacías de procesos a una lista (de donde tomaremos una entrada libre
+al crear procesos), se llama a tss\_init() (que inicializa el primer y único
+tss que usaran todas las tareas, además de setear el tr), se agrega la tarea
+idle con add\_idle() y se registran como sistem calls las llamadas que este
+módulo implementa, que son exit()-waitpid()-newprocess()-getpid().
+
+Luego está la función pm\_swichto(), que dado un número de proceso, realiza el
+cambio de contexto al mismo. Logra esto salvando el estado del proceso actual
+(se hace por assembler guardando esp y el cr3), y recobrando el del nuevo.
+Logra arrancar el nuevo proceso mediante el uso de la técnica iret, para poder
+setear esp-ss-eflags-eip-cs todo "atómicamente" (y así evitar #GP tratando de setear
+ss). Esta función es utilizada por sched\_schedule() para realizar el cambio de
+tareas una vez que se eligió la próxima tarea a ejecutar.
+
+Probablemente la función más interesante es sys\_newprocess(), que crea un
+nuevo proceso y deja listo para ejecutar. Como fue dicho anteriormente todo el
+código está apoyado en la existencia de un sistema de archivos, por lo que esta
+función recibe el path del proceso a ejecutar. Sin ahondar en detalles del fs,
+se llama a la función find\_inode() que retorna el inodo correspondiente al
+proceso en el directorio de archivos. Procedemos a pedir una entrada libre en
+el arreglo de procesos, y la iniciamos con los valores predeterminados. Se
+setean los file descriptors estándar (stdin/out/err), y se llena el estado del
+proceso con los valores encontrados en el header de pso.
+
+Se procede a copiar todo el programa en memoria. Esto se logra pidiendo de a
+páginas y copiando desde el sistema de archivos a estas páginas, y mapeandolas
+en su directorio contiguamente desde una dirección virtual (que es la dada en
+el header de pso, que en nuestro caso es 0x400000). Para poder realizar esta
+copia es necesario mapear temporalmente la página en el directorio de páginas
+actual, y remover este mapeo una vez terminada la copia.
+
+Luego se reserva e inicializa en 0 el espacio restante que requiere la
+aplicación (el caso de la sección .bss) y se reservan 2 páginas más, una para
+la stack del proceso en modo usuario y otra para la stack en modo kernel. Antes
+de agregar al proceso a la lista ready del scheduler, queda una tarea más por
+realizar. Para que el sistema operativo soporte el envío de argumentos, se
+agregó a la llamada un parametro "argv", que simula al de C. Para que la nueva
+tarea pueda recibirlo, es necesario copiar todo este arreglo a una página
+nueva, mapearla al espacio de direcciones del proceso nuevo, y agregar el
+puntero a la misma en la stack, seguido por el "argc" o cantidad de argumentos.
+De esta manera main recibe estos parametros igual que cualquier otra función en
+C.
+
+Tenemos la función sys\_exit() que termina al proceso que la llama. Logra esto
+liberando todas las páginas asignadas al proceso, ingresando su entrada de
+proceso en la lista de libres, y llamando sched\_schedule() seguir con la
+ejecución de otra task. Antes de esto se fija si su padre se encuentra
+bloqueado esperando que termine, en cuyo caso lo desbloquea y agrega a la lista
+ready.
+
+Esta última funcionalidad es lograda por sys\_waitpid(), que bloquea a un
+proceso hasta que termine el hijo con el pid deseado.
+
+Por último agregé un nuevo handler para la exepción de fallo de página en
+pm\_init(), que simplemente llama a sys\_exit() si el proceso que generó la
+interrupción era ring 3 (caso contrario llama al handler original).
