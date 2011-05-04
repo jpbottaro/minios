@@ -1,3 +1,37 @@
 \section{Scheduler}
 
-COMPLETAR
+La implementación esta en sched.c
+
+El scheduler cuenta con una función principal, sched\_schedule(), que es
+llamada siempre que ocurre una interrupción del reloj. Esta se encarga de
+verificar si hay tareas listas para ser ejecutadas, y las va rotando en el
+procesador al estilo Round-Robin. En caso de que no halla ninguna lista, se
+pasa a la tarea idle, que simplemente consta de un ciclo infinito, que espera a
+ser interrumpido nuevamente.
+
+Para armar la lista ready de procesos se utilizó nuevamente sys/queue.h. En el
+manejador de procesos o pm se definió un arreglo de procesos que contiene todas
+las entradas libres posibles para nuevas tasks. Cada una de estas entradas
+tiene sus respectivos punteros de la lista de ready, por lo que luego es
+cuestión de definir la cabeza de la misma (ready\_list) e ir agregando procesos
+a medida que se crean.
+
+Se provee la función sched\_init() que a su vez llama a pm\_init() (que veremos
+en breve), e inicializa la lista ready.
+
+Además estan las funciones sched\_block() y sched\_unblock() que dado un
+proceso y un número de dispositivo, blockean a este task (es decir lo sacan de
+ready y lo desalojan del procesador), y lo agregan a una lista de espera, de
+donde no será removido hasta que no se reciba un sched\_unblock() con el mismo
+número de dispositivo. Cuando esto ocurre, el proceso es nuevamente marcado
+como listo y agregado a la lista correspondiente.
+
+Estas últimas 2 interrupciones son utilizadas actualmente solo por el módulo
+kbd de manejo de teclado (aunque sirven para cualquier dispositivo). El manejo
+de teclado no es discutido en este informe ya que no pertenece al alcanse del
+TP1 de la materia, pero basta con contar que cuando un proceso hace un read() a
+el archivo /dev/stdin, este es blockeado con sched\_block() esperando el número
+de dispositivo correspondiente. Utilizando el caracter de salto de linea como
+centinela, el kbd dispara el sched\_unblock() y le devuelve la linea ingresada
+al proceso original. Ver más de esto en los archivo kernel/kbd.c y kernel/dev.c
+(e indirectamente fs/fs.c por el read()).

@@ -1,15 +1,15 @@
 \section{Build system}
 
-El proyecto del nucleo que se nos presentó en la cursada se basa en un único
+El proyecto del núcleo que se nos presentó en la cursada se basa en un único
 makefile que se encarga de compilar todo el código, crear la imagen y armar
 un diskette booteable.
 Este diskette contiene un boot loader que simplemente carga toda la imagen en
 la memoria y comienza la ejecución del mismo.
 
 El problema de esta organización es que no escala bien. Habiendo usado un
-makefile similar para Orga2, preferí evitar usar un makefile monolítico, y
+makefile similar para Orga2, preferí evitar usar uno monolítico, y
 separar el trabajo en partes más chicas.
-Por esto es que se me ocurrió jugar un poco con Make y generar un simple build
+Por esto es que se me ocurrió jugar un poco con make y generar un simple build
 system para poder imitar el manejo de directorios de projectos como linux o
 minix.
 
