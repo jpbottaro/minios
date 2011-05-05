@@ -20,11 +20,11 @@ Se provee la función sched\_init() que a su vez llama a pm\_init() (que veremos
 en breve), e inicializa la lista ready.
 
 Además estan las funciones sched\_block() y sched\_unblock() que dado un
-proceso y un número de dispositivo, blockean a este task (es decir lo sacan de
-ready y lo desalojan del procesador), y lo agregan a una lista de espera, de
+proceso y una lista de espera, blockean a este task, es decir lo sacan de
+ready y lo agregan a la lista de espera, de
 donde no será removido hasta que no se reciba un sched\_unblock() con el mismo
-número de dispositivo. Cuando esto ocurre, el proceso es nuevamente marcado
-como listo y agregado a la lista correspondiente.
+proceso (o bien con NULL y este sea el primero de la lista). Cuando esto ocurre,
+el proceso es nuevamente marcado como listo y agregado a la lista correspondiente.
 
 Estas últimas 2 interrupciones son utilizadas actualmente solo por el módulo
 kbd de manejo de teclado (aunque sirven para cualquier dispositivo). El manejo

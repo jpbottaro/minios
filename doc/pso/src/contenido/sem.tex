@@ -1,3 +1,31 @@
 \section{Semáforos}
 
-COMPLETAR
+La implementación de semaforos la base en un ejemplo de código que encontré en
+stackoverflow (para ver el link dirijirse a la función en cuestión). Se
+encuentra en el archivo sem.c.
+
+La función sem\_signal() es trivial, no tenemos que tomar ningun cuidado en la
+misma, solo aumentamos el valor del semaforo y desalojamos al primer procesa de
+la lista de espera si lo hubiese.
+
+La función sem\_wait() es un poco más interesante. La parte más importante de
+la misma es la llamada a cmpxchg, una instrucción de intel que nos asegura
+atomicidad realizando su tarea. Simplemente comparamos el valor de el semaforo
+con el que suponemos que tiene (el que guardamos un par de instrucciones
+antes), y en caso de que esto coincida decrementa en 1. Como todo esto es
+atómico, puede ocurrir una de dos cosas, o bien tiene exito y logramos obtener
+el semáforo, o falla y debemos reintentar.
+
+La manera entonces de implementar la función fue con un ciclo infinito, que
+comienza preguntando si el valor del semáforo es 0. En caso de que lo sea, se
+agrega a la lista de espera y realiza un sched\_schedule() \_solo si\_ el valor
+del semáforo sigue siendo 0. La siguiente instrucción es inmediatamente
+removerse de la lista de espera del sem. De esta manera logramos bloquear el
+proceso y no generar ningún deadlock, que podría ocurrir si luego de agregarse
+a la lista de espera justo se hubiese liberado el semáforo, y igualmente se
+realizara el cambio de contexto (resultando en la tarea siendo bloqueada
+indefinidamente).
+
+En el caso de que el valor del semáforo no fuese 0, solo basta llamar a cmpxchg
+con los valores antes explicados. Si es exitoso podemos volver de la función, y
+si falla simplemente realizamos un continue, rehaciendo el ciclo.
