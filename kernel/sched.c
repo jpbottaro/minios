@@ -20,15 +20,24 @@ void sched_init()
     last_process = current_process = NULL;
 }
 
-/* unblock first process in waiting list */
-void sched_unblock(waiting_list_t *list)
+/* unblock process in waiting list (the first if process is NULL) */
+void sched_unblock(struct process_state_s *process, waiting_list_t *list)
 {
-    struct process_state_s *process;
+    struct process_state_s *p;
 
-    process = LIST_FIRST(list);
-    if (process != NULL) {
-        LIST_REMOVE(process, wait);
-        CIRCLEQ_INSERT_HEAD(&ready_list, process, ready);
+    if (process == NULL) {
+        process = LIST_FIRST(list);
+        if (process != NULL) {
+            LIST_REMOVE(process, wait);
+            CIRCLEQ_INSERT_HEAD(&ready_list, process, ready);
+        }
+    } else {
+        LIST_FOREACH(p, list, wait) {
+            if (process == p) {
+                LIST_REMOVE(process, wait);
+                CIRCLEQ_INSERT_HEAD(&ready_list, process, ready);
+            }
+        }
     }
 }
 
@@ -40,10 +49,6 @@ void sched_block(struct process_state_s *process, waiting_list_t *list)
 
     /* add to waiting list */
     LIST_INSERT_HEAD(list, process, wait);
-
-    /* if caller is the current process, schedule to next one */
-    if (process == current_process)
-        sched_schedule(1);
 }
 
 /* put a process in the ready list */

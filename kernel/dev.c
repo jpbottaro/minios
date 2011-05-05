@@ -11,6 +11,7 @@ int dev_io(unsigned int dev, char *buf, int n, int flag)
         case DEV_STDIN:
             if (flag == FS_READ) {
                 sched_block(current_process, &kbd_list);
+                sched_schedule(1);
                 return kbd_getline(buf, n);
             }
             break;

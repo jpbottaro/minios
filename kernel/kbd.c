@@ -100,6 +100,6 @@ void kbd_key(unsigned char scancode)
         print_key(key);
         buffer_key(key);
         if (key == '\n')
-            sched_unblock(&kbd_list);
+            sched_unblock(NULL, &kbd_list);
     }
 }
