@@ -1,13 +1,12 @@
 #ifndef _SEM_H
 #define _SEM_H
 
-#include <tipos.h>
-
-typedef sint_32 sem_id;
+#include <minios/sched.h>
+#include <sys/types.h>
 
 typedef struct str_sem_t {
-	uint_32 vl; /* Free places      */
-	uint_32 q;  /* Wait-event queue */
+    unsigned int count;
+    waiting_list_t wait;
 } sem_t;
 
 #define SEM_NEW(val) (sem_t){.vl = (val), .q = (uint_32)-1}

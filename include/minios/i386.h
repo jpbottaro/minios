@@ -38,6 +38,9 @@ LS_INLINE unsigned int rss(void);
 LS_INLINE unsigned int redi(void);
 LS_INLINE unsigned int resi(void);
 LS_INLINE unsigned int rebp(void);
+LS_INLINE unsigned int cmpxchg(volatile unsigned int *addr,
+                                        unsigned int oldval,
+                                        unsigned int newval);
 
 LS_INLINE void outb(int port, unsigned char data) {
 	__asm __volatile("outb %0,%w1" : : "a" (data), "d" (port));
@@ -202,6 +205,19 @@ LS_INLINE unsigned int rebp(void) {
 	unsigned int val;
 	__asm __volatile("movl %%ebp,%0" : "=r" (val));
 	return val;
+}
+
+LS_INLINE unsigned int cmpxchg(volatile unsigned int *addr,
+                                        unsigned int oldval,
+                                        unsigned int newval)
+{
+    unsigned int result;
+
+    // The + in "+m" denotes a read-modify-write operand.
+    __asm __volatile("lock cmpxchgl %3, %1 \n setzb %0" :
+                     "=qm" (result), "+m" (*addr) :
+                     "a" (oldval), "r" (newval));
+    return result;
 }
 
 #endif
