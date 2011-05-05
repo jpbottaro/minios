@@ -4,6 +4,8 @@
 #include "kbd.h"
 #include "vga.h"
 
+waiting_list_t kbd_list;
+
 /* array taken from http://www.osdever.net/bkerndev/Docs/keyboard.htm */
 unsigned char kbdus[128] =
 {
@@ -98,6 +100,6 @@ void kbd_key(unsigned char scancode)
         print_key(key);
         buffer_key(key);
         if (key == '\n')
-            sched_unblock(DEV_STDIN);
+            sched_unblock(&kbd_list);
     }
 }

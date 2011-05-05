@@ -5,8 +5,7 @@
 struct process_state_s *last_process;
 struct process_state_s *current_process;
 
-CIRCLEQ_HEAD(ready_list_t, process_state_s) ready_list;
-LIST_HEAD(waiting_list_t, process_state_s) waiting_list;
+CIRCLEQ_HEAD(ready_list_s, process_state_s) ready_list;
 
 /* intialize scheduler, must be called before any function */
 void sched_init()
@@ -21,32 +20,26 @@ void sched_init()
     last_process = current_process = NULL;
 }
 
-/* unblock first process waiting for 'dev' */
-void sched_unblock(unsigned int dev)
+/* unblock first process in waiting list */
+void sched_unblock(waiting_list_t *list)
 {
     struct process_state_s *process;
 
-    /* unblock process waiting for the device */
-    /* XXX this is very _VERY_ limited, since we dont check who gets it, just
-     * XXX the first one. It will do for now, only for the keyboard */
-    LIST_FOREACH(process, &waiting_list, wait) {
-        if (process->dev == dev) {
-            LIST_REMOVE(process, wait);
-            CIRCLEQ_INSERT_HEAD(&ready_list, process, ready);
-            return;
-        }
+    process = LIST_FIRST(list);
+    if (process != NULL) {
+        LIST_REMOVE(process, wait);
+        CIRCLEQ_INSERT_HEAD(&ready_list, process, ready);
     }
 }
 
-/* block a process waiting for device 'dev' */
-void sched_block(struct process_state_s *process, unsigned int dev)
+/* block process and put it in waiting list */
+void sched_block(struct process_state_s *process, waiting_list_t *list)
 {
     /* remove from list */
     CIRCLEQ_REMOVE(&ready_list, process, ready);
 
     /* add to waiting list */
-    process->dev = dev;
-    LIST_INSERT_HEAD(&waiting_list, process, wait);
+    LIST_INSERT_HEAD(list, process, wait);
 
     /* if caller is the current process, schedule to next one */
     if (process == current_process)

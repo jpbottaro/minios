@@ -4,12 +4,13 @@
 #include <minios/sched.h>
 #include "kbd.h"
 
+/* currently this is ad-hoc, make it modular later */
 int dev_io(unsigned int dev, char *buf, int n, int flag)
 {
     switch (dev) {
         case DEV_STDIN:
             if (flag == FS_READ) {
-                sched_block(current_process, dev);
+                sched_block(current_process, &kbd_list);
                 return kbd_getline(buf, n);
             }
             break;
