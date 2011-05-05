@@ -1,5 +1,3 @@
 - Most of the issues come from changing the fs image from linux. Apparently
   when removing/moving/copying files, it clears blocks that it should not...
   Now the image is stable but any change on it could corrupt any block
-
-- Strange #GP and problems with mkdir and try to mv something in the dir
