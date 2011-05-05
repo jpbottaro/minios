@@ -47,10 +47,4 @@ introducidas en la carpeta bin/ de la imagen fsimage. En caso de que se desee
 cambiar alguna, los pasos son:
 
 - Modificar lo que se desee en apps/, y realizar make.
-- En la carpeta bin/, ejecutar sh.sh (un script que monta la imagen fsimage, y
-  copia los binarios generados de apps). Esto requiere contraseña del root para
-  poder montar la imagen.
-
-En caso de que no quiera dar esta contraseña a un script que no conoce (yo no
-lo haría), puede o abrirlo y ver lo que hace (son solo un par de lineas), o
-montar la imagen y copiar la/las aplicaciones manualmente.
+- Agregar los archivos .pso a la carpeta bin/ en la imagen
