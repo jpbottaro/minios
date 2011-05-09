@@ -9,8 +9,7 @@ typedef struct str_sem_t {
     waiting_list_t wait;
 } sem_t;
 
-#define SEM_NEW(val) (sem_t){.vl = (val), .q = (uint_32)-1}
-
+void sem_init(sem_t* s, unsigned int val);
 void sem_wait(sem_t* s);
 void sem_signal(sem_t* s);
 void sem_broadcast(sem_t* s);

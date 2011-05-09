@@ -1,6 +1,12 @@
 #include <minios/i386.h>
 #include <minios/sem.h>
 
+void sem_init(sem_t* s, unsigned int val)
+{
+    s->count = val;
+    LIST_INIT(&s->wait);
+}
+
 /* implementation based on
  * http://stackoverflow.com/questions/5839315/
  * can-i-switch-the-test-and-modification-part-in-wait-signal-semaphore */
