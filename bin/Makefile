@@ -44,7 +44,6 @@ $(IMG_FLOPPY): $(BIN_BOOT) $(BIN_KERN)
 	dd if=$< of=$@ bs=1 count=3 conv=notrunc 2>/dev/null
 	dd if=$< of=$@ bs=1 count=450 seek=62 skip=62 conv=notrunc 2>/dev/null
 	mcopy -obi $@ $(BIN_KERN) ::kernel.bin
-	for T in $(TASKS); do mcopy -obi $@ $$T ::`basename $$T`; done;
 
 $(BIN_KERN)::
 	@echo Building kernel
@@ -55,15 +54,6 @@ $(BIN_KERN)::
 	@$(MAKE) -C ../lib
 	@echo Linking $@
 	@cat $(DEPEND) 2>/dev/null | xargs $(LD) $(LDFLAGS) -o $@
-	@echo Adding fsimage to $@
-	@mv $@ $@.tmp
-	@dd if=/dev/zero bs=1 count=$(KERNELMEM) of=$@ status=noxfer \
-															>/dev/null 2>&1
-	@dd if=$@.tmp bs=1 of=$@ conv=notrunc count=$(KERNELMEM) \
-											  status=noxfer >/dev/null 2>&1
-	@dd if=$(FSIMAGE) bs=1 of=$@ conv=notrunc seek=$(KERNELMEM) \
-											  status=noxfer >/dev/null 2>&1
-	@rm $@.tmp
 
 clean:
 	@$(MAKE) --no-print-directory -C ../kernel clean
