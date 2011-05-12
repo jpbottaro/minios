@@ -1,8 +1,19 @@
-#include <minios/fs.h>
+#include <minios/sched.h>
 #include <minios/vga.h>
 #include <minios/dev.h>
-#include <minios/sched.h>
+#include <errno.h>
 #include "kbd.h"
+
+
+int dev_descriptor(chardev* dev)
+{
+    return -ENOSYS;
+}
+
+void dev_init(void)
+{
+
+}
 
 /* currently this is ad-hoc, make it modular later */
 int dev_io(unsigned int dev, char *buf, int n, int flag)
