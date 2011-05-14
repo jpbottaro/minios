@@ -4,12 +4,6 @@
 #include <errno.h>
 #include "kbd.h"
 
-
-int dev_descriptor(chardev* dev)
-{
-    return -ENOSYS;
-}
-
 void dev_init(void)
 {
 
@@ -18,6 +12,9 @@ void dev_init(void)
 /* currently this is ad-hoc, make it modular later */
 int dev_io(unsigned int dev, char *buf, int n, int flag)
 {
+    return 0;
+}
+/*
     switch (dev) {
         case DEV_STDIN:
             if (flag == FS_READ) {
@@ -34,6 +31,4 @@ int dev_io(unsigned int dev, char *buf, int n, int flag)
         default:
             break;
     }
-
-    return 0;
-}
+*/

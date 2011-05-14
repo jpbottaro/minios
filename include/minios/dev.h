@@ -54,9 +54,6 @@ struct str_blockdev {
 	uint_32 size;
 } __attribute__((packed));
 
-void device_init(void);
-
-int device_descriptor(chardev* dev);
-
+void dev_init(void);
 
 #endif /* _DEV_H */
