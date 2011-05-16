@@ -10,6 +10,8 @@
 int get_fd(ino_t ino_num, unsigned int pos);
 int release_fd(int fd);
 
+struct file_operations_s *fd_op(unsigned int fd);
+
 ino_t current_dir();
 void set_current_dir(ino_t ino);
 

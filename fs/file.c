@@ -16,20 +16,20 @@ void init_fds(unsigned int id)
         debug_panic("init_fds: no /dev folder (init_fds)");
     dev = get_inode(ino_num);
 
-    file->ino = find_inode(dev, "stdin", FS_SEARCH_GET);
-    file->pos = 0; file->fd = 0; file++;
-    file->ino = find_inode(dev, "stdout", FS_SEARCH_GET);
-    file->pos = 0; file->fd = 1; file++;
-    file->ino = find_inode(dev, "stderr", FS_SEARCH_GET);
-    file->pos = 0; file->fd = 2; file++;
+    file->f_ino = find_inode(dev, "stdin", FS_SEARCH_GET);
+    file->f_pos = 0; file->f_fd = 0; file++;
+    file->f_ino = find_inode(dev, "stdout", FS_SEARCH_GET);
+    file->f_pos = 0; file->f_fd = 1; file++;
+    file->f_ino = find_inode(dev, "stderr", FS_SEARCH_GET);
+    file->f_pos = 0; file->f_fd = 2; file++;
 
     unused_fd = &ps[id].unused_fd;
     LIST_INIT(unused_fd);
     i = 3;
     for (; file < &ps[id].files[MAX_FILES]; ++file) {
-        file->fd = i++;
-        file->ino = NO_INODE;
-        file->pos = 0;
+        file->f_fd = i++;
+        file->f_ino = NO_INODE;
+        file->f_pos = 0;
         LIST_INSERT_HEAD(unused_fd, file, unused);
     }
 }
@@ -42,9 +42,9 @@ int get_fd(ino_t ino_num, unsigned int pos)
 
     if (file != NULL) {
         LIST_REMOVE(file, unused);
-        file->ino = ino_num;
-        file->pos = pos;
-        return file->fd;
+        file->f_ino = ino_num;
+        file->f_pos = pos;
+        return file->f_fd;
     }
 
     return ERROR;
@@ -56,9 +56,9 @@ int release_fd(int fd)
     struct unused_fd_t *unused_fd = &current_process->unused_fd;
     struct file_s *file = &current_process->files[fd];
 
-    if (file->ino != NO_INODE) {
-        file->ino = NO_INODE;
-        file->pos = 0;
+    if (file->f_ino != NO_INODE) {
+        file->f_ino = NO_INODE;
+        file->f_pos = 0;
         LIST_INSERT_HEAD(unused_fd, file, unused);
         return OK;
     } else {
@@ -68,22 +68,27 @@ int release_fd(int fd)
 
 void set_file_inode(unsigned int fd, ino_t ino)
 {
-    current_process->files[fd].ino = ino;
+    current_process->files[fd].f_ino = ino;
 }
 
 ino_t file_inode(unsigned int fd)
 {
-    return current_process->files[fd].ino;
+    return current_process->files[fd].f_ino;
+}
+
+struct file_operations_s *fd_op(unsigned int fd)
+{
+    return current_process->files[fd].f_op;
 }
 
 void set_file_pos(unsigned int fd, unsigned int pos)
 {
-    current_process->files[fd].pos = pos;
+    current_process->files[fd].f_pos = pos;
 }
 
 unsigned int file_pos(unsigned int fd)
 {
-    return current_process->files[fd].pos;
+    return current_process->files[fd].f_pos;
 }
 
 ino_t current_dir()

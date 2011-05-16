@@ -76,7 +76,7 @@ static void fill_inode(struct inode_s *ino, int mode)
 /* open file and return fd; to make our life easier, always open RW */
 int sys_open(const char *filename, int flags, int mode)
 {
-    int flag;
+    int flag, fd;
     ino_t ino_num;
     struct inode_s *ino, *dir;
 
@@ -94,7 +94,19 @@ int sys_open(const char *filename, int flags, int mode)
     if (flags & O_TRUNC)
         ino->i_size = 0;
 
-    return get_fd(ino_num, (flags & O_APPEND) ? ino->i_size : 0);
+    fd = get_fd(ino_num, (flags & O_APPEND) ? ino->i_size : 0);
+
+    /* this is kinda _very_ ugly.. check later how linux does it */
+    if (IS_DEV(ino->i_mode)) {
+        dev_file_calls(fd_op(fd), ino->i_zone[0]);
+    } else {
+        //fd_read(fd, fs_read);
+        //fd_write(fd, fs_write);
+        //fd_lseek(fd, fs_lseek);
+        //fd_flush(fd, fs_flush);
+    }
+
+    return fd;
 }
 
 /* close file; since our fs resides in memory and we dont have to write changes

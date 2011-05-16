@@ -21,11 +21,20 @@ struct inode_s {
 };
 
 struct file_s {
-    int fd;
-    unsigned int ino;
-    unsigned int pos;
+    int f_fd;
+    u32_t f_ino;
+    u32_t f_pos;
+
+    struct file_operations_s *f_op;
 
     LIST_ENTRY(file_s) unused;
+};
+
+struct file_operations_s {
+    size_t (*read) (struct file_s *, char *, size_t);
+    ssize_t (*write) (struct file_s *, const char *, size_t);
+    size_t (*llseek) (struct file_s *, u32_t, int);
+    int (*flush) (struct file_s *);
 };
 
 LIST_HEAD(unused_fd_t, file_s);
@@ -72,9 +81,14 @@ void           *get_block(zone_t num);
 #define I_TYPE           0170000
 #define I_FILE           0100000
 #define I_DIRECTORY      0040000
+/* XXX FIXXX, put real constants */
 #define I_SPECIAL        0020000
+#define I_CHAR           0010000
+#define I_BLOCK          0000000
 #define IS_FILE(mode)    (((mode) & I_TYPE) == I_FILE)
 #define IS_DIR(mode)     (((mode) & I_TYPE) == I_DIRECTORY)
-#define IS_CHAR(mode)    (((mode) & I_TYPE) == I_SPECIAL)
+#define IS_CHAR(mode)    (((mode) & I_TYPE) == I_CHAR)
+#define IS_BLOCK(mode)   (((mode) & I_TYPE) == I_BLOCK)
+#define IS_DEV(mode)     (IS_CHAR(mode) || IS_BLOCK(mode))
 
 #endif /* _FS_H */
