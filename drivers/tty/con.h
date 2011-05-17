@@ -1,11 +1,9 @@
 #ifndef __CON_H__
 #define __CON_H__
 
-#include <tipos.h>
-#include <device.h>
+#include <minios/dev.h>
+#include <sys/types.h>
 
 void con_init();
-
-chardev* con_open(void);
 
 #endif

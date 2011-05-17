@@ -1,9 +1,8 @@
-#include <tipos.h>
-#include <i386.h>
-#include <fdd.h>
-#include <debug.h>
-#include <loader.h>
-#include <sem.h>
+#include <minios/debug.h>
+#include <minios/i386.h>
+#include <minios/sem.h>
+#include <sys/types.h>
+#include "fdd.h"
 
 #define FDD_PORT 0x3F0
 
@@ -77,28 +76,8 @@
 #define DMAIO_MODE       0x00B
 #define DMAIO_INIT       0x00A
 
-
-/* Block device */
-
-
-sint_32 fdd_block_read(blockdev* this, uint_32 pos, void* buf, uint_32 size) {
-	return 0;
-}
-
-sint_32 fdd_block_write(blockdev* this, uint_32 pos, const void* buf, uint_32 size)  {
-	return -1;
-}
-
-
-
-/* Devuelve un blockdev de la disketera en cuesti'on */
-blockdev* fdd_open(int nro) {
-	return NULL;
-}
-
-
-
 /** Init **/
 
-void fdd_init(void) {
+void fdd_init(void)
+{
 }

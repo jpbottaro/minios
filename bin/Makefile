@@ -1,4 +1,4 @@
-_DEPEND=kernel fs lib
+_DEPEND=kernel fs lib drivers
 DEPEND=$(patsubst %,../%/obj/depend,$(_DEPEND))
 
 # programs
@@ -60,6 +60,8 @@ $(BIN_KERN)::
 	@$(MAKE) -C ../fs
 	@echo Building lib
 	@$(MAKE) -C ../lib
+	@echo Building drivers
+	@$(MAKE) -C ../drivers
 	@echo Linking $@
 	@cat $(DEPEND) 2>/dev/null | xargs $(LD) $(LDFLAGS) -o $@
 
@@ -67,5 +69,6 @@ clean:
 	@$(MAKE) --no-print-directory -C ../kernel clean
 	@$(MAKE) --no-print-directory -C ../fs clean
 	@$(MAKE) --no-print-directory -C ../lib clean
+	@$(MAKE) -C ../drivers clean
 	rm -f $(BIN_KERN)
 	rm -f $(IMG_FLOPPY)
