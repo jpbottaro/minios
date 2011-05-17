@@ -10,6 +10,8 @@ struct video_char_s {
 
 void vga_init(void);
 
+void vga_copy_vram(const struct video_char_s video[25][80], int x, int y);
+void vga_scrollup_vram();
 void vga_print_key(u16_t r, u16_t c, char key);
 int vga_write(u16_t r, u16_t c, const char* msg, int n);
 int vga_printf(u16_t r, u16_t c, const char* format, ...);

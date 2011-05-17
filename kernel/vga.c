@@ -13,8 +13,34 @@ struct pos_s {
 struct video_char_s (*vram)[25][80] = (struct video_char_s (*)[25][80]) 0xB8000;
 unsigned int x = 0, y = 0;
 
+/* move cursor to (x,y), we asume the ports are 0x3D4-0x3D5 */
+void move_cursor(int x, int y)
+{
+    unsigned short pos;
+
+    pos = (y * 80) + x;
+    /* low register */
+    outb(0x3D4, 0x0F);
+    outb(0x3D5, (unsigned char) (pos & 0xFF));
+    /* high register */
+    outb(0x3D4, 0x0E);
+    outb(0x3D5, (unsigned char) ((pos >> 8) & 0xFF));
+}
+
+/* refresh video ram with new buffer */
+void vga_copy_vram(const struct video_char_s video[25][80], int x, int y)
+{
+    int i, j;
+
+    for (i = 0; i < 25; ++i)
+        for (j = 0; j < 80; ++j)
+            (*vram)[i][j] = video[i][j];
+
+    move_cursor(x, y);
+}
+
 /* move the video ram 1 row up */
-void scroll_up_vram()
+void vga_scrollup_vram()
 {
     int i, j;
 
@@ -29,20 +55,6 @@ void scroll_up_vram()
         (*vram)[24][j].letter = 0;
         (*vram)[24][j].color = VGA_FC_WHITE;
     }
-}
-
-/* move cursor to (x,y), we asume the ports are 0x3D4-0x3D5 */
-void move_cursor(int x, int y)
-{
-    unsigned short pos;
-
-    pos = (y * 80) + x;
-    /* low register */
-    outb(0x3D4, 0x0F);
-    outb(0x3D5, (unsigned char) (pos & 0xFF));
-    /* high register */
-    outb(0x3D4, 0x0E);
-    outb(0x3D5, (unsigned char) ((pos >> 8) & 0xFF));
 }
 
 /* init vga and clear screen */
@@ -67,7 +79,7 @@ void print_key(struct pos_s *pos, char key)
         case '\n':
             pos->x = 0;
             if (pos->y == 24)
-                scroll_up_vram();
+                vga_scrollup_vram();
             else
                 pos->y++;
             break;
@@ -86,7 +98,7 @@ void print_key(struct pos_s *pos, char key)
             if (pos->x == 80) {
                 pos->x = 0;
                 if (pos->y == 24)
-                    scroll_up_vram();
+                    vga_scrollup_vram();
                 else
                     pos->y++;
             }
