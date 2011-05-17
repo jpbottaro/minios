@@ -66,31 +66,6 @@ int release_fd(int fd)
     }
 }
 
-void set_file_inode(int fd, ino_t ino)
-{
-    current_process->files[fd].f_ino = ino;
-}
-
-ino_t file_inode(int fd)
-{
-    return current_process->files[fd].f_ino;
-}
-
-struct file_operations_s *fd_op(int fd)
-{
-    return current_process->files[fd].f_op;
-}
-
-void set_file_pos(int fd, unsigned int pos)
-{
-    current_process->files[fd].f_pos = pos;
-}
-
-unsigned int file_pos(int fd)
-{
-    return current_process->files[fd].f_pos;
-}
-
 ino_t current_dir()
 {
     return current_process->curr_dir;

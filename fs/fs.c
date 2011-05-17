@@ -392,14 +392,16 @@ int fs_getdents(int fd, char *buf, size_t n)
     struct inode_s *dir, *ino;
     struct dir_entry_s *dentry;
     struct dirent *dent;
+    struct file_s *flip;
 
-    dir = get_inode(file_inode(fd));
+    flip = get_file(fd);
+    dir = get_inode(flip->f_ino);
 
     if (!IS_DIR(dir->i_mode))
         return ERROR;
 
     i = 0;
-    pos = file_pos(fd);
+    pos = flip->f_pos;
     while (n >= sizeof(struct dirent) + 1) {
         dentry = next_entry(dir, &pos);
         if (dentry == NULL)
@@ -422,7 +424,7 @@ int fs_getdents(int fd, char *buf, size_t n)
         i += dent->d_reclen;
         n -= dent->d_reclen;
     }
-    set_file_pos(fd, pos);
+    flip->f_pos = pos;
 
     return i;
 }
