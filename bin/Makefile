@@ -44,13 +44,13 @@ $(IMG_FLOPPY): $(BIN_BOOT) $(BIN_KERN) $(FSIMAGE)
 	$(MKFS) -F 12 -f 2 -n $(DISK_LABEL) $@
 	dd if=$< of=$@ bs=1 count=3 conv=notrunc 2>/dev/null
 	dd if=$< of=$@ bs=1 count=450 seek=62 skip=62 conv=notrunc 2>/dev/null
-	# <A> Agrego imagen del disco al de kernel
+	@# <A> Agrego imagen del disco al de kernel
 	mv $(BIN_KERN) $(BIN_KERN).tmp
 	dd if=/dev/zero bs=1 count=$(KERNELMEM) of=$(BIN_KERN) status=noxfer >/dev/null 2>&1
 	dd if=$(BIN_KERN).tmp bs=1 of=$(BIN_KERN) conv=notrunc count=$(KERNELMEM) status=noxfer >/dev/null 2>&1
 	dd if=$(FSIMAGE) bs=1 of=$(BIN_KERN) conv=notrunc seek=$(KERNELMEM) status=noxfer >/dev/null 2>&1
 	rm $(BIN_KERN).tmp
-	# <\A>
+	@# <\A>
 	mcopy -obi $@ $(BIN_KERN) ::kernel.bin
 
 $(BIN_KERN)::
