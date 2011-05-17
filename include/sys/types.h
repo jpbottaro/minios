@@ -87,5 +87,7 @@ typedef short        nlink_t;	   /* number of links to a file */
 typedef long	       off_t;	   /* offset within a file */
 typedef int            pid_t;	   /* process id (must be signed) */
 typedef short          uid_t;	   /* user id */
+typedef unsigned int   dev_t;
+
 
 #endif /* _TYPES_H */

@@ -11,48 +11,29 @@
 char *fs_offset;
 struct inode_s *root;
 
-static int fs_readwrite(int fd, char *buf, unsigned int n, int flag);
+static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag);
 static void fill_inode(struct inode_s *ino, int mode);
 
 /* initialize fs, needs to be ALL mapped in memory, fs_start being first byte */
 int fs_init(u32_t fs_start)
 {
-    struct inode_s *ino, *dev;
-    ino_t ino_num;
     fs_offset = (char *) fs_start;
     read_super();
     root = (struct inode_s *) (fs_offset + INODE_OFFSET);
 
-    /* make stdin, stdout, stderr */
-    if ( (ino_num = find_inode(NULL, "/dev", FS_SEARCH_GET)) == NO_INODE)
-        debug_panic("fs_init: no /dev folder!!");
-    dev = get_inode(ino_num);
-
-    ino_num = find_inode(dev, "stdin", FS_SEARCH_ADD);
-    ino = get_inode(ino_num);
-    fill_inode(ino, I_SPECIAL);
-    ino->i_zone[0] = DEV_STDIN;
-    ino_num = find_inode(dev, "stdout", FS_SEARCH_ADD);
-    ino = get_inode(ino_num);
-    fill_inode(ino, I_SPECIAL);
-    ino->i_zone[0] = DEV_STDOUT;
-    ino_num = find_inode(dev, "stderr", FS_SEARCH_ADD);
-    ino = get_inode(ino_num);
-    fill_inode(ino, I_SPECIAL);
-    ino->i_zone[0] = DEV_STDERR;
-
     /* register sys calls */
     SCALL_REGISTER(3, sys_read);
     SCALL_REGISTER(4, sys_write);
-    SCALL_REGISTER(5, sys_open);
-    SCALL_REGISTER(6, sys_close);
-    SCALL_REGISTER(10, sys_unlink);
-    SCALL_REGISTER(12, sys_chdir);
+    SCALL_REGISTER(5, fs_open);
+    SCALL_REGISTER(6, fs_close);
+    SCALL_REGISTER(10, fs_unlink);
+    SCALL_REGISTER(12, fs_chdir);
     SCALL_REGISTER(19, sys_lseek);
-    SCALL_REGISTER(38, sys_rename);
-    SCALL_REGISTER(39, sys_mkdir);
-    SCALL_REGISTER(40, sys_rmdir);
-    SCALL_REGISTER(141, sys_getdents);
+    SCALL_REGISTER(38, fs_rename);
+    SCALL_REGISTER(39, fs_mkdir);
+    SCALL_REGISTER(40, fs_rmdir);
+    SCALL_REGISTER(141, fs_getdents);
+    SCALL_REGISTER(200, sys_flush);
 
     return OK;
 }
@@ -74,7 +55,7 @@ static void fill_inode(struct inode_s *ino, int mode)
 }
 
 /* open file and return fd; to make our life easier, always open RW */
-int sys_open(const char *filename, int flags, int mode)
+int fs_open(const char *filename, int flags, int mode)
 {
     int flag, fd;
     ino_t ino_num;
@@ -98,12 +79,9 @@ int sys_open(const char *filename, int flags, int mode)
 
     /* this is kinda _very_ ugly.. check later how linux does it */
     if (IS_DEV(ino->i_mode)) {
-        dev_file_calls(fd_op(fd), ino->i_zone[0]);
+        dev_file_calls(get_file(fd), ino->i_zone[0]);
     } else {
-        //fd_read(fd, fs_read);
-        //fd_write(fd, fs_write);
-        //fd_lseek(fd, fs_lseek);
-        //fd_flush(fd, fs_flush);
+        dev_file_calls(get_file(fd), DEV_FS);
     }
 
     return fd;
@@ -112,24 +90,24 @@ int sys_open(const char *filename, int flags, int mode)
 /* close file; since our fs resides in memory and we dont have to write changes
  * anywhere, we just release fd
  */
-int sys_close(int fd)
+int fs_close(int fd)
 {
     return release_fd(fd);
 }
 
 /* move the pointer of a file to a different position in it */
-int sys_lseek(int fd, off_t offset, int whence)
+int fs_lseek(struct file_s *flip, off_t offset, int whence)
 {
     struct inode_s *ino;
     int pos;
 
-    ino = get_inode(file_inode(fd));
+    ino = get_inode(flip->f_ino);
     switch (whence) {
         case SEEK_SET:
             pos = offset;
             break;
         case SEEK_CUR:
-            pos = file_pos(fd) + offset;
+            pos = flip->f_pos + offset;
             break;
         case SEEK_END:
             pos = ino->i_size + offset;
@@ -138,14 +116,22 @@ int sys_lseek(int fd, off_t offset, int whence)
             return ERROR;
     }
     pos = pos > ino->i_size ? ino->i_size : pos < 0 ? 0 : pos;
-    set_file_pos(fd, pos);
+    flip->f_pos = pos;
     return OK;
 }
 
-static int fs_readwrite(int fd, char *buf, unsigned int n, int flag)
+/* generic lseek */
+int sys_lseek(int fd, off_t offset, int whence)
 {
-    struct inode_s *ino = get_inode(file_inode(fd));
-    unsigned int pos = file_pos(fd);
+    struct file_s *flip = get_file(fd);
+
+    return flip->f_op->lseek(flip, offset, whence);
+}
+
+static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag)
+{
+    struct inode_s *ino = get_inode(flip->f_ino);
+    unsigned int pos = flip->f_pos;
 
     if (ino == NULL)
         return -1;
@@ -154,10 +140,6 @@ static int fs_readwrite(int fd, char *buf, unsigned int n, int flag)
     if (IS_DIR(ino->i_mode))
         return -1;
        
-    /* if its a char special file, call the kernel */
-    if (IS_CHAR(ino->i_mode))
-        return dev_io(ino->i_zone[0], buf, n, flag);
-
     /* check limit of file in read operation */
     if (flag == FS_READ)
         n = MIN(n, ino->i_size - pos);
@@ -167,14 +149,14 @@ static int fs_readwrite(int fd, char *buf, unsigned int n, int flag)
         return ERROR;
 
     /* check how much did we read/write */
-    n = pos - file_pos(fd);
+    n = pos - flip->f_pos;
     
     /* update inode size */
     if (pos > ino->i_size)
         ino->i_size = pos;
 
     /* set new filepos */
-    set_file_pos(fd, pos);
+    flip->f_pos = pos;
 
     return n;
 }
@@ -211,19 +193,35 @@ int copy_file(char *buf, unsigned int n, unsigned int pos, struct inode_s *ino,
 }
 
 /* read 'n' bytes from a file a put them on buf */
-int sys_read(int fd, char *buf, unsigned int n)
+size_t fs_read(struct file_s *flip, char *buf, size_t n)
 {
-    return fs_readwrite(fd, buf, n, FS_READ);
+    return fs_readwrite(flip, buf, n, FS_READ);
 }
 
 /* write 'n' bytes from 'buf' in the file referenced by 'fd' */
-int sys_write(int fd, char *buf, unsigned int n)
+ssize_t fs_write(struct file_s *flip, char *buf, size_t n)
 {
-    return fs_readwrite(fd, buf, n, FS_WRITE);
+    return fs_readwrite(flip, buf, n, FS_READ);
+}
+
+/* generic read for an fd */
+size_t sys_read(int fd, char *buf, unsigned int n)
+{
+    struct file_s *flip = get_file(fd);
+
+    return flip->f_op->read(flip, buf, n);
+}
+
+/* generic write for an fd */
+ssize_t sys_write(int fd, const char *buf, unsigned int n)
+{
+    struct file_s *flip = get_file(fd);
+
+    return flip->f_op->write(flip, buf, n);
 }
 
 /* remove file/dir from fs */
-int sys_unlink(const char *pathname)
+int fs_unlink(const char *pathname)
 {
     ino_t ino;
     struct inode_s *dir;
@@ -238,7 +236,7 @@ int sys_unlink(const char *pathname)
     return OK;
 }
 
-int sys_chdir(const char *path)
+int fs_chdir(const char *path)
 {
     ino_t ino;
 
@@ -271,7 +269,7 @@ void last_component(const char *path, char *last)
 }
 
 /* rename oldpath to newpath */
-int sys_rename(const char *oldpath, const char *newpath)
+int fs_rename(const char *oldpath, const char *newpath)
 {
     ino_t ino_num, parent_num;
     struct inode_s *dir, *last_dir, *ino;
@@ -317,7 +315,7 @@ int sys_rename(const char *oldpath, const char *newpath)
 }
 
 /* create new directory */
-int sys_mkdir(const char *pathname, mode_t mode)
+int fs_mkdir(const char *pathname, mode_t mode)
 {
     ino_t parent_num, ino_num;
     struct inode_s *ino, *dir;
@@ -358,7 +356,7 @@ int sys_mkdir(const char *pathname, mode_t mode)
 }
 
 /* remove directory (only if it is empty) */
-int sys_rmdir(const char *pathname)
+int fs_rmdir(const char *pathname)
 {
     ino_t parent_num, ino_num;
     struct inode_s *ino, *dir;
@@ -388,7 +386,7 @@ int sys_rmdir(const char *pathname)
     return OK;
 }
 
-int sys_getdents(int fd, char *buf, size_t n)
+int fs_getdents(int fd, char *buf, size_t n)
 {
     unsigned int i, pos;
     struct inode_s *dir, *ino;
@@ -429,10 +427,38 @@ int sys_getdents(int fd, char *buf, size_t n)
     return i;
 }
 
+/* generic flush */
+int sys_flush(int fd)
+{
+    struct file_s *flip = get_file(fd);
+
+    return flip->f_op->flush(flip);
+}
+
+/* make new device file in /dev folder, with type, major and minor numbers */
+int fs_make_dev(const char *name, int type, dev_t major, dev_t minor)
+{
+    struct inode_s *ino, *dev;
+    ino_t ino_num;
+
+    if ( (ino_num = find_inode(NULL, "/dev", FS_SEARCH_GET)) == NO_INODE)
+        debug_panic("fs_make_dev: no /dev folder!!");
+    dev = get_inode(ino_num);
+
+    if ( (ino_num = find_inode(dev, name, FS_SEARCH_ADD)) == NO_INODE)
+        return ERROR;
+    ino = get_inode(ino_num);
+    fill_inode(ino, type);
+    ino->i_zone[0] = major;
+    ino->i_zone[1] = minor;
+
+    return OK;
+}
+
 /* this one should close all open fds and write buffered changes etc. but,
  * as you probably know already ;), no real need for that
  */
-int end_fs()
+int fs_end()
 {
     return OK;
 }

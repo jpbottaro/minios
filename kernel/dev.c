@@ -6,11 +6,10 @@
 
 void dev_init(void)
 {
-
 }
 
-/* currently this is ad-hoc, make it modular later */
-int dev_io(unsigned int dev, char *buf, int n, int flag)
+/* assign file operations of device */
+int dev_file_calls(struct file_s *flip, dev_t dev)
 {
     return 0;
 }

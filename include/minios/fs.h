@@ -33,25 +33,29 @@ struct file_s {
 struct file_operations_s {
     size_t (*read) (struct file_s *, char *, size_t);
     ssize_t (*write) (struct file_s *, const char *, size_t);
-    size_t (*llseek) (struct file_s *, u32_t, int);
+    size_t (*lseek) (struct file_s *, u32_t, int);
     int (*flush) (struct file_s *);
 };
 
 LIST_HEAD(unused_fd_t, file_s);
 
 int fs_init(u32_t fs_start);
-int sys_open(const char *filename, int flags, int mode);
-int sys_close(int fd);
+int fs_open(const char *filename, int flags, int mode);
+int fs_close(int fd);
 int sys_lseek(int fd, off_t offset, int whence);
-int sys_read(int fd, char *buf, unsigned int n);
-int sys_write(int fd, char *buf, unsigned int n);
-int sys_unlink(const char *pathname);
-int sys_rename(const char *oldpath, const char *newpath);
-int sys_chdir(const char *path);
-int sys_mkdir(const char *pathname, mode_t mode);
-int sys_rmdir(const char *pathname);
-int sys_getdents(int fd, char *buf, size_t n);
-int end_fs();
+int fs_lseek(struct file_s *flip, off_t offset, int whence);
+size_t sys_read(int fd, char *buf, unsigned int n);
+size_t fs_read(struct file_s *flip, char *buf, size_t n);
+ssize_t sys_write(int fd, const char *buf, unsigned int n);
+ssize_t fs_write(struct file_s *flip, char *buf, size_t n);
+int fs_unlink(const char *pathname);
+int fs_rename(const char *oldpath, const char *newpath);
+int fs_chdir(const char *path);
+int fs_mkdir(const char *pathname, mode_t mode);
+int fs_rmdir(const char *pathname);
+int fs_getdents(int fd, char *buf, size_t n);
+int sys_flush(int fd);
+int fs_end();
 
 void init_fds(unsigned int id);
 
@@ -90,5 +94,7 @@ void           *get_block(zone_t num);
 #define IS_CHAR(mode)    (((mode) & I_TYPE) == I_CHAR)
 #define IS_BLOCK(mode)   (((mode) & I_TYPE) == I_BLOCK)
 #define IS_DEV(mode)     (IS_CHAR(mode) || IS_BLOCK(mode))
+
+int fs_make_dev(const char *name, int type, dev_t major, dev_t minor);
 
 #endif /* _FS_H */
