@@ -21,9 +21,6 @@ void idt_init() {
     /* register clock handler */
     idt_register(32, _isr32, DEFAULT_PL);
 
-    /* register kbd handler */
-    idt_register(33, _isr33, DEFAULT_PL);
-
     /* register syscall handler */
     idt_register(128, _isr128, DEFAULT_PL);
 }

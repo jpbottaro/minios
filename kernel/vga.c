@@ -1,17 +1,17 @@
 #include <minios/misc.h>
 #include <minios/i386.h>
+#include <minios/vga.h>
 #include <stdarg.h>
-#include "vga.h"
 
 #define MAX_LINE 0x100
 
-struct video_char_s {
-    char letter;
-    char color;
-} __attribute__((__packed__));
+struct pos_s {
+    int x;
+    int y;
+};
 
 struct video_char_s (*vram)[25][80] = (struct video_char_s (*)[25][80]) 0xB8000;
-unsigned int x = 0, y = 0, xlimit = 0;
+unsigned int x = 0, y = 0;
 
 /* move the video ram 1 row up */
 void scroll_up_vram()
@@ -57,75 +57,75 @@ void vga_init()
         }
     }
 
-    x = xlimit = y = 0;
     move_cursor(0, 0);
 }
 
 /* print 1 key in the screen */
-void print_key(char key)
+void print_key(struct pos_s *pos, char key)
 {
     switch (key) {
         case '\n':
-            x = xlimit = 0;
-            if (y == 24)
+            pos->x = 0;
+            if (pos->y == 24)
                 scroll_up_vram();
             else
-                y++;
+                pos->y++;
             break;
         case '\b':
-            if (x > xlimit) {
-                x--;
-                (*vram)[y][x].letter = 0;
+            if (pos->x > 0) {
+                pos->x--;
+                (*vram)[pos->y][pos->x].letter = 0;
             }
             break;
         case '\t':
             key = ' ';
         default:
-            (*vram)[y][x].letter = key;
-            (*vram)[y][x].color = VGA_FC_WHITE;
-            x++;
-            if (x == 80) {
-                x = xlimit = 0;
-                if (y == 24)
+            (*vram)[pos->y][pos->x].letter = key;
+            (*vram)[pos->y][pos->x].color = VGA_FC_WHITE;
+            pos->x++;
+            if (pos->x == 80) {
+                pos->x = 0;
+                if (pos->y == 24)
                     scroll_up_vram();
                 else
-                    y++;
+                    pos->y++;
             }
     }
-    move_cursor(x, y);
+    move_cursor(pos->x, pos->y);
 }
 
-int vga_pwrite(u16_t r, u16_t c, const char* msg, int n)
+void vga_print_key(u16_t r, u16_t c, char key)
+{
+    struct pos_s pos = {.x = c, .y = r};
+    print_key(&pos, key);
+}
+
+int vga_write(u16_t r, u16_t c, const char* msg, int n)
 {
     int i;
+    struct pos_s pos;
 
-    x = c;
-    y = r;
+    pos.x = c;
+    pos.y = r;
     for (i = 0; i < n; ++i)
-        print_key(msg[i]);
-    xlimit = x;
+        print_key(&pos, msg[i]);
 
+    move_cursor(pos.x, pos.y);
     return i;
 }
 
-int vga_write(const char* msg, int n)
+int vga_printf(u16_t r, u16_t c, const char* format, ...)
 {
-    int i;
-
-    for (i = 0; i < n && msg[i] != '\0'; ++i)
-        print_key(msg[i]);
-    xlimit = x;
-
-   return i;
-}
-
-int real_printf(const char* format, va_list ap)
-{   
     const char *p, *str;
     u32_t i, j, len;
+    va_list ap;
     int pad;
     char buf[30];
+    struct pos_s pos;
 
+    pos.x = c;
+    pos.y = r;
+    va_start(ap, format);
     p = format;
     len = 0;
     for (i = 0; i < MAX_LINE && p[i] != '\0'; ++i) {
@@ -142,11 +142,11 @@ int real_printf(const char* format, va_list ap)
                     if (pad > 0)
                         pad -= mystrlen(str);
                     while (pad-- > 0) {
-                        print_key(' ');
+                        print_key(&pos, ' ');
                         ++len;
                     }
                     for (j = 0; j < MAX_LINE && str[j] != '\0'; ++j) {
-                        print_key(str[j]);
+                        print_key(&pos, str[j]);
                         ++len;
                     }
                     break;
@@ -156,11 +156,11 @@ int real_printf(const char* format, va_list ap)
                     if (pad > 0)
                         pad -= mystrlen(buf);
                     while (pad-- > 0) {
-                        print_key('0');
+                        print_key(&pos, '0');
                         ++len;
                     }
                     for (j = 0; j < MAX_LINE && buf[j] != '\0'; ++j) {
-                        print_key(buf[j]);
+                        print_key(&pos, buf[j]);
                         ++len;
                     }
                     break;
@@ -170,11 +170,11 @@ int real_printf(const char* format, va_list ap)
                     if (pad > 0)
                         pad -= mystrlen(buf);
                     while (pad-- > 0) {
-                        print_key('0');
+                        print_key(&pos, '0');
                         ++len;
                     }
                     for (j = 0; j < MAX_LINE && buf[j] != '\0'; ++j) {
-                        print_key(buf[j]);
+                        print_key(&pos, buf[j]);
                         ++len;
                     }
                     break;
@@ -185,37 +185,10 @@ int real_printf(const char* format, va_list ap)
                     break;
             }
         } else {
-            print_key(p[i]);
+            print_key(&pos, p[i]);
             ++len;
         }
     }
-
-    xlimit = x;
-    return len;
-}
-
-int vga_pprintf(u16_t r, u16_t c, const char* format, ...)
-{
-    va_list ap;
-    int len;
-    
-    x = c;
-    y = r;
-    va_start(ap, format);
-    len = real_printf(format, ap);
-    va_end(ap);
-
-    return len;
-}
-
-/* print a null terminated string in the screen */
-int vga_printf(const char* format, ...)
-{
-    va_list ap;
-    int len;
-    
-    va_start(ap, format);
-    len = real_printf(format, ap);
     va_end(ap);
 
     return len;

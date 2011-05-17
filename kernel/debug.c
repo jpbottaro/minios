@@ -50,7 +50,7 @@ INTR_FUNC("SIMD", 19, 0);
 
 void debug_panic(const char *msg)
 {
-    vga_pprintf(24, 0, "PANIC! %s", msg);
+    vga_printf(24, 0, "PANIC! %s", msg);
     for (;;) {}
 }
 
@@ -98,39 +98,39 @@ void debug_kernelpanic(const u32_t* stack, const exp_state* expst)
 
     vga_init();
 
-    vga_pprintf(0, 0, "Kernel Panic!");
+    vga_printf(0, 0, "Kernel Panic!");
 
     /* STACK */
-    vga_pprintf(2, 0, "Stack:");
+    vga_printf(2, 0, "Stack:");
     for (i = 0; i < 14; ++i) {
         st = (stack + i * 4);
-        vga_pprintf(3 + i, 0, "%8x:%8x %8x %8x %8x",
+        vga_printf(3 + i, 0, "%8x:%8x %8x %8x %8x",
                 st, *st, *(st + 1), *(st + 2), *(st + 3));
-        vga_pwrite(3 + i, 45, (char *) st, 16);
+        vga_write(3 + i, 45, (char *) st, 16);
     }
 
     /* REGISTERS */
-    vga_pprintf(2, 62, "EAX %8x", expst->eax);
-    vga_pprintf(3, 62, "EBX %8x", expst->ebx);
-    vga_pprintf(4, 62, "ECX %8x", expst->ecx);
-    vga_pprintf(5, 62, "EDX %8x", expst->edx);
-    vga_pprintf(6, 62, "ESI %8x", expst->esi);
-    vga_pprintf(7, 62, "EDI %8x", expst->edi);
-    vga_pprintf(8, 62, "EBP %8x", expst->ebp);
-    vga_pprintf(9, 62, "ESP %4x:%8x", expst->org_ss, expst->org_esp);
-    vga_pprintf(10, 62, "EIP %4x:%8x", expst->org_cs, expst->org_eip);
-    vga_pprintf(11, 62, "EFL %8x", expst->eflags);
-    vga_pprintf(13, 62, "TR  %8x", rtr());
-    vga_pprintf(14, 62, "CR2 %8x", rcr2());
-    vga_pprintf(15, 62, "CR3 %8x", rcr3());
-    vga_pprintf(16, 62, "PID %8x", current_pid());
+    vga_printf(2, 62, "EAX %8x", expst->eax);
+    vga_printf(3, 62, "EBX %8x", expst->ebx);
+    vga_printf(4, 62, "ECX %8x", expst->ecx);
+    vga_printf(5, 62, "EDX %8x", expst->edx);
+    vga_printf(6, 62, "ESI %8x", expst->esi);
+    vga_printf(7, 62, "EDI %8x", expst->edi);
+    vga_printf(8, 62, "EBP %8x", expst->ebp);
+    vga_printf(9, 62, "ESP %4x:%8x", expst->org_ss, expst->org_esp);
+    vga_printf(10, 62, "EIP %4x:%8x", expst->org_cs, expst->org_eip);
+    vga_printf(11, 62, "EFL %8x", expst->eflags);
+    vga_printf(13, 62, "TR  %8x", rtr());
+    vga_printf(14, 62, "CR2 %8x", rcr2());
+    vga_printf(15, 62, "CR3 %8x", rcr3());
+    vga_printf(16, 62, "PID %8x", current_pid());
 
     /* BACKTRACE */
     p = (u32_t *) expst->ebp;
-    vga_pprintf(18, 0, "Backtrace: Current: %8x", expst->org_eip);
+    vga_printf(18, 0, "Backtrace: Current: %8x", expst->org_eip);
     for (i = 19; i < 19; ++i) {
         address = call_address((u8_t *) *(p - 1));
-        vga_pprintf(i, 0, "At %8x: CALL %8x %s",
+        vga_printf(i, 0, "At %8x: CALL %8x %s",
                     *(p - 1), address, address == 0 ? "<Invalid address>" : "");
         p = (u32_t *) *p;
         if (((u32_t)p & ~0x3FF) != (expst->ebp & ~0x3FF))
@@ -138,6 +138,6 @@ void debug_kernelpanic(const u32_t* stack, const exp_state* expst)
     }
 
     /* Error */
-    vga_pprintf(24, 0, "EXP %2x err: %8x %s",
+    vga_printf(24, 0, "EXP %2x err: %8x %s",
                 expst->nr, expst->errcode, expst->name);
 }

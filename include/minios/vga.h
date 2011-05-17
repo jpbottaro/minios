@@ -3,13 +3,16 @@
 
 #include <sys/types.h>
 
+struct video_char_s {
+    char letter;
+    char color;
+} __attribute__((__packed__));
+
 void vga_init(void);
 
-int vga_pwrite(u16_t r, u16_t c, const char* msg, int n);
-int vga_write(const char* msg, int n);
-int vga_pprintf(u16_t r, u16_t c, const char* format, ...);
-//                                        __attribute__ ((format (printf, 3, 4)));
-int vga_printf(const char* format, ...);
+void vga_print_key(u16_t r, u16_t c, char key);
+int vga_write(u16_t r, u16_t c, const char* msg, int n);
+int vga_printf(u16_t r, u16_t c, const char* format, ...);
 
 /* Paleta de 16 colores */
 #define VGA_FC_BLACK   0x00

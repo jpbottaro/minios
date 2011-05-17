@@ -17,16 +17,6 @@ _isr32:
     add esp, 4
     popad
     iret
-_isr33:
-    pushad
-    xor eax, eax
-    in al, 0x60
-    push eax
-    call kbd_key
-    add esp, 4
-    call reset_intr_pic1
-    popad
-    iret
 _isr128:
     pushad
     push edx
