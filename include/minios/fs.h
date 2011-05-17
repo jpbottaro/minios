@@ -81,6 +81,9 @@ int copy_file(char *buf, unsigned int n, unsigned int pos, struct inode_s *ino,
 struct inode_s *get_inode(ino_t num);
 void           *get_block(zone_t num);
 
+int imayor(ino_t ino_num);
+int iminor(ino_t ino_num);
+
 /* constants for attribute i_mode in inode struct */
 #define I_TYPE           0170000
 #define I_FILE           0100000

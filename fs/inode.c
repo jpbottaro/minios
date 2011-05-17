@@ -263,3 +263,17 @@ block_t read_map(struct inode_s *ino, unsigned int pos, int flag)
 
     return NO_BLOCK;
 }
+
+int imayor(ino_t ino_num)
+{
+    struct inode_s *ino = get_inode(ino_num);
+    
+    return ino->i_zone[0];
+}
+
+int iminor(ino_t ino_num)
+{
+    struct inode_s *ino = get_inode(ino_num);
+    
+    return ino->i_zone[1];
+}
