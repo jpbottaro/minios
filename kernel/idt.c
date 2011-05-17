@@ -1,6 +1,6 @@
+#include <minios/idt.h>
 #include "isr.h"
 #include "pic.h"
-#include "idt.h"
 
 void idt_register(int intr, void (*isr)(void), int pl)
 {

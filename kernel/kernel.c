@@ -3,7 +3,7 @@
 #include <minios/vga.h>
 #include <minios/i386.h>
 #include <minios/sched.h>
-#include "idt.h"
+#include <minios/idt.h>
 #include "scall.h"
 #include "clock.h"
 

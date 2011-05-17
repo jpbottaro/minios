@@ -1,3 +1,4 @@
+#include <minios/sti.h>
 #include "con.h"
 
 void con_init()

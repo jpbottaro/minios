@@ -3,9 +3,9 @@
 #include <minios/scall.h>
 #include <minios/misc.h>
 #include <minios/i386.h>
+#include <minios/idt.h>
 #include <minios/mm.h>
 #include "debug.h"
-#include "idt.h"
 #include "tss.h"
 #include "gdt.h"
 #include "pm.h"

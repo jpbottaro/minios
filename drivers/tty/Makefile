@@ -1,8 +1,9 @@
+DRIVER_NAME=tty
+DRIVER_DIR=drivers
 ODIR=obj
-DRIVER_DIR=drivers/tty
-_OBJ=con.o
+_OBJ=con.o kbd.o
 OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
-DEP=$(patsubst %,../$(DRIVER_DIR)/$(ODIR)/%,$(_OBJ))
+DEP=$(patsubst %,../$(DRIVER_DIR)/$(DRIVER_NAME)/$(ODIR)/%,$(_OBJ))
 
 CC=gcc
 CFLAGS=-m32 -g -ggdb -Wall -Werror -O0 -I ../../include\

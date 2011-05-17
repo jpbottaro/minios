@@ -1,5 +1,5 @@
-#ifndef __IDT_H__
-#define __IDT_H__
+#ifndef _IDT_H
+#define _IDT_H
 
 #define DEFAULT_PL 0x8E00
 
@@ -21,4 +21,4 @@ typedef struct str_idt_entry_fld {
 extern idt_entry idt[];
 extern idt_descriptor IDT_DESC;
 
-#endif /* __IDT_H__ */
+#endif /* _IDT_H */
