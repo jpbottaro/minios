@@ -96,7 +96,7 @@ void debug_kernelpanic(const u32_t* stack, const exp_state* expst)
     u32_t *p;
     u32_t address;
 
-    vga_init();
+    vga_clear();
 
     vga_printf(0, 0, "Kernel Panic!");
 

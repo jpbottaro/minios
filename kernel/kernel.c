@@ -18,7 +18,7 @@ void kernel_init()
     scall_init();
 
     /* clear the screen */
-    vga_init();
+    vga_clear();
 
     /* initialize memory managment unit */
     mm_init();

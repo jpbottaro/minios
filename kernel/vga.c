@@ -57,8 +57,8 @@ void vga_scrollup_vram()
     }
 }
 
-/* init vga and clear screen */
-void vga_init()
+/* clear screen */
+void vga_clear()
 {
     int i, j;
 
