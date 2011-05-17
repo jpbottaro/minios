@@ -17,6 +17,12 @@ static void fill_inode(struct inode_s *ino, int mode);
 /* initialize fs, needs to be ALL mapped in memory, fs_start being first byte */
 int fs_init(u32_t fs_start)
 {
+    struct file_operations_s ops = {
+        .read = fs_read, 
+        .write = fs_write,
+        .lseek = fs_lseek
+    };
+
     fs_offset = (char *) fs_start;
     read_super();
     root = (struct inode_s *) (fs_offset + INODE_OFFSET);
@@ -34,6 +40,9 @@ int fs_init(u32_t fs_start)
     SCALL_REGISTER(40, fs_rmdir);
     SCALL_REGISTER(141, fs_getdents);
     SCALL_REGISTER(200, sys_flush);
+
+    /* register fs device */
+    dev_register(DEV_FS, &ops);
 
     return OK;
 }
@@ -96,7 +105,7 @@ int fs_close(int fd)
 }
 
 /* move the pointer of a file to a different position in it */
-int fs_lseek(struct file_s *flip, off_t offset, int whence)
+size_t fs_lseek(struct file_s *flip, off_t offset, int whence)
 {
     struct inode_s *ino;
     int pos;
@@ -121,7 +130,7 @@ int fs_lseek(struct file_s *flip, off_t offset, int whence)
 }
 
 /* generic lseek */
-int sys_lseek(int fd, off_t offset, int whence)
+size_t sys_lseek(int fd, off_t offset, int whence)
 {
     struct file_s *flip = get_file(fd);
 
@@ -213,7 +222,7 @@ size_t sys_read(int fd, char *buf, unsigned int n)
 }
 
 /* generic write for an fd */
-ssize_t sys_write(int fd, const char *buf, unsigned int n)
+ssize_t sys_write(int fd, char *buf, unsigned int n)
 {
     struct file_s *flip = get_file(fd);
 
