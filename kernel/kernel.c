@@ -11,6 +11,8 @@
 
 #include <minios/debug.h>
 
+extern void con_init();
+
 /* here is where the magic starts */
 void kernel_init()
 {
@@ -38,6 +40,8 @@ void kernel_init()
 
     /* initialize our memory mapped file system */
     fs_init(FS_INITIAL_POS);
+
+    con_init();
 
     /* initialize scheduler */
     sched_init();
