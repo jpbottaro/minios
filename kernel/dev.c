@@ -27,22 +27,3 @@ int dev_register(unsigned int major, struct file_operations_s *fops)
     devices[major].d_op = *fops;
     return 0;
 }
-
-/*
-    switch (dev) {
-        case DEV_STDIN:
-            if (flag == FS_READ) {
-                sched_block(current_process, &kbd_list);
-                sched_schedule(1);
-                return kbd_getline(buf, n);
-            }
-            break;
-        case DEV_STDOUT:
-        case DEV_STDERR:
-            if (flag == FS_WRITE)
-                return vga_write(buf, n);
-            break;
-        default:
-            break;
-    }
-*/
