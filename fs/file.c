@@ -1,5 +1,6 @@
 #include <minios/sched.h> /* process table (needed for process fd's) */
 #include <minios/debug.h>
+#include <minios/dev.h>
 #include <sys/queue.h>
 #include "fs.h"
 
@@ -17,11 +18,19 @@ void init_fds(unsigned int id)
     dev = get_inode(ino_num);
 
     file->f_ino = find_inode(dev, "stdin", FS_SEARCH_GET);
-    file->f_pos = 0; file->f_fd = 0; file++;
+    file->f_pos = 0; file->f_fd = 0;
+    dev_file_calls(file, imayor(file->f_ino));
+    file++;
+
     file->f_ino = find_inode(dev, "stdout", FS_SEARCH_GET);
-    file->f_pos = 0; file->f_fd = 1; file++;
+    file->f_pos = 0; file->f_fd = 1;
+    dev_file_calls(file, imayor(file->f_ino));
+    file++;
+
     file->f_ino = find_inode(dev, "stderr", FS_SEARCH_GET);
-    file->f_pos = 0; file->f_fd = 2; file++;
+    file->f_pos = 0; file->f_fd = 2;
+    dev_file_calls(file, imayor(file->f_ino));
+    file++;
 
     unused_fd = &ps[id].unused_fd;
     LIST_INIT(unused_fd);

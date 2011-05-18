@@ -14,15 +14,15 @@ struct inode_s *root;
 static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag);
 static void fill_inode(struct inode_s *ino, int mode);
 
+static struct file_operations_s ops = {
+    .read = fs_read, 
+    .write = fs_write,
+    .lseek = fs_lseek
+};
+
 /* initialize fs, needs to be ALL mapped in memory, fs_start being first byte */
 int fs_init(u32_t fs_start)
 {
-    struct file_operations_s ops = {
-        .read = fs_read, 
-        .write = fs_write,
-        .lseek = fs_lseek
-    };
-
     fs_offset = (char *) fs_start;
     read_super();
     root = (struct inode_s *) (fs_offset + INODE_OFFSET);
