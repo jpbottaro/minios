@@ -14,7 +14,7 @@ struct video_char_s (*vram)[25][80] = (struct video_char_s (*)[25][80]) 0xB8000;
 unsigned int x = 0, y = 0;
 
 /* move cursor to (x,y), we asume the ports are 0x3D4-0x3D5 */
-void move_cursor(int x, int y)
+void vga_move_cursor(int x, int y)
 {
     unsigned short pos;
 
@@ -28,15 +28,13 @@ void move_cursor(int x, int y)
 }
 
 /* refresh video ram with new buffer */
-void vga_copy_vram(const struct video_char_s video[25][80], int x, int y)
+void vga_copy_vram(const struct video_char_s video[25][80])
 {
     int i, j;
 
     for (i = 0; i < 25; ++i)
         for (j = 0; j < 80; ++j)
             (*vram)[i][j] = video[i][j];
-
-    move_cursor(x, y);
 }
 
 /* move the video ram 1 row up */
@@ -69,7 +67,7 @@ void vga_clear()
         }
     }
 
-    move_cursor(0, 0);
+    vga_move_cursor(0, 0);
 }
 
 /* print 1 key in the screen */
@@ -103,13 +101,13 @@ void print_key(struct pos_s *pos, char key)
                     pos->y++;
             }
     }
-    move_cursor(pos->x, pos->y);
+    vga_move_cursor(pos->x, pos->y);
 }
 
 void vga_print_key(u16_t r, u16_t c, char key)
 {
-    struct pos_s pos = {.x = c, .y = r};
-    print_key(&pos, key);
+    (*vram)[r][c].letter = key;
+    (*vram)[r][c].color = VGA_FC_WHITE;
 }
 
 int vga_write(u16_t r, u16_t c, const char* msg, int n)
@@ -122,7 +120,7 @@ int vga_write(u16_t r, u16_t c, const char* msg, int n)
     for (i = 0; i < n; ++i)
         print_key(&pos, msg[i]);
 
-    move_cursor(pos.x, pos.y);
+    vga_move_cursor(pos.x, pos.y);
     return i;
 }
 

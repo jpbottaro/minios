@@ -8,11 +8,11 @@ struct video_char_s {
     char color;
 } __attribute__((__packed__));
 
-void vga_init(void);
-
-void vga_copy_vram(const struct video_char_s video[25][80], int x, int y);
-void vga_scrollup_vram();
+void vga_clear(void);
+void vga_copy_vram(const struct video_char_s video[25][80]);
+void vga_move_cursor(int x, int y);
 void vga_print_key(u16_t r, u16_t c, char key);
+void vga_scrollup_vram();
 int vga_write(u16_t r, u16_t c, const char* msg, int n);
 int vga_printf(u16_t r, u16_t c, const char* format, ...);
 
