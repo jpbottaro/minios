@@ -26,7 +26,7 @@ void con_init()
     fs_make_dev("stderr", I_CHAR, DEV_TTY, 2);
 
     /* manage keyboard interruptions */
-    idt_register(23, kbd_intr, DEFAULT_PL);
+    idt_register(33, kbd_intr, DEFAULT_PL);
 
     /* initialize virtual consoles */
     for (i = 0; i < MAX_CONSOLES; i++) {
@@ -37,6 +37,7 @@ void con_init()
     }
 
     current_con = &console[0];
+    kbd_currentkbd(&current_con->kbd);
 
     dev_register(DEV_TTY, &ops);
 }
