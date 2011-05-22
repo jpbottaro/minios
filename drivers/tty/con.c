@@ -123,6 +123,7 @@ int con_realwrite(struct console_s *con, const char* msg, int n)
 
     for (i = 0; i < n; ++i)
         con_print_key(con, msg[i]);
+    con->xlimit = con->x;
 
     return i;
 }

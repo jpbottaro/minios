@@ -214,7 +214,7 @@ ssize_t fs_write(struct file_s *flip, char *buf, size_t n)
 }
 
 /* generic read for an fd */
-size_t sys_read(int fd, char *buf, unsigned int n)
+size_t sys_read(int fd, char *buf, size_t n)
 {
     struct file_s *flip = get_file(fd);
 
@@ -222,7 +222,7 @@ size_t sys_read(int fd, char *buf, unsigned int n)
 }
 
 /* generic write for an fd */
-ssize_t sys_write(int fd, char *buf, unsigned int n)
+ssize_t sys_write(int fd, char *buf, size_t n)
 {
     struct file_s *flip = get_file(fd);
 
