@@ -16,14 +16,14 @@ void main(int argc, const char *argv[])
     char buf[BUF_SIZE];
 
     if ( (fd = open((argc > 1) ? argv[1] : ".", O_RDONLY, 0)) < 0) {
-        write(STDOUT_FILENO, DIRNOEXISTS, sizeof(DIRNOEXISTS));
+        write(STDOUT_FILENO, DIRNOEXISTS, sizeof(DIRNOEXISTS) - 1);
         _exit(-1);
     }
 
     for (;;) {
         nread = getdents(fd, buf, BUF_SIZE);
         if (nread == -1) {
-            write(STDOUT_FILENO, GETDENTSERR, sizeof(GETDENTSERR));
+            write(STDOUT_FILENO, GETDENTSERR, sizeof(GETDENTSERR) - 1);
             _exit(-1);
         }
 

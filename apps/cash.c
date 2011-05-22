@@ -46,7 +46,7 @@ void writePS1()
     buf[i++] = '$';
     buf[i++] = '\0';
 
-    write(STDOUT_FILENO, buf, i);
+    write(STDOUT_FILENO, buf, i - 1);
 }
 
 #define MAX_LINE 100
@@ -88,7 +88,7 @@ void execute(const char *buf)
         if ( (pid = newprocess(argv[0], argv)) < 0 &&
              (pid = newprocess(extendcmd, argv)) < 0) {
             write(STDOUT_FILENO, "Program not found\n",
-                          sizeof("Program not found\n"));
+                          sizeof("Program not found\n") - 1);
         } else {
             waitpid(pid, NULL, 0);
         }
@@ -104,10 +104,10 @@ int sh_cmd(const char *cmd, char *const argv[])
                 updatepwd(argv[1]);
             else
                 write(STDOUT_FILENO, "Directory not found\n",
-                        sizeof("Directory not found\n"));
+                        sizeof("Directory not found\n") - 1);
         }
     } else if (mystrncmp(cmd, "pwd", sizeof("pwd")) == 0) {
-        write(STDOUT_FILENO, pwd, sizeof(pwd));
+        write(STDOUT_FILENO, pwd, sizeof(pwd) - 1);
         write(STDOUT_FILENO, "\n", 1);
     } else if (mystrncmp(cmd, "exit", sizeof("exit")) == 0) {
         _exit(0);

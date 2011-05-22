@@ -7,12 +7,12 @@
 void main(int argc, const char *argv[])
 {
     if (argc < 2) {
-        write(STDOUT_FILENO, ERR_ARGC, sizeof(ERR_ARGC));
+        write(STDOUT_FILENO, ERR_ARGC, sizeof(ERR_ARGC) - 1);
         _exit(1);
     }
 
     if (mkdir(argv[1], 0) < 0) {
-        write(STDOUT_FILENO, ERR_MKDIR, sizeof(ERR_MKDIR));
+        write(STDOUT_FILENO, ERR_MKDIR, sizeof(ERR_MKDIR) - 1);
         _exit(1);
     }
 

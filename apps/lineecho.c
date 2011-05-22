@@ -9,7 +9,7 @@ void main()
     char buf[MAX_BUF];
     int len;
 
-    write(1, MOTD, sizeof(MOTD));
+    write(1, MOTD, sizeof(MOTD) - 1);
     len = read(0, buf, MAX_BUF);
     while (len != 0 && mystrncmp(buf, "exit", 4) != 0) {
         write(1, buf, len);
