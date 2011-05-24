@@ -161,7 +161,7 @@ static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag
     n = pos - flip->f_pos;
     
     /* update inode size */
-    if (pos > ino->i_size)
+    if (pos > ino->i_size && flag == FS_WRITE)
         ino->i_size = pos;
 
     /* set new filepos */
@@ -210,13 +210,16 @@ size_t fs_read(struct file_s *flip, char *buf, size_t n)
 /* write 'n' bytes from 'buf' in the file referenced by 'fd' */
 ssize_t fs_write(struct file_s *flip, char *buf, size_t n)
 {
-    return fs_readwrite(flip, buf, n, FS_READ);
+    return fs_readwrite(flip, buf, n, FS_WRITE);
 }
 
 /* generic read for an fd */
 size_t sys_read(int fd, char *buf, size_t n)
 {
     struct file_s *flip = get_file(fd);
+
+    if (flip == NULL)
+        return ERROR;
 
     return flip->f_op->read(flip, buf, n);
 }
@@ -225,6 +228,9 @@ size_t sys_read(int fd, char *buf, size_t n)
 ssize_t sys_write(int fd, char *buf, size_t n)
 {
     struct file_s *flip = get_file(fd);
+
+    if (flip == NULL)
+        return ERROR;
 
     return flip->f_op->write(flip, buf, n);
 }
