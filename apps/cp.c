@@ -4,6 +4,7 @@
 
 #define MAX_BUF 1024
 
+#define ERR_ARGC "Too few arguments\n"
 #define ERR_OPEN "Error in open()\n"
 #define ERR_READ "Error in read()\n"
 #define ERR_WRITE "Error in write()\n"
@@ -12,6 +13,11 @@ void main(int argc, char *argv[])
 {
     char buf[MAX_BUF];
     int len, from, to;
+
+    if (argc < 3) {
+        write(STDOUT_FILENO, ERR_ARGC, sizeof(ERR_ARGC) - 1);
+        _exit(-1);
+    }
 
     if ( (from = open(argv[1], O_RDONLY, 0)) < 0) {
         write(STDOUT_FILENO, ERR_OPEN, sizeof(ERR_OPEN) - 1);
