@@ -9,6 +9,7 @@
 #define INTR_FUNC(NAME, NR, ERROR) \
     void isr ## NR() \
     { \
+        cli(); \
         int off  = ((ERROR) ? 0 : -1); \
         u32_t *ebp = (u32_t *) rebp(); \
         exp_state test = {.eax = reax(), .ebx = rebx(), \
@@ -17,14 +18,14 @@
                           .es = res(), .ds = rds(), .fs = rfs(), \
                           .gs = rgs(), .ss = rss(), \
                           .edi = redi(), .esi = resi(), \
-                          .ebp = rebp(), .esp = resp(), \
+                          .ebp = *ebp, .esp = resp(), \
                           .errcode = ((ERROR) ? *(ebp + 1) : 0), \
                           .org_eip = *(ebp + (u32_t)(2 + off)), \
                           .org_cs  = *(ebp + (u32_t)(3 + off)), \
                           .eflags  = *(ebp + (u32_t)(4 + off)), \
                           .org_esp = *(ebp + (u32_t)(5 + off)), \
                           .org_ss  = *(ebp + (u32_t)(6 + off)) }; \
-        debug_kernelpanic((u32_t *) resp(), &test); \
+        debug_kernelpanic((u32_t *) test.org_esp, &test); \
         for (;;) {} \
     }
 
@@ -80,7 +81,7 @@ u32_t call_address(u8_t *instr)
 {
     switch (*instr) {
         case 0xE8:
-            return *((u32_t *) (instr + 1));
+            return ((u32_t) instr + 5) + *((u32_t *) (instr + 1));
         case 0xFF:
             /* HACER */
         default:
@@ -94,19 +95,22 @@ void debug_kernelpanic(const u32_t* stack, const exp_state* expst)
     int i;
     const u32_t *st;
     u32_t *p;
+    u8_t *instr;
     u32_t address;
 
     vga_clear();
-
     vga_printf(0, 0, "Kernel Panic!");
 
     /* STACK */
-    vga_printf(2, 0, "Stack:");
-    for (i = 0; i < 14; ++i) {
-        st = (stack + i * 4);
-        vga_printf(3 + i, 0, "%8x:%8x %8x %8x %8x",
-                st, *st, *(st + 1), *(st + 2), *(st + 3));
-        vga_write(3 + i, 45, (char *) st, 16);
+    /* check if there is enough stack to show */
+    if ((((u32_t) stack) & ~0x3FF) < 0xF00) {
+        vga_printf(2, 0, "Stack:");
+        for (i = 0; i < 14; ++i) {
+            st = (stack + i * 4);
+            vga_printf(3 + i, 0, "%8x:%8x %8x %8x %8x",
+                    st, *st, *(st + 1), *(st + 2), *(st + 3));
+            vga_write(3 + i, 45, (char *) st, 16);
+        }
     }
 
     /* REGISTERS */
@@ -125,19 +129,23 @@ void debug_kernelpanic(const u32_t* stack, const exp_state* expst)
     vga_printf(15, 62, "CR3 %8x", rcr3());
     vga_printf(16, 62, "PID %8x", current_pid());
 
-    /* BACKTRACE */
-    p = (u32_t *) expst->ebp;
-    vga_printf(18, 0, "Backtrace: Current: %8x", expst->org_eip);
-    for (i = 19; i < 19; ++i) {
-        address = call_address((u8_t *) *(p - 1));
-        vga_printf(i, 0, "At %8x: CALL %8x %s",
-                    *(p - 1), address, address == 0 ? "<Invalid address>" : "");
-        p = (u32_t *) *p;
-        if (((u32_t)p & ~0x3FF) != (expst->ebp & ~0x3FF))
-            break;
-    }
-
-    /* Error */
+    /* ERROR */
     vga_printf(24, 0, "EXP %2x err: %8x %s",
                 expst->nr, expst->errcode, expst->name);
+
+    /* BACKTRACE */
+    p = (u32_t *) expst->ebp;
+    instr = (u8_t *) *(p + 1) - 5;
+    vga_printf(18, 0, "Backtrace: Current: %8x", expst->org_eip);
+    for (i = 19; i < 22; ++i) {
+        /* get destination address of the call */
+        address = call_address(instr);
+        vga_printf(i, 0, "At %8x: CALL %8x %s",
+                    instr, address, address == 0 ? "<Invalid address>" : "");
+        p = (u32_t *) *p;
+        /* check if we left the page (avoid another gp or pf) */
+        if (((u32_t)p & ~0x3FF) != (expst->ebp & ~0x3FF))
+            break;
+        instr = (u8_t *) *(p + 1) - 5;
+    }
 }
