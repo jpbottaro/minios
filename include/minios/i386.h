@@ -211,7 +211,7 @@ LS_INLINE unsigned int cmpxchg(volatile unsigned int *addr,
                                         unsigned int oldval,
                                         unsigned int newval)
 {
-    unsigned int result;
+    unsigned char result;
 
     // The + in "+m" denotes a read-modify-write operand.
     __asm __volatile("lock cmpxchgl %3, %1 \n setzb %0" :
