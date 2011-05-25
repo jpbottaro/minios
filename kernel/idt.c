@@ -17,9 +17,6 @@ void idt_init() {
     disable_pic();
     reset_pic();
     enable_pic();
-
-    /* register syscall handler */
-    idt_register(128, _isr128, USER_PL);
 }
 
 idt_entry idt[255] = {};

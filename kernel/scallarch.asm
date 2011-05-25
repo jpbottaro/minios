@@ -1,12 +1,11 @@
 BITS 32
 
 extern reset_intr_pic1
-extern kbd_key
 extern system_calls
 
-global _isr128  ; sys_call (int 0x80)
+global scall_handler
 
-_isr128:
+scall_handler:
     pushad
     push edx
     push ecx
