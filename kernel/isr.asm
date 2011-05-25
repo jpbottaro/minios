@@ -6,7 +6,6 @@ extern kbd_key
 extern system_calls
 
 global _isr32	; clock
-global _isr33   ; keyboard
 global _isr128  ; sys_call (int 0x80)
 
 _isr32:
@@ -22,6 +21,7 @@ _isr128:
     push edx
     push ecx
     push ebx
+    sti
     mov eax, [system_calls + eax * 4]
     call eax
     mov [res], eax
