@@ -1,15 +1,14 @@
 #include <minios/mm.h>
 #include <minios/fs.h>
+#include <minios/idt.h>
 #include <minios/vga.h>
 #include <minios/i386.h>
 #include <minios/sched.h>
-#include <minios/idt.h>
+#include <minios/debug.h>
 #include "scall.h"
 #include "clock.h"
 
 #define FS_INITIAL_POS 0x20000
-
-#include <minios/debug.h>
 
 extern void con_init();
 
@@ -41,6 +40,7 @@ void kernel_init()
     /* initialize our memory mapped file system */
     fs_init(FS_INITIAL_POS);
 
+    /* init console driver */
     con_init();
 
     /* initialize scheduler */

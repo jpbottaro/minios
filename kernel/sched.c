@@ -1,11 +1,14 @@
-#include <minios/i386.h>
 #include <minios/sched.h>
+#include <minios/i386.h>
+#include <minios/idt.h>
 #include <minios/pm.h>
 
 struct process_state_s *last_process;
 struct process_state_s *current_process;
 
 CIRCLEQ_HEAD(ready_list_s, process_state_s) ready_list;
+
+extern void clock_handler();
 
 /* intialize scheduler, must be called before any function */
 void sched_init()
@@ -18,6 +21,9 @@ void sched_init()
 
     /* start with no current process */
     last_process = current_process = NULL;
+
+    /* register handler for clock */
+    idt_register(32, clock_handler, DEFAULT_PL);
 }
 
 /* unblock process in waiting list (the first if process is NULL) */

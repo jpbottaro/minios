@@ -18,9 +18,6 @@ void idt_init() {
     reset_pic();
     enable_pic();
 
-    /* register clock handler */
-    idt_register(32, _isr32, DEFAULT_PL);
-
     /* register syscall handler */
     idt_register(128, _isr128, USER_PL);
 }
