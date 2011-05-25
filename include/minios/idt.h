@@ -2,6 +2,7 @@
 #define _IDT_H
 
 #define DEFAULT_PL 0x8E00
+#define USER_PL    0xEE00
 
 void idt_init();
 void idt_register(int intr, void (*isr)(void), int pl);

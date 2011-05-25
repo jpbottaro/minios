@@ -61,13 +61,13 @@ void mm_map_page(mm_page *dir, void *vir, void *phy)
     /* table not present? */
     if (!(dir_entry->attr & MM_ATTR_P)) {
         void *table_page = mm_mem_alloc();
-        *dir_entry = make_mm_entry_addr(table_page, 0111);
+        *dir_entry = make_mm_entry_addr(table_page, 7);
         mm_map_page(dir, table_page, table_page);
     }
 
     table_entry = (mm_page *) (dir_entry->base << 12) +
                               (((u32_t) vir >> 12) & 0x3FF);
-    *table_entry = make_mm_entry_addr(phy,  0111);
+    *table_entry = make_mm_entry_addr(phy,  7);
     tlbflush();
 }
 
@@ -96,16 +96,16 @@ mm_page* mm_dir_new()
     mm_page *tablebase = (mm_page *) mm_mem_alloc();
 
     /* 0111 means present, r/w and user */
-    *dirbase = make_mm_entry_addr(tablebase, 0111);
+    *dirbase = make_mm_entry_addr(tablebase, 7);
 
     /* mark first page as not present, to catch NULL pointers */
     /* XXX see why it does not work */
-    *tablebase = make_mm_entry_addr(0, 0111);
+    *tablebase = make_mm_entry_addr(0, 3);
     tablebase++;
 
     for (base = PAGE_SIZE; base < 0x400000; base += PAGE_SIZE) {
         /* 011 means present, r/w and supervisor */
-        *tablebase = make_mm_entry_addr(base, 0111);
+        *tablebase = make_mm_entry_addr(base, 3);
         tablebase++;
     }
 

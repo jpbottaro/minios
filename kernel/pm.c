@@ -216,8 +216,8 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     LIST_REMOVE(process, unused);
     process->run = 0;
     process->pid = pid++;
-    process->uid = 1;
-    process->gid = 1;
+    process->uid = 2;
+    process->gid = 2;
     process->waiting = NULL;
     process->parent = current_process;
     process->curr_dir = curr_dir;

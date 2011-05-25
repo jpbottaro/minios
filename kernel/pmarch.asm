@@ -31,8 +31,6 @@ load_process_state:
     mov ebp, [eax + DATA_EBP]
     mov edx, [eax + DATA_DIRPAGES]
     mov cr3, edx
-    cmp dword [eax + DATA_RUN], 1
-    je finish_line
     cmp dword [eax + DATA_UID], 1
     je root
 user:
@@ -41,6 +39,8 @@ user:
     mov es, edx
     mov fs, edx
     mov gs, edx
+    cmp dword [eax + DATA_RUN], 1
+    je finish_line
     push edx
     push dword [eax + DATA_ESP]
     push dword EFLAGS_MASK
@@ -52,6 +52,8 @@ root:
     mov es, edx
     mov fs, edx
     mov gs, edx
+    cmp dword [eax + DATA_RUN], 1
+    je finish_line
     mov esp, [eax + DATA_ESP]
     push dword EFLAGS_MASK
     push dword KERN_CODE

@@ -22,7 +22,7 @@ void idt_init() {
     idt_register(32, _isr32, DEFAULT_PL);
 
     /* register syscall handler */
-    idt_register(128, _isr128, DEFAULT_PL);
+    idt_register(128, _isr128, USER_PL);
 }
 
 idt_entry idt[255] = {};
