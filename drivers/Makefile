@@ -1,6 +1,6 @@
 ODIR=obj
 
-_DEPEND=tty floppy
+_DEPEND=tty serial hdd
 DEPEND=$(patsubst %,%/obj/depend,$(_DEPEND))
 
 # programs
@@ -10,11 +10,13 @@ MAKE=make
 
 all:
 	@$(MAKE) -C tty
-	@$(MAKE) -C floppy
+	@$(MAKE) -C serial
+	@$(MAKE) -C hdd
 	@mkdir -p $(ODIR)
 	@cat $(DEPEND) > $(ODIR)/depend
 
 clean:
 	@$(MAKE) -C tty clean
-	@$(MAKE) -C floppy clean
+	@$(MAKE) -C serial clean
+	@$(MAKE) -C hdd clean
 	rm -rf $(ODIR)

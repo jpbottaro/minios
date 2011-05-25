@@ -1,22 +1,18 @@
-#include <serial.h>
-#include <tipos.h>
-#include <i386.h>
-#include <isr.h>
-#include <pic.h>
-#include <debug.h>
+#include <minios/i386.h>
+#include "serial.h"
 
 #define SP_PORT 0x03F8
 
 /* Serial Controler sub-SP_PORTs */
-#define PORT_DATA  0 /* R/W - DATA flow */
-#define PORT_IER   1 /* R/W - Interrupt Enable Register */
-#define PORT_IIR   2 /* R   - Interrupt Id Register */
-#define PORT_FCTRL 2 /*   W - FIFO Control */
-#define PORT_LCTRL 3 /* R/W - Line Control */
-#define PORT_MCTRL 4 /* R/W - MODEM Control */
-#define PORT_LSTAT 5 /* R/W - Line Status */
-#define PORT_MSTAT 6 /* R/W - MODEM Status */
-#define PORT_SCRAT 7 /* R/W - Scratch ¿eh? */
+#define PORT_DATA   0 /* R/W - DATA flow */
+#define PORT_IER    1 /* R/W - Interrupt Enable Register */
+#define PORT_IIR    2 /* R   - Interrupt Id Register */
+#define PORT_FCTRL  2 /*   W - FIFO Control */
+#define PORT_LCTRL  3 /* R/W - Line Control */
+#define PORT_MCTRL  4 /* R/W - MODEM Control */
+#define PORT_LSTAT  5 /* R/W - Line Status */
+#define PORT_MSTAT  6 /* R/W - MODEM Status */
+#define PORT_SCRAT  7 /* R/W - Scratch ¿eh? */
 #define PORT_DL_LSB 0 /* Divisor latch - LSB (need DLAB=1) */
 #define PORT_DL_MSB 1 /* Divisor latch - MSB (need DLAB=1)  */
 
@@ -34,12 +30,12 @@
 #define LC_BIT7 0x02
 #define LC_BIT8 0x03
 
-#define LC_PARITY   0x08
-#define LC_PARITY_E 0x10
-#define LC_PARITY_O 0x00
+#define LC_PARITY    0x08
+#define LC_PARITY_E  0x10
+#define LC_PARITY_O  0x00
 #define LC_PARITY_ST 0x20
-#define LC_BREAK    0x40
-#define LC_DLAB     0x80
+#define LC_BREAK     0x40
+#define LC_DLAB      0x80
 
 /* Line Status Bits */
 #define LS_DR   0x01  /* Data Ready */
@@ -76,28 +72,22 @@
 #define IE_RLS   0x04 /* Int Enable: Receiver Line Status */
 #define IE_MODEM 0x08 /* Int Enable: MODEM Status */
 
-
-/** Char device **/
-
-sint_32 serial_read(chardev* this, void* buf, uint_32 size) {
-	return 0;
+size_t serial_read(struct file_s *flip, char *buf, size_t n)
+{
+    return 0;
 }
 
-sint_32 serial_write(chardev* this, const void* buf, uint_32 size) {
-	return 0;
+ssize_t serial_write(struct file_s *flip, char *buf, size_t n)
+{
+    return 0;
 }
 
-uint_32 serial_flush(chardev* this) {
-	return 0;
+int serial_flush(struct file_s *flip)
+{
+    return 0;
 }
 
-chardev* serial_open(int nro) { /* 0 para COM1, 1 para COM2, ... */
-
-	return NULL;
-}
-
-/** Init **/
-void serial_init() {
+void serial_init()
+{
 	
 }
-
