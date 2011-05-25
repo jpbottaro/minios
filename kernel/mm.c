@@ -100,7 +100,7 @@ mm_page* mm_dir_new()
 
     /* mark first page as not present, to catch NULL pointers */
     /* XXX see why it does not work */
-    *tablebase = make_mm_entry_addr(0, 3);
+    *tablebase = make_mm_entry_addr(0, 2);
     tablebase++;
 
     for (base = PAGE_SIZE; base < 0x400000; base += PAGE_SIZE) {
