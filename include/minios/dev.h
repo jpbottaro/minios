@@ -3,8 +3,10 @@
 
 #define MAX_DEVICES 20
 
-#define DEV_TTY 0
-#define DEV_FS  1
+#define DEV_TTY    0
+#define DEV_FS     1
+#define DEV_SERIAL 2
+#define DEV_HDD    3
 
 #include <minios/fs.h>
 #include <sys/types.h>
