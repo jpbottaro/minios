@@ -1,7 +1,7 @@
 DRIVER_NAME=serial
 DRIVER_DIR=drivers
 ODIR=obj
-_OBJ=serial.o
+_OBJ=serial.o serial_intr.o
 OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
 DEP=$(patsubst %,../$(DRIVER_DIR)/$(DRIVER_NAME)/$(ODIR)/%,$(_OBJ))
 

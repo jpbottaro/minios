@@ -1,4 +1,6 @@
+#include <minios/sched.h>
 #include <minios/i386.h>
+#include <minios/idt.h>
 #include "serial.h"
 
 #define SP_PORT 0x03F8
@@ -72,14 +74,46 @@
 #define IE_RLS   0x04 /* Int Enable: Receiver Line Status */
 #define IE_MODEM 0x08 /* Int Enable: MODEM Status */
 
+#define MAX_SIZE 128
+
+static unsigned char buffer[MAX_SIZE];
+static int pos;
+static int end;
+static int wait_size;
+static waiting_list_t list;
+
+void serial_getline(char *buf, size_t n)
+{
+}
+
 size_t serial_read(struct file_s *flip, char *buf, size_t n)
 {
-    return 0;
+    int i, size = (end >= pos) ? end - pos : end - pos + MAX_SIZE;
+
+    if (n > size) {
+        wait_size = n;
+        sched_block(current_process, &list);
+        sched_schedule(1);
+    }
+
+    i = 0;
+    while (i != n) {
+        buf[i++] = buffer[pos++];
+        pos %= MAX_SIZE;
+    }
+    wait_size = 0;
+
+    return n;
 }
 
 ssize_t serial_write(struct file_s *flip, char *buf, size_t n)
 {
-    return 0;
+    int i;
+
+    for (i = 0; i < n; i++)
+        outb(SP_PORT, buf[i]);
+
+    return i;
 }
 
 int serial_flush(struct file_s *flip)
@@ -87,7 +121,46 @@ int serial_flush(struct file_s *flip)
     return 0;
 }
 
+static struct file_operations_s ops = {
+    .read = serial_read,
+    .write = serial_write,
+    .flush = serial_flush
+};
+
+extern void serial_intr();
+
+void serial_handler()
+{
+    int size;
+    unsigned char c = inb(SP_PORT);
+    buffer[end++] = c;
+    end %= MAX_SIZE;
+
+    size = (end >= pos) ? end - pos : end - pos + MAX_SIZE;
+    if (wait_size && wait_size <= size)
+        sched_unblock(NULL, &list);
+}
+
 void serial_init()
 {
-	
+    /* make char device in /dev */
+    fs_make_dev("serial", I_CHAR, DEV_SERIAL, 0);
+
+    /* register interruption handler */
+    idt_register(36, serial_intr, DEFAULT_PL);
+
+    /* register device */
+    dev_register(DEV_SERIAL, &ops);
+
+    /* this bit was taken from http://wiki.osdev.org/serial_ports */
+    outb(SP_PORT + 1, 0x00); /* Disable all interrupts                     */
+    outb(SP_PORT + 3, 0x80); /* Enable DLAB (set baud rate divisor)        */
+    outb(SP_PORT + 0, 0x03); /* Set divisor to 3 (lo byte) 38400 baud      */
+    outb(SP_PORT + 1, 0x00); /*                  (hi byte)                 */
+    outb(SP_PORT + 3, 0x03); /* 8 bits, no parity, one stop bit            */
+    outb(SP_PORT + 2, 0xC7); /* Enable FIFO, clear them, 14-byte threshold */
+    outb(SP_PORT + 4, 0x0B); /* IRQs enabled, RTS/DSR set                  */
+
+    LIST_INIT(&list);
+    pos = end = wait_size = 0;
 }

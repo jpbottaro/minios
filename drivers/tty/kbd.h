@@ -15,9 +15,7 @@ struct kbd_s {
 
 /* interrupt handler */
 void kbd_intr();
-
 void kbd_init(struct kbd_s *k);
-
 void kbd_key(unsigned char scancode);
 void kbd_currentkbd(struct kbd_s *k);
 int kbd_getline(struct kbd_s *k, char *line, unsigned int n);

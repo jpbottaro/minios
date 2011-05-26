@@ -10,7 +10,9 @@
 
 #define FS_INITIAL_POS 0x20000
 
+/* temporary, will see what is the better way to load drivers */
 extern void con_init();
+extern void serial_init();
 
 /* here is where the magic starts */
 void kernel_init()
@@ -42,6 +44,9 @@ void kernel_init()
 
     /* init console driver */
     con_init();
+
+    /* init serial driver */
+    serial_init();
 
     /* initialize scheduler */
     sched_init();
