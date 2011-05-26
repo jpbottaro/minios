@@ -1,5 +1,5 @@
-#include <minios/sched.h>
 #include <minios/i386.h>
+#include <minios/sem.h>
 #include <minios/idt.h>
 #include "serial.h"
 
@@ -79,29 +79,20 @@
 static unsigned char buffer[MAX_SIZE];
 static int pos;
 static int end;
-static int wait_size;
-static waiting_list_t list;
-
-void serial_getline(char *buf, size_t n)
-{
-}
+static sem_t data;
 
 size_t serial_read(struct file_s *flip, char *buf, size_t n)
 {
-    int i, size = (end >= pos) ? end - pos : end - pos + MAX_SIZE;
+    int i;
 
-    if (n > size) {
-        wait_size = n;
-        sched_block(current_process, &list);
-        sched_schedule(1);
-    }
+    sem_wait(&data);
 
     i = 0;
-    while (i != n) {
+    while (i < n && pos != end && buffer[pos] != '\0') {
         buf[i++] = buffer[pos++];
         pos %= MAX_SIZE;
     }
-    wait_size = 0;
+    buffer[i] = '\0';
 
     return n;
 }
@@ -131,14 +122,12 @@ extern void serial_intr();
 
 void serial_handler()
 {
-    int size;
     unsigned char c = inb(SP_PORT);
     buffer[end++] = c;
     end %= MAX_SIZE;
 
-    size = (end >= pos) ? end - pos : end - pos + MAX_SIZE;
-    if (wait_size && wait_size <= size)
-        sched_unblock(NULL, &list);
+    if (c == '\0')
+        sem_signal(&data);
 }
 
 void serial_init()
@@ -161,6 +150,6 @@ void serial_init()
     outb(SP_PORT + 2, 0xC7); /* Enable FIFO, clear them, 14-byte threshold */
     outb(SP_PORT + 4, 0x0B); /* IRQs enabled, RTS/DSR set                  */
 
-    LIST_INIT(&list);
-    pos = end = wait_size = 0;
+    pos = end = 0;
+    sem_init(&data, 0);
 }

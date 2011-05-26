@@ -1,6 +1,6 @@
-#include <minios/dev.h>
 #include <minios/misc.h>
-#include <minios/sched.h>
+#include <minios/dev.h>
+#include <minios/sem.h>
 #include <sys/queue.h>
 #include "kbd.h"
 #include "con.h"
@@ -52,7 +52,7 @@ void kbd_init(struct kbd_s *k)
 {
     k->pos = 0;
     k->end = 0;
-    LIST_INIT(&k->list);
+    sem_init(&k->data, 0);
 }
 
 /* save key in a buffer */
@@ -112,6 +112,6 @@ void kbd_key(unsigned char scancode)
         con_print_key(current_con, key);
         kbd_buffer_key(current_kbd, key);
         if (key == '\n')
-            sched_unblock(NULL, &current_kbd->list);
+            sem_signal(&current_kbd->data);
     }
 }

@@ -3,14 +3,14 @@
 
 #define MAX_KEYS 0x100
 
-#include <minios/sched.h>
+#include <minios/sem.h>
 
 struct kbd_s {
     char buffer[MAX_KEYS];
     unsigned int pos;
     unsigned int end;
 
-    waiting_list_t list;
+    sem_t data;
 };
 
 /* interrupt handler */

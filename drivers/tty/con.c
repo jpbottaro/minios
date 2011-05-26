@@ -1,4 +1,4 @@
-#include <minios/sched.h>
+#include <minios/sem.h>
 #include <minios/idt.h>
 #include <minios/fs.h>
 #include "con.h"
@@ -111,8 +111,7 @@ size_t con_read(struct file_s *flip, char *buf, size_t n)
     if (minor % 3 != 0)
         return 0;
 
-    sched_block(current_process, &console[minor / 3].kbd.list);
-    sched_schedule(1);
+    sem_wait(&console[minor / 3].kbd.data);
 
     return kbd_getline(&console[minor / 3].kbd, buf, n);
 }
