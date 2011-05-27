@@ -5,6 +5,8 @@
 #include <minios/i386.h>
 #include <minios/idt.h>
 #include <minios/mm.h>
+#include <minios/fs.h>
+#include <fcntl.h>
 #include "debug.h"
 #include "tss.h"
 #include "gdt.h"
@@ -186,30 +188,22 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
  */
 pid_t sys_newprocess(const char *filename, char *const argv[])
 {
+    int fd;
     u32_t i, j, size, max;
+    u32_t mem_offset;
+    pso_file pso_header;
     mm_page *dirbase;
     void *page, *stack;
-    ino_t curr_dir, ino_num;
-    struct inode_s *ino, *dir;
-    struct process_state_s *process;
     char *tmpargv[MAX_ARG];
-    pso_file pso_header;
-    u32_t mem_offset;
+    struct process_state_s *process;
 
     /* get process entry for child */
     process = LIST_FIRST(&unused_list);
     if (process == NULL)
         debug_panic("No space for new process in ps array!");
 
-    curr_dir = (current_process == NULL) ? 1 : current_process->curr_dir;
-
-    /* get inode of new process' exe */
-    dir = get_inode(curr_dir);
-    if ( (ino_num = find_inode(dir, filename, FS_SEARCH_GET)) == NO_INODE)
-        return -1;
-    ino = get_inode(ino_num);
-
-    if (!IS_FILE(ino->i_mode))
+    /* open target file */
+    if ( (fd = fs_open(filename, O_RDONLY, 0)) < 0)
         return -1;
 
     /* fill child entry */
@@ -220,7 +214,10 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     process->gid = 2;
     process->waiting = NULL;
     process->parent = current_process;
-    process->curr_dir = curr_dir;
+    if (current_process != NULL)
+        process->curr_dir = current_process->curr_dir;
+    else
+        process->curr_dir = 1;
     process->last_mem = (char *) REQUESTED_MEMORY_START;
     process->esp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);
     process->ebp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);
@@ -234,15 +231,25 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     mm_map_page(dirbase, dirbase, dirbase);
 
     /* get header */
-    copy_file((char *) &pso_header, sizeof(pso_header), 0, ino, FS_READ);
+    sys_read(fd, (char *) &pso_header, sizeof(pso_header));
     if (mystrncmp((char *) pso_header.signature, "PSO", 3) != 0)
         debug_panic("newprocess: see what to do with tasks with wrong magic");
     mem_offset = pso_header.mem_start;
     process->eip = pso_header._main;
 
     /* build code */
-    max = MIN(ino->i_size, pso_header.mem_end_disk - pso_header.mem_start);
-    for (i = 0; i < max; i += PAGE_SIZE) {
+    max = pso_header.mem_end_disk - pso_header.mem_start;
+
+    /* yak.. first page outside the loop, to add the pso_header too */
+    page = mm_mem_alloc();
+    add_process_page(process, page);
+    mm_map_page((mm_page *) rcr3(), tmpmem, page);
+    mymemcpy(tmpmem, (char *) &pso_header, sizeof(pso_header));
+    sys_read(fd, tmpmem + sizeof(pso_header), PAGE_SIZE - sizeof(pso_header));
+    mm_map_page(dirbase, (void *) mem_offset, page);
+    mm_umap_page((mm_page *) rcr3(), tmpmem);
+
+    for (i = PAGE_SIZE; i < max; i += PAGE_SIZE) {
         /* get new page for code */
         page = mm_mem_alloc();
         add_process_page(process, page);
@@ -251,8 +258,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         mm_map_page((mm_page *) rcr3(), tmpmem, page);
 
         /* copy file from filesystem to the new page */
-        size = MIN(PAGE_SIZE, ino->i_size - i);
-        copy_file((char *) tmpmem, size, i, ino, FS_READ);
+        sys_read(fd, tmpmem, PAGE_SIZE);
 
         /* add the new code page to the page directory table */
         mm_map_page(dirbase, (void *) (i + mem_offset), page);
@@ -260,6 +266,9 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         /* remove temporary ident mapping */
         mm_umap_page((mm_page *) rcr3(), tmpmem);
     }
+
+    /* close file */
+    fs_close(fd);
 
     /* reserve uninitialized space */
     max = pso_header.mem_end - pso_header.mem_start;
@@ -288,7 +297,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         page = mm_mem_alloc();
         add_process_page(process, page);
         mm_map_page(dirbase, (void *) ARG_PAGE, page);
-        mm_map_page((mm_page *) rcr3(), (void *) tmpmem, page);
+        mm_map_page((mm_page *) rcr3(), tmpmem, page);
 
         /* put the arguments in the new page */
         for (i = j = 0; i < MAX_ARG - 1 && argv[i] != NULL; ++i) {
@@ -299,7 +308,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         }
         /* copy the tmpargv array of pointers to the arguments */
         tmpargv[i] = NULL;
-        mymemcpy((char *) tmpmem + j, (char *) tmpargv, (i + 1) * 4);
+        mymemcpy(tmpmem + j, (char *) tmpargv, (i + 1) * 4);
         mm_umap_page((mm_page *) rcr3(), tmpmem);
     }
     /* add the values to the stack so that main() can get them */

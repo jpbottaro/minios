@@ -4,6 +4,8 @@
 #include <sys/queue.h>
 #include "fs.h"
 
+struct file_s tmpfile = {.f_fd = 0};
+
 /* init fds for a process */
 void init_fds(unsigned int id)
 {
@@ -46,11 +48,19 @@ void init_fds(unsigned int id)
 /* get a new fd */
 int get_fd(ino_t ino_num, unsigned int pos)
 {
-    struct unused_fd_t *unused_fd = &current_process->unused_fd;
-    struct file_s *file = LIST_FIRST(unused_fd);
+    struct unused_fd_t *unused_fd;
+    struct file_s *file;
+
+    if (current_process != NULL) {
+        unused_fd = &current_process->unused_fd;
+        file = LIST_FIRST(unused_fd);
+        if (file != NULL)
+            LIST_REMOVE(file, unused);
+    } else {
+        file = &tmpfile;
+    }
 
     if (file != NULL) {
-        LIST_REMOVE(file, unused);
         file->f_ino = ino_num;
         file->f_pos = pos;
         return file->f_fd;
@@ -62,6 +72,9 @@ int get_fd(ino_t ino_num, unsigned int pos)
 /* release a fd */
 int release_fd(int fd)
 {
+    if (current_process == NULL)
+        return OK;
+
     struct unused_fd_t *unused_fd = &current_process->unused_fd;
     struct file_s *file = &current_process->files[fd];
 
@@ -77,15 +90,20 @@ int release_fd(int fd)
 
 ino_t current_dir()
 {
-    return current_process->curr_dir;
+    if (current_process == NULL) return 1;
+    else                         return current_process->curr_dir;
 }
 
 void set_current_dir(ino_t ino)
 {
-    current_process->curr_dir = ino;
+    if (current_process != NULL)
+        current_process->curr_dir = ino;
 }
 
 struct file_s *get_file(int fd)
 {
-    return &current_process->files[fd];
+    if (current_process != NULL)
+        return &current_process->files[fd];
+    else
+        return &tmpfile;
 }
