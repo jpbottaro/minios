@@ -189,7 +189,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
 pid_t sys_newprocess(const char *filename, char *const argv[])
 {
     int fd;
-    u32_t i, j, size, max;
+    int i, j, size, max, ret, len;
     u32_t mem_offset;
     pso_file pso_header;
     mm_page *dirbase;
@@ -200,11 +200,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     /* get process entry for child */
     process = LIST_FIRST(&unused_list);
     if (process == NULL)
-        debug_panic("No space for new process in ps array!");
-
-    /* open target file */
-    if ( (fd = fs_open(filename, O_RDONLY, 0)) < 0)
-        return -1;
+        debug_panic("newprocess: No space for new process in ps array!");
 
     /* fill child entry */
     LIST_REMOVE(process, unused);
@@ -230,8 +226,18 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     /* ident map the directory table (this way its 'user' and not 'system') */
     mm_map_page(dirbase, dirbase, dirbase);
 
+    /* open target file */
+    if ( (fd = fs_open(filename, O_RDONLY, 0)) < 0)
+        return -1;
+
+    /* how much did read */
+    len = 0;
+
     /* get header */
-    sys_read(fd, (char *) &pso_header, sizeof(pso_header));
+    if ( (ret = sys_read(fd, (char *) &pso_header, PSO_SIZE)) != PSO_SIZE)
+        debug_panic("newprocess: error in sys_read, cant get header");
+    len += ret;
+
     if (mystrncmp((char *) pso_header.signature, "PSO", 3) != 0)
         debug_panic("newprocess: see what to do with tasks with wrong magic");
     mem_offset = pso_header.mem_start;
@@ -244,8 +250,11 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     page = mm_mem_alloc();
     add_process_page(process, page);
     mm_map_page((mm_page *) rcr3(), tmpmem, page);
-    mymemcpy(tmpmem, (char *) &pso_header, sizeof(pso_header));
-    sys_read(fd, tmpmem + sizeof(pso_header), PAGE_SIZE - sizeof(pso_header));
+    mymemcpy(tmpmem, (char *) &pso_header, PSO_SIZE);
+    if ( (ret = sys_read(fd, tmpmem + PSO_SIZE, PAGE_SIZE - PSO_SIZE)) < 0)
+        debug_panic("newprocess: error in sys_read, cant get program");
+    len += ret;
+    
     mm_map_page(dirbase, (void *) mem_offset, page);
     mm_umap_page((mm_page *) rcr3(), tmpmem);
 
@@ -258,14 +267,28 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         mm_map_page((mm_page *) rcr3(), tmpmem, page);
 
         /* copy file from filesystem to the new page */
-        sys_read(fd, tmpmem, PAGE_SIZE);
+        if ( (ret = sys_read(fd, tmpmem, PAGE_SIZE)) < 0)
+            debug_panic("newprocess: error in sys_read, cant get program");
+        len += ret;
 
         /* add the new code page to the page directory table */
         mm_map_page(dirbase, (void *) (i + mem_offset), page);
 
         /* remove temporary ident mapping */
         mm_umap_page((mm_page *) rcr3(), tmpmem);
+
+        if (ret == 0)
+            break;
     }
+
+    /* XXX for some reason, the apps dont have their size right in their
+     * headers (much bigger), so skip this test for now
+     */
+    /* 
+    if (len != max)
+        debug_panic("newprocess: coudn't read enough! the program size does not "
+                    "match what the sys_read() call gave us");
+    */
 
     /* close file */
     fs_close(fd);
