@@ -1,10 +1,9 @@
 - Most of the issues come from changing the fs image from linux. Apparently
   when removing/moving/copying files, it clears blocks that it should not...
-  Now the image is stable but any change on it could corrupt any block
 
   Also, there is something wrong with the block/inode arrays, its reporting
   that used blocks arent.. if I create files or folders, it overrides the
   contents of the file "readme" for example.
 
-- Strange #GP happening randomly when returning from last write() system call
-  in cat, when printing a file with more than 1 block (eg cat readme).
+- The header of the apps have a wrong size, they report much more that they
+  really have.
