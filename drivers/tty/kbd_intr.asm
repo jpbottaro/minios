@@ -1,5 +1,6 @@
 global kbd_intr
 extern reset_intr_pic1
+extern reset_intr_pic2
 extern kbd_key
 
 kbd_intr:
@@ -10,5 +11,6 @@ kbd_intr:
     call kbd_key
     add esp, 4
     call reset_intr_pic1
+    call reset_intr_pic2
     popad
     iret
