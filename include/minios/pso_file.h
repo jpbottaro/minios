@@ -12,4 +12,6 @@ typedef struct str_pso_file {
 	u8_t data[0]; 
 } pso_file;
 
+#define PSO_SIZE sizeof(pso_file)
+
 #endif /* _PSO_FILE_H */

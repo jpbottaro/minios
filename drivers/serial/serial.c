@@ -74,27 +74,30 @@
 #define IE_RLS   0x04 /* Int Enable: Receiver Line Status */
 #define IE_MODEM 0x08 /* Int Enable: MODEM Status */
 
-#define MAX_SIZE 128
+#define MAX_SIZE 0x2000
 
 static unsigned char buffer[MAX_SIZE];
 static int pos;
 static int end;
-static sem_t data;
+static sem_t data, read;
 
 size_t serial_read(struct file_s *flip, char *buf, size_t n)
 {
     int i;
 
-    sem_wait(&data);
+    if (n > MAX_SIZE)
+        return -1;
 
+    sem_wait(&read);
     i = 0;
-    while (i < n && pos != end && buffer[pos] != '\0') {
+    while (i < n && pos != end) {
+        sem_wait(&data);
         buf[i++] = buffer[pos++];
         pos %= MAX_SIZE;
     }
-    buffer[i] = '\0';
+    sem_signal(&read);
 
-    return n;
+    return i;
 }
 
 ssize_t serial_write(struct file_s *flip, char *buf, size_t n)
@@ -120,14 +123,28 @@ static struct file_operations_s ops = {
 
 extern void serial_intr();
 
+int serial_ready()
+{
+   return inb(SP_PORT + PORT_LSTAT) & LS_DR;
+}
+
 void serial_handler()
 {
-    unsigned char c = inb(SP_PORT);
-    buffer[end++] = c;
-    end %= MAX_SIZE;
+    unsigned char c;
 
-    if (c == '\0')
+    /* if the buffer is full, exit */
+    if ((end + 1) % MAX_SIZE == pos)
+        return;
+
+    while (serial_ready()) {
+        c = inb(SP_PORT);
+        buffer[end++] = c;
+        end %= MAX_SIZE;
         sem_signal(&data);
+        /* if the buffer runs out, just drop bytes */
+        if ((end + 1) % MAX_SIZE == pos)
+            break;
+    }
 }
 
 void serial_init()
@@ -142,7 +159,7 @@ void serial_init()
     dev_register(DEV_SERIAL, &ops);
 
     /* this bit was taken from http://wiki.osdev.org/serial_ports */
-    outb(SP_PORT + 1, 0x00); /* Disable all interrupts                     */
+    outb(SP_PORT + 1, 0x01); /* Disable all interrupts                     */
     outb(SP_PORT + 3, 0x80); /* Enable DLAB (set baud rate divisor)        */
     outb(SP_PORT + 0, 0x03); /* Set divisor to 3 (lo byte) 38400 baud      */
     outb(SP_PORT + 1, 0x00); /*                  (hi byte)                 */
@@ -152,4 +169,5 @@ void serial_init()
 
     pos = end = 0;
     sem_init(&data, 0);
+    sem_init(&read, 1);
 }
