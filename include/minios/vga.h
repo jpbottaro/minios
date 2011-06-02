@@ -9,7 +9,7 @@ struct video_char_s {
 } __attribute__((__packed__));
 
 void vga_clear(void);
-void vga_copy_vram(const struct video_char_s video[25][80]);
+void vga_copy_vram(struct video_char_s video[25][80]);
 void vga_move_cursor(int x, int y);
 void vga_print_key(u16_t r, u16_t c, char key);
 void vga_scrollup_vram();
