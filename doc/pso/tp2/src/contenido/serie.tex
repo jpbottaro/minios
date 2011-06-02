@@ -1,3 +1,14 @@
 \section{Puerto Serie}
 
-COMPLETAR
+La implementación del puerto serie la basé en la explicación en osdev.org.
+Básicamente inicializamos el dispositivo con una serie de valores en sus
+puertos, registramos el dispositivo con las operaciones y su handler.
+
+El handler de la interrupción se encarga de leer y guardar todos los caracteres
+que pueda del puerto mientras el dispositivo se mantenga ready. Utilizo un
+buffer circular para grabar los datos que recibo, descartando todo lo que me lo
+llene. Es importante tener en cuenta que utilizo un semáforo para contar la
+cantidad de bytes recibidos. En cada byte lo signalizo, luego un proceso que
+haga un read tomará bytes del buffer y por cada uno manda un wait. Así me
+aseguro de que el proceso se mantenga bloqueado hasta no tener todo lo que
+pidió.

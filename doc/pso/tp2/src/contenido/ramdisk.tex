@@ -1,3 +1,10 @@
 \section{Driver Ramdisk}
 
-COMPLETAR
+El primer paso para portar el file system a la nueva interfáz de dispositivos
+fue crear un ramdisk. La razón es que el file system ya estaba implementado
+sobre memoria, y de alguna manera decidí tomar este camino para aliviar el
+proceso.
+
+Este driver es probablemente el más siemple posible. Se inicializa con la
+dirección inicial de memoria, y luego los reads/writes/lseeks se toman a partir
+de esta dirección.

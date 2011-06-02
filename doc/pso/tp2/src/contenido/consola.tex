@@ -1,3 +1,17 @@
 \section{Consola}
 
-COMPLETAR
+En el tp anterior se mostró una implementación de la consola. Esta no se atenía
+a la abrstración de dispositivos, era más bien un agregado al core del kernel.
+
+Procedí a separar la lógica de la tty a un driver, conformando el manejo del
+teclado, y la lectura/escritura en una terminal virtual. Luego se crean los
+dispositivos tty0, tty1, ...
+
+Además se registra el handler de interrupción, y se mantiene una consola como
+la actual, que representa aquella con foco. Luego todo interrupción del
+teclado es ruteada a la misma, y se mantiene el cursor a la posición actual.
+
+La escritura se resuleve igual que en el módulo de vga del kernel, con la
+función print\_key(). La lectura del teclado se apoya en el uso de un semáforo,
+que empieza en 0 y es signalizado cada vez que se recibe un '\n'. Luego una
+tarea que lea stdin se bloqueará hasta que se reciba el centinela.
