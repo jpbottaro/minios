@@ -2,6 +2,8 @@
 #define __KBD_H__
 
 #define MAX_KEYS 0x100
+#define KEY_LEFT  1
+#define KEY_RIGHT 2
 
 #include <minios/sem.h>
 

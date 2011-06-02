@@ -31,9 +31,9 @@ unsigned char kbdus[128] =
     0,                                              /* Up Arrow              */
     0,                                              /* Page Up               */
   '-',
-    0,                                              /* Left Arrow            */
+    KEY_LEFT,                                       /* Left Arrow            */
     0,
-    0,                                              /* Right Arrow           */
+    KEY_RIGHT,                                      /* Right Arrow           */
   '+',
     0,                                              /* 79 - End key          */
     0,                                              /* Down Arrow            */

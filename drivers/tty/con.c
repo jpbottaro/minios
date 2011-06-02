@@ -25,6 +25,7 @@ void con_switch(int con_num)
 
     /* update video ram with new console */
     vga_copy_vram(current_con->video);
+    vga_move_cursor(current_con->x, current_con->y);
 }
 
 void con_init()
@@ -58,12 +59,12 @@ void con_init()
     dev_register(DEV_TTY, &ops);
 }
 
-void con_left()
+void con_right()
 {
     con_switch((current_con->i + 1) % MAX_CONSOLES);
 }
 
-void con_right()
+void con_left()
 {
     if (current_con->i == 0)
         con_switch(MAX_CONSOLES - 1);
@@ -92,6 +93,12 @@ void scrollup(struct video_char_s video[25][80])
 void con_print_key(struct console_s *c, char key)
 {
     switch (key) {
+        case KEY_LEFT:
+            con_left();
+            break;
+        case KEY_RIGHT:
+            con_right();
+            break;
         case '\n':
             c->x = c->xlimit = 0;
             if (c->y == 24) {
