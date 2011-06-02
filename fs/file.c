@@ -11,25 +11,21 @@ void init_fds(unsigned int id)
 {
     int i;
     ino_t ino_num;
-    struct inode_s *dev;
     struct file_s *file = ps[id].files;
     struct unused_fd_t *unused_fd;
 
-    if ( (ino_num = find_inode(NULL, "/dev", FS_SEARCH_GET)) == NO_INODE)
-        debug_panic("init_fds: no /dev folder (init_fds)");
-    dev = get_inode(ino_num);
+    if ( (ino_num = find_inode(NULL, "/dev/tty", FS_SEARCH_GET)) == NO_INODE)
+        debug_panic("init_fds: no /dev/tty");
 
-    file->f_ino = find_inode(dev, "stdin", FS_SEARCH_GET);
+    file->f_ino = ino_num;
     file->f_pos = 0; file->f_fd = 0;
     dev_file_calls(file, imayor(file->f_ino));
     file++;
-
-    file->f_ino = find_inode(dev, "stdout", FS_SEARCH_GET);
+    file->f_ino = ino_num;
     file->f_pos = 0; file->f_fd = 1;
     dev_file_calls(file, imayor(file->f_ino));
     file++;
-
-    file->f_ino = find_inode(dev, "stderr", FS_SEARCH_GET);
+    file->f_ino = ino_num;
     file->f_pos = 0; file->f_fd = 2;
     dev_file_calls(file, imayor(file->f_ino));
     file++;

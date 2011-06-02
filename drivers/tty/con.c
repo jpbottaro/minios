@@ -19,27 +19,48 @@ static struct file_operations_s ops = {
 void con_init()
 {
     int i;
-
-    /* make stdin, stdout, stderr */
-    fs_make_dev("stdin", I_CHAR, DEV_TTY, 0);
-    fs_make_dev("stdout", I_CHAR, DEV_TTY, 1);
-    fs_make_dev("stderr", I_CHAR, DEV_TTY, 2);
+    char tty[] = "tty0";
 
     /* manage keyboard interruptions */
     idt_register(33, kbd_intr, DEFAULT_PL);
 
-    /* initialize virtual consoles */
+    /* initialize virtual consoles (MAX_CONSOLES < 10) */
     for (i = 0; i < MAX_CONSOLES; i++) {
+        tty[3] = i + '0';
+        fs_make_dev(tty, I_CHAR, DEV_TTY, i);
+        console[i].i = i;
         console[i].x = 0;
         console[i].y = 0;
         console[i].xlimit = 0;
         kbd_init(&console[i].kbd);
     }
 
+    /* make current virtual terminal dev */
+    fs_make_dev("tty", I_CHAR, DEV_TTY, 0);
     current_con = &console[0];
     kbd_currentkbd(&current_con->kbd);
 
     dev_register(DEV_TTY, &ops);
+}
+
+void con_switch(int con_num)
+{
+    con_num %= MAX_CONSOLES;
+    fs_make_dev("tty", I_CHAR, DEV_TTY, con_num);
+    current_con = &console[con_num];
+}
+
+void con_left()
+{
+    con_switch((current_con->i + 1) % MAX_CONSOLES);
+}
+
+void con_right()
+{
+    if (current_con->i == 0)
+        con_switch(MAX_CONSOLES - 1);
+    else
+        con_switch(current_con->i - 1);
 }
 
 void scrollup(struct video_char_s video[25][80])
@@ -108,12 +129,9 @@ size_t con_read(struct file_s *flip, char *buf, size_t n)
 {
     int minor = iminor(flip->f_ino);
 
-    if (minor % 3 != 0)
-        return 0;
+    sem_wait(&console[minor].kbd.data);
 
-    sem_wait(&console[minor / 3].kbd.data);
-
-    return kbd_getline(&console[minor / 3].kbd, buf, n);
+    return kbd_getline(&console[minor].kbd, buf, n);
 }
 
 int con_realwrite(struct console_s *con, const char* msg, int n)
@@ -131,8 +149,5 @@ ssize_t con_write(struct file_s *flip, char *buf, size_t n)
 {
     int minor = iminor(flip->f_ino);
 
-    if (minor % 3 == 0)
-        return 0;
-
-    return con_realwrite(&console[minor / 3], buf, n);
+    return con_realwrite(&console[minor], buf, n);
 }
