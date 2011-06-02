@@ -22,8 +22,8 @@ struct inode_s {
 
 struct file_s {
     int f_fd;
-    u32_t f_ino;
     u32_t f_pos;
+    struct inode_s *f_ino;
 
     struct file_operations_s *f_op;
 
@@ -81,8 +81,8 @@ int copy_file(char *buf, unsigned int n, unsigned int pos, struct inode_s *ino,
 struct inode_s *get_inode(ino_t num);
 void           *get_block(zone_t num);
 
-int imayor(ino_t ino_num);
-int iminor(ino_t ino_num);
+int imayor(struct inode_s *ino);
+int iminor(struct inode_s *ino);
 
 /* constants for attribute i_mode in inode struct */
 #define I_TYPE           0170000

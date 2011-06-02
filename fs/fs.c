@@ -109,7 +109,7 @@ size_t fs_lseek(struct file_s *flip, off_t offset, int whence)
     struct inode_s *ino;
     int pos;
 
-    ino = get_inode(flip->f_ino);
+    ino = flip->f_ino;
     switch (whence) {
         case SEEK_SET:
             pos = offset;
@@ -138,7 +138,7 @@ size_t sys_lseek(int fd, off_t offset, int whence)
 
 static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag)
 {
-    struct inode_s *ino = get_inode(flip->f_ino);
+    struct inode_s *ino = flip->f_ino;
     unsigned int pos = flip->f_pos;
 
     if (ino == NULL)
@@ -409,7 +409,7 @@ int fs_getdents(int fd, char *buf, size_t n)
     struct file_s *flip;
 
     flip = get_file(fd);
-    dir = get_inode(flip->f_ino);
+    dir = flip->f_ino;
 
     if (!IS_DIR(dir->i_mode))
         return ERROR;
