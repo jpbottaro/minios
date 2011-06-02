@@ -6,9 +6,9 @@
 
 void execute(const char *buf);
 
-char extendcmd[MAX_LEN] = "/bin/";
 char user[MAX_LEN] = "jpbottaro";
 char pwd[MAX_LEN] = "/";
+char extendcmd[MAX_BUF] = "/bin/";
 unsigned int pwd_len = 1;
 
 void writePS1();
@@ -84,7 +84,8 @@ void execute(const char *buf)
     /* if cmd is not a shell cmd, find binary and execute it */
     if (!sh_cmd(argv[0], argv)) {
         /* create process and wait for it to finish */
-        mystrncpy(extendcmd + sizeof("/bin/") - 1, argv[0], MAX_LEN);
+        mystrncpy(extendcmd + sizeof("/bin/") - 1, argv[0],
+                    MAX_BUF - sizeof("/bin/"));
         if ( (pid = newprocess(argv[0], argv)) < 0 &&
              (pid = newprocess(extendcmd, argv)) < 0) {
             write(STDOUT_FILENO, "Program not found\n",
