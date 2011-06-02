@@ -28,13 +28,16 @@ void vga_move_cursor(int x, int y)
 }
 
 /* refresh video ram with new buffer */
-void vga_copy_vram(const struct video_char_s video[25][80])
+void vga_copy_vram(struct video_char_s video[25][80])
 {
     int i, j;
 
-    for (i = 0; i < 25; ++i)
-        for (j = 0; j < 80; ++j)
-            (*vram)[i][j] = video[i][j];
+    for (i = 0; i < 25; ++i) {
+        for (j = 0; j < 80; ++j) {
+            (*vram)[i][j].letter = video[i][j].letter;
+            (*vram)[i][j].color = video[i][j].color;
+        }
+    }
 }
 
 /* move the video ram 1 row up */

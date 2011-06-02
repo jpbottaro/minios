@@ -16,9 +16,20 @@ static struct file_operations_s ops = {
     .write = con_write
 };
 
+void con_switch(int con_num)
+{
+    con_num %= MAX_CONSOLES;
+    fs_make_dev("tty", I_CHAR, DEV_TTY, con_num);
+    current_con = &console[con_num];
+    kbd_currentkbd(&current_con->kbd);
+
+    /* update video ram with new console */
+    vga_copy_vram(current_con->video);
+}
+
 void con_init()
 {
-    int i;
+    int i, j, k;
     char tty[] = "tty0";
 
     /* manage keyboard interruptions */
@@ -32,22 +43,19 @@ void con_init()
         console[i].x = 0;
         console[i].y = 0;
         console[i].xlimit = 0;
+        for (j = 0; j < 25; j++) {
+            for (k = 0; k < 80; k++) {
+                console[i].video[j][k].letter = 0;
+                console[i].video[j][k].color = VGA_FC_WHITE;
+            }
+        }
         kbd_init(&console[i].kbd);
     }
 
     /* make current virtual terminal dev */
-    fs_make_dev("tty", I_CHAR, DEV_TTY, 0);
-    current_con = &console[0];
-    kbd_currentkbd(&current_con->kbd);
+    con_switch(0);
 
     dev_register(DEV_TTY, &ops);
-}
-
-void con_switch(int con_num)
-{
-    con_num %= MAX_CONSOLES;
-    fs_make_dev("tty", I_CHAR, DEV_TTY, con_num);
-    current_con = &console[con_num];
 }
 
 void con_left()
