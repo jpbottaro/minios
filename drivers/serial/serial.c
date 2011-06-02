@@ -159,7 +159,7 @@ void serial_init()
     dev_register(DEV_SERIAL, &ops);
 
     /* this bit was taken from http://wiki.osdev.org/serial_ports */
-    outb(SP_PORT + 1, 0x01); /* Disable all interrupts                     */
+    outb(SP_PORT + 1, 0x01); /* Enable all interrupts                      */
     outb(SP_PORT + 3, 0x80); /* Enable DLAB (set baud rate divisor)        */
     outb(SP_PORT + 0, 0x03); /* Set divisor to 3 (lo byte) 38400 baud      */
     outb(SP_PORT + 1, 0x00); /*                  (hi byte)                 */

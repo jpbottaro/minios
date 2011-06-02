@@ -18,8 +18,6 @@ extern void serial_init();
 /* here is where the magic starts */
 void kernel_init()
 {
-    int i;
-
     /* this has to come first, as it clears all system calls */
     scall_init();
 
@@ -58,9 +56,7 @@ void kernel_init()
     sched_init();
 
     /* add the shell as first program */
-    for (i = 0; i < MAX_CONSOLES; ++i) {
-        sys_newprocess("/bin/cash", NULL);
-    }
+    sys_newprocess("/bin/cash", NULL);
 
     /* enable interruptions (and therefore scheduler) */
     sti();
