@@ -8,7 +8,15 @@
 #define MAX_FILES 10
 #define NR_ZONES  10
 
+#define BLOCK_SIZE 1024
+
 struct inode_s {
+    u32_t i_free;
+    u32_t i_num;
+    u32_t i_dirty;
+    u32_t i_refcount;
+    u32_t i_pos;
+
     u16_t i_mode;           /* file type, protection, etc. */
     u16_t i_nlinks;         /* how many links to this file */
     u16_t i_uid;            /* user id of the file's owner */
@@ -18,6 +26,20 @@ struct inode_s {
     u32_t i_mtime;          /* when was file data last changed */
     u32_t i_ctime;
     u32_t i_zone[NR_ZONES]; /* zone numbers for direct, ind, and dbl ind */
+
+    LIST_ENTRY(inode_s) ptr;
+};
+
+struct buf_s {
+    u32_t b_free;
+    u32_t b_num;
+    u32_t b_dirty;
+    u32_t b_refcount;
+    u32_t b_pos;
+
+    char b_buffer[BLOCK_SIZE];
+
+    LIST_ENTRY(buf_s) ptr;
 };
 
 struct file_s {
@@ -37,11 +59,14 @@ struct file_operations_s {
     int     (*flush) (struct file_s *);
 };
 
+extern struct inode_s *root;
+
 LIST_HEAD(unused_fd_t, file_s);
 
-int fs_init(u32_t fs_start);
+int fs_init(dev_t dev);
 int fs_open(const char *filename, int flags, int mode);
 int fs_close(int fd);
+int fs_closeall(struct file_s files[]);
 size_t sys_lseek(int fd, off_t offset, int whence);
 size_t fs_lseek(struct file_s *flip, off_t offset, int whence);
 size_t sys_read(int fd, char *buf, size_t n);
@@ -66,7 +91,7 @@ void init_fds(unsigned int id);
 #define FS_SEARCH_REMOVE  0x0004
 #define FS_SEARCH_LASTDIR 0x0005
 
-ino_t find_inode(struct inode_s *dir, const char *user_path, int flag);
+struct inode_s *find_inode(struct inode_s *dir, const char *user_path, int flag);
 
 /* flags for copy_file */
 #define FS_READ  0
@@ -79,7 +104,10 @@ int copy_file(char *buf, unsigned int n, unsigned int pos, struct inode_s *ino,
 #define NO_INODE ((ino_t)   0)
 
 struct inode_s *get_inode(ino_t num);
-void           *get_block(zone_t num);
+struct buf_s *get_block(zone_t num);
+
+void release_inode(struct inode_s *ino);
+void release_block(struct buf_s *buf);
 
 int imayor(struct inode_s *ino);
 int iminor(struct inode_s *ino);

@@ -10,24 +10,23 @@ struct file_s tmpfile = {.f_fd = 0};
 void init_fds(unsigned int id)
 {
     int i;
-    ino_t ino_num;
     struct inode_s *ino;
     struct file_s *file = ps[id].files;
     struct unused_fd_t *unused_fd;
 
-    if ( (ino_num = find_inode(NULL, "/dev/tty", FS_SEARCH_GET)) == NO_INODE)
+    if ( (ino = find_inode(NULL, "/dev/tty", FS_SEARCH_GET)) == NULL)
         debug_panic("init_fds: no /dev/tty");
-    ino = get_inode(ino_num);
 
     file->f_ino = ino;
     file->f_pos = 0; file->f_fd = 0;
     dev_file_calls(file, imayor(file->f_ino));
     file++;
-    file->f_ino = ino;
+    /* use get_inode to increse references (so later is easier to remove) */
+    file->f_ino = get_inode(ino->i_num);
     file->f_pos = 0; file->f_fd = 1;
     dev_file_calls(file, imayor(file->f_ino));
     file++;
-    file->f_ino = ino;
+    file->f_ino = get_inode(ino->i_num);
     file->f_pos = 0; file->f_fd = 2;
     dev_file_calls(file, imayor(file->f_ino));
     file++;
@@ -44,7 +43,7 @@ void init_fds(unsigned int id)
 }
 
 /* get a new fd */
-int get_fd(ino_t ino_num, unsigned int pos)
+int get_fd(struct inode_s *ino, unsigned int pos)
 {
     struct unused_fd_t *unused_fd;
     struct file_s *file;
@@ -59,7 +58,7 @@ int get_fd(ino_t ino_num, unsigned int pos)
     }
 
     if (file != NULL) {
-        file->f_ino = get_inode(ino_num);
+        file->f_ino = ino;
         file->f_pos = pos;
         return file->f_fd;
     }
@@ -86,16 +85,19 @@ int release_fd(int fd)
     }
 }
 
-ino_t current_dir()
+struct inode_s *current_dir()
 {
-    if (current_process == NULL) return 1;
+    if (current_process == NULL) return NULL;
     else                         return current_process->curr_dir;
 }
 
-void set_current_dir(ino_t ino)
+void set_current_dir(struct inode_s *ino)
 {
-    if (current_process != NULL)
+    if (current_process != NULL) {
+        release_inode(current_process->curr_dir);
+        get_inode(ino->i_num);
         current_process->curr_dir = ino;
+    }
 }
 
 struct file_s *get_file(int fd)

@@ -11,12 +11,15 @@
 #define FS_INITIAL_POS 0x20000
 
 /* temporary, will see what is the better way to load drivers */
-extern void con_init();
+#include "../drivers/tty/con.h"
+#include "../drivers/ramdisk/ramdisk.h"
 extern void serial_init();
 
 /* here is where the magic starts */
 void kernel_init()
 {
+    int i;
+
     /* this has to come first, as it clears all system calls */
     scall_init();
 
@@ -39,8 +42,11 @@ void kernel_init()
     /* set hw clock to 50hz */
     clock_init(50);
 
-    /* initialize our memory mapped file system */
-    fs_init(FS_INITIAL_POS);
+    /* add ramdisk driver */
+    ramdisk_init(FS_INITIAL_POS);
+
+    /* initialize our file system */
+    fs_init(DEV_RAMDISK);
 
     /* init console driver */
     con_init();
@@ -52,7 +58,10 @@ void kernel_init()
     sched_init();
 
     /* add the shell as first program */
-    sys_newprocess("/bin/cash", NULL);
+    for (i = 0; i < MAX_CONSOLES; ++i) {
+        sys_newprocess("/bin/cash", NULL);
+        con_right();
+    }
 
     /* enable interruptions (and therefore scheduler) */
     sti();

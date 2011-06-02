@@ -10,6 +10,8 @@
 
 #define MAX_PATH 120
 #define MAX_NAME 30
+#define MAX_INODES_CACHE 50
+#define MAX_BUFFERS_CACHE 10
 #define NO_LINK  ((nlink_t) 0)
 
 struct dir_entry_s {
@@ -17,9 +19,11 @@ struct dir_entry_s {
     char name[MAX_NAME];
 };
 
+void inodes_init();
 block_t read_map(struct inode_s *ino, unsigned int pos, int flag);
-struct dir_entry_s *empty_entry(struct inode_s *dir);
-struct dir_entry_s *next_entry(struct inode_s *dir, unsigned int *p);
-struct dir_entry_s *search_inode(struct inode_s *dir, const char *path);
+int empty_entry(struct inode_s *dir, ino_t ino_num, char *name);
+int next_entry(struct inode_s *dir, unsigned int *p, struct dir_entry_s *dent);
+int search_inode(struct inode_s *dir, const char *name, struct dir_entry_s *dentry,
+                                                                         int flag);
 
 #endif /* __INODE_H__ */

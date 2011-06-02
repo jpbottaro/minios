@@ -8,7 +8,8 @@
 #include <minios/dev.h>
 #include "fs.h"
 
-char *fs_offset;
+struct file_s *fs_dev;
+struct file_s fs_dev_str;
 struct inode_s *root;
 
 static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag);
@@ -21,11 +22,13 @@ static struct file_operations_s ops = {
 };
 
 /* initialize fs, needs to be ALL mapped in memory, fs_start being first byte */
-int fs_init(u32_t fs_start)
+int fs_init(dev_t dev)
 {
-    fs_offset = (char *) fs_start;
+    fs_dev = &fs_dev_str;
+    dev_file_calls(fs_dev, dev);
     read_super();
-    root = (struct inode_s *) (fs_offset + INODE_OFFSET);
+    inodes_init();
+    root = get_inode(1);
 
     /* register sys calls */
     SCALL_REGISTER(3, sys_read);
@@ -35,7 +38,7 @@ int fs_init(u32_t fs_start)
     SCALL_REGISTER(10, fs_unlink);
     SCALL_REGISTER(12, fs_chdir);
     SCALL_REGISTER(19, sys_lseek);
-    SCALL_REGISTER(38, fs_rename);
+    //SCALL_REGISTER(38, fs_rename);
     SCALL_REGISTER(39, fs_mkdir);
     SCALL_REGISTER(40, fs_rmdir);
     SCALL_REGISTER(141, fs_getdents);
@@ -66,16 +69,13 @@ static void fill_inode(struct inode_s *ino, int mode)
 int fs_open(const char *filename, int flags, int mode)
 {
     int flag, fd;
-    ino_t ino_num;
     struct inode_s *ino, *dir;
 
     flag = (flags & O_CREAT) ? FS_SEARCH_CREAT : FS_SEARCH_GET;
-    dir = get_inode(current_dir());
+    dir = current_dir();
 
-    if ( (ino_num = find_inode(dir, filename, flag)) == NO_INODE)
+    if ( (ino = find_inode(dir, filename, flag)) == NULL)
         return ERROR;
-
-    ino = get_inode(ino_num);
 
     if (flags & O_CREAT)
         fill_inode(ino, mode);
@@ -83,7 +83,7 @@ int fs_open(const char *filename, int flags, int mode)
     if (flags & O_TRUNC)
         ino->i_size = 0;
 
-    fd = get_fd(ino_num, (flags & O_APPEND) ? ino->i_size : 0);
+    fd = get_fd(ino, (flags & O_APPEND) ? ino->i_size : 0);
 
     /* this is kinda _very_ ugly.. check later how linux does it */
     if (IS_DEV(ino->i_mode)) {
@@ -100,7 +100,23 @@ int fs_open(const char *filename, int flags, int mode)
  */
 int fs_close(int fd)
 {
+    struct file_s *flip;
+
+    if ( (flip = get_file(fd)) == NULL)
+        return - 1;
+    release_inode(flip->f_ino);
+
     return release_fd(fd);
+}
+
+int fs_closeall(struct file_s files[])
+{
+    int i;
+
+    for (i = 0; i < MAX_FILES; i++)
+        release_inode(files[i].f_ino);
+
+    return OK;
 }
 
 /* move the pointer of a file to a different position in it */
@@ -175,7 +191,7 @@ int copy_file(char *buf, unsigned int n, unsigned int pos, struct inode_s *ino,
 {
     unsigned int size, off;
     block_t blocknr;
-    char *block;
+    struct buf_s *block;
 
     /* if performance is the objective, the first block could be separated so
      * that we dont have to do '%' every cicle and therefore remove 'off'
@@ -184,17 +200,18 @@ int copy_file(char *buf, unsigned int n, unsigned int pos, struct inode_s *ino,
     while (n > 0) {
         if ( (blocknr = read_map(ino, pos, flag)) == NO_BLOCK)
             return ERROR;
-        block = (char *) get_block(blocknr);
+        block = get_block(blocknr);
 
         off = pos % BLOCK_SIZE;
         size = MIN(n, BLOCK_SIZE - off);
 
-        if (flag == FS_WRITE) mymemcpy(block + off, buf, size);
-        else                  mymemcpy(buf, block + off, size);
+        if (flag == FS_WRITE) mymemcpy(block->b_buffer + off, buf, size);
+        else                  mymemcpy(buf, block->b_buffer + off, size);
 
         n -= size;
         pos += size;
         buf += size;
+        release_block(block);
     }
 
     return pos;
@@ -237,31 +254,34 @@ ssize_t sys_write(int fd, char *buf, size_t n)
 /* remove file/dir from fs */
 int fs_unlink(const char *pathname)
 {
-    ino_t ino;
-    struct inode_s *dir;
+    struct inode_s *dir, *ino;
 
-    dir = get_inode(current_dir());
+    dir = current_dir();
 
-    if ( (ino = find_inode(dir, pathname, FS_SEARCH_REMOVE)) == NO_INODE)
+    if ( (ino = find_inode(dir, pathname, FS_SEARCH_REMOVE)) == NULL)
         return ERROR;
 
-    rm_inode(ino);
+    rm_inode(ino->i_num);
+
+    release_inode(ino);
 
     return OK;
 }
 
 int fs_chdir(const char *path)
 {
-    ino_t ino;
+    struct inode_s *ino;
 
-    if ( (ino = find_inode(get_inode(current_dir()), path, FS_SEARCH_GET))
-                                                                    == NO_INODE)
+    if ( (ino = find_inode(current_dir(), path, FS_SEARCH_GET)) == NULL)
         return ERROR;
 
-    if (!IS_DIR(get_inode(ino)->i_mode))
+    if (!IS_DIR(ino->i_mode))
         return ERROR;
 
     set_current_dir(ino);
+
+    release_inode(ino);
+
     return OK;
 }
 
@@ -283,18 +303,17 @@ void last_component(const char *path, char *last)
 }
 
 /* rename oldpath to newpath */
+#if 0
 int fs_rename(const char *oldpath, const char *newpath)
 {
-    ino_t ino_num, parent_num;
     struct inode_s *dir, *last_dir, *ino;
     struct dir_entry_s *dentry;
     char name[MAX_NAME];
 
-    dir = get_inode(current_dir());
+    dir = current_dir();
     /* get last directory of path */
-    if ( (parent_num = find_inode(dir, newpath, FS_SEARCH_LASTDIR)) == NO_INODE)
+    if ( (last_dir = find_inode(dir, newpath, FS_SEARCH_LASTDIR)) == NULL)
         return ERROR;
-    last_dir = get_inode(parent_num);
 
     /* get last component of path */
     last_component(newpath, name);
@@ -304,67 +323,58 @@ int fs_rename(const char *oldpath, const char *newpath)
         if ( (dentry = empty_entry(last_dir)) == NULL)
             return ERROR;
 
-    /* error if file is actually a dir */
-    if (dentry->num != 0 && IS_DIR(get_inode(dentry->num)->i_mode))
-        return ERROR;
-
     /* remove entry from the old directory */
-    if ( (ino_num = find_inode(dir, oldpath, FS_SEARCH_REMOVE)) == NO_INODE)
+    if ( (ino = find_inode(dir, oldpath, FS_SEARCH_REMOVE)) == NULL)
         return ERROR;
 
     /* fill entry in new directory */
-    dentry->num = ino_num;
+    dentry->num = ino->i_num;
     mystrncpy(dentry->name, name, MAX_NAME);
     last_dir->i_size += DIRENTRY_SIZE;
 
     /* check if oldpath was a dir, and update '..' in that case */
-    ino = get_inode(ino_num);
     if (IS_DIR(ino->i_mode)) {
         dentry = search_inode(ino, "..");
-        dentry->num = parent_num;
+        dentry->num = last_dir->i_num;
         last_dir->i_nlinks++;
     }
 
     return OK;
 }
+#endif
 
 /* create new directory */
 int fs_mkdir(const char *pathname, mode_t mode)
 {
-    ino_t parent_num, ino_num;
     struct inode_s *ino, *dir;
-    struct dir_entry_s *dentry;
     char name[MAX_NAME];
 
     last_component(pathname, name);
 
     /* get inode numbers from parent and new dir */
-    dir = get_inode(current_dir());
-    if ( (parent_num = find_inode(dir, pathname, FS_SEARCH_LASTDIR)) == NO_INODE)
+    dir = current_dir();
+    if ( (dir = find_inode(dir, pathname, FS_SEARCH_LASTDIR)) == NULL)
         return ERROR;
-    dir = get_inode(parent_num);
-    if ( (ino_num = find_inode(dir, name, FS_SEARCH_ADD)) == NO_INODE)
+    if ( (ino = find_inode(dir, name, FS_SEARCH_ADD)) == NULL)
         return ERROR;
-    ino = get_inode(ino_num);
 
     /* fill new dir inode */
     fill_inode(ino, mode);
     ino->i_mode = (ino->i_mode & ~I_TYPE) | I_DIRECTORY;
 
     /* add '.' */
-    dentry = empty_entry(ino);
-    dentry->num = ino_num;
-    mystrncpy(dentry->name, ".", 2);
+    empty_entry(ino, ino->i_num, ".");
     ino->i_nlinks++;
 
     /* and '..' */
-    dentry = empty_entry(ino);
-    dentry->num = parent_num;
-    mystrncpy(dentry->name, "..", 3);
+    empty_entry(ino, dir->i_num, "..");
     dir->i_nlinks++;
 
     /* update dir size */
     ino->i_size = DIRENTRY_SIZE * 2;
+
+    release_inode(dir);
+    release_inode(ino);
 
     return OK;
 }
@@ -372,30 +382,31 @@ int fs_mkdir(const char *pathname, mode_t mode)
 /* remove directory (only if it is empty) */
 int fs_rmdir(const char *pathname)
 {
-    ino_t parent_num, ino_num;
+    struct dir_entry_s dentry;
     struct inode_s *ino, *dir;
     char name[MAX_NAME];
 
     last_component(pathname, name);
 
     /* get inode numbers from parent and new dir */
-    dir = get_inode(current_dir());
-    if ( (parent_num = find_inode(dir, pathname, FS_SEARCH_LASTDIR)) == NO_INODE)
+    dir = current_dir();
+    if ( (dir = find_inode(dir, pathname, FS_SEARCH_LASTDIR)) == NULL)
         return ERROR;
-    dir = get_inode(parent_num);
-    if ( (ino_num = find_inode(dir, name, FS_SEARCH_GET)) == NO_INODE)
+    if ( (ino = find_inode(dir, name, FS_SEARCH_GET)) == NULL)
         return ERROR;
-    ino = get_inode(ino_num);
     
-    /* check if its a dir and it is empty */
-    if (!IS_DIR(ino->i_mode) || search_inode(ino, NULL) != NULL)
+    /* check if its a dir and it is empty - fscking ugly hacks..*/
+    if (!IS_DIR(ino->i_mode) || search_inode(ino, NULL, &dentry, 0) == ERROR)
         return ERROR;
 
     /* this cant give an error */
-    find_inode(dir, name, FS_SEARCH_REMOVE);
+    release_inode(find_inode(dir, name, FS_SEARCH_REMOVE));
 
     /* free blocks and inode */
-    rm_inode(ino_num);
+    rm_inode(ino->i_num);
+
+    release_inode(dir);
+    release_inode(ino);
 
     return OK;
 }
@@ -404,7 +415,7 @@ int fs_getdents(int fd, char *buf, size_t n)
 {
     unsigned int i, pos;
     struct inode_s *dir, *ino;
-    struct dir_entry_s *dentry;
+    struct dir_entry_s dentry;
     struct dirent *dent;
     struct file_s *flip;
 
@@ -417,14 +428,13 @@ int fs_getdents(int fd, char *buf, size_t n)
     i = 0;
     pos = flip->f_pos;
     while (n >= sizeof(struct dirent) + 1) {
-        dentry = next_entry(dir, &pos);
-        if (dentry == NULL)
+        if (next_entry(dir, &pos, &dentry) == ERROR)
             break;
-        ino = get_inode(dentry->num);
+        ino = get_inode(dentry.num);
         dent = (struct dirent *) (buf + i);
-        dent->d_ino = dentry->num; 
+        dent->d_ino = dentry.num; 
         dent->d_off = pos - sizeof(struct dir_entry_s);
-        dent->d_reclen = mystrncpy(dent->d_name, dentry->name, MAX_NAME) + 
+        dent->d_reclen = mystrncpy(dent->d_name, dentry.name, MAX_NAME) + 
                          1 +                      /* add the \0 */
                          sizeof(ino_t) +          /* add the d_ino */
                          sizeof(off_t) +          /* add the d_off */
@@ -437,6 +447,7 @@ int fs_getdents(int fd, char *buf, size_t n)
                                                                  DT_UNK);
         i += dent->d_reclen;
         n -= dent->d_reclen;
+        release_inode(ino);
     }
     flip->f_pos = pos;
 
@@ -455,20 +466,21 @@ int sys_flush(int fd)
 int fs_make_dev(const char *name, int type, dev_t major, dev_t minor)
 {
     struct inode_s *ino, *dev;
-    ino_t ino_num;
 
-    if ( (ino_num = find_inode(NULL, "/dev", FS_SEARCH_GET)) == NO_INODE)
+    if ( (dev = find_inode(NULL, "/dev", FS_SEARCH_GET)) == NULL)
         debug_panic("fs_make_dev: no /dev folder!!");
-    dev = get_inode(ino_num);
 
-    if ( (ino_num = find_inode(dev, name, FS_SEARCH_CREAT)) == NO_INODE)
+    if ( (ino = find_inode(dev, name, FS_SEARCH_CREAT)) == NULL)
         return ERROR;
-    ino = get_inode(ino_num);
+
     /* fill it if it is empty */
-    if (!ino->i_nlinks)
+    if (ino->i_free)
         fill_inode(ino, type);
     ino->i_zone[0] = major;
     ino->i_zone[1] = minor;
+
+    release_inode(dev);
+    release_inode(ino);
 
     return OK;
 }
@@ -478,5 +490,6 @@ int fs_make_dev(const char *name, int type, dev_t major, dev_t minor)
  */
 int fs_end()
 {
-    return OK;
+    release_inode(root);
+    return 0;
 }

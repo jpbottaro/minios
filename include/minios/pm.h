@@ -51,7 +51,7 @@ struct process_state_s {
     /* fs data */
     struct unused_fd_t unused_fd;
     struct file_s files[MAX_FILES];
-    unsigned int curr_dir;
+    struct inode_s *curr_dir;
 
     /* dev io data */
     unsigned int dev;

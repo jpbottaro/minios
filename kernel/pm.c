@@ -135,6 +135,8 @@ void sys_exit(int status)
     LIST_INSERT_HEAD(&unused_list, current_process, unused);
     sched_unqueue(current_process);
 
+    fs_closeall(current_process->files);
+
     current_process = NULL;
     sched_schedule(0);
 }
@@ -220,7 +222,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     if (current_process != NULL)
         process->curr_dir = current_process->curr_dir;
     else
-        process->curr_dir = 1;
+        process->curr_dir = root;
     process->last_mem = (char *) REQUESTED_MEMORY_START;
     process->esp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);
     process->ebp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);

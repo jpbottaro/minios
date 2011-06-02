@@ -13,7 +13,7 @@
 #define _FCNTL_H
 
 #ifndef _TYPES_H
-#include <minix/types.h>
+#include <sys/types.h>
 #endif
 
 /* These values are used for cmd in fcntl().  POSIX Table 6-1.  */

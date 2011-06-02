@@ -7,11 +7,11 @@
 
 #include <minios/fs.h> /* file_s struct */
 
-int get_fd(ino_t ino_num, unsigned int pos);
+int get_fd(struct inode_s *ino, unsigned int pos);
 int release_fd(int fd);
 
-ino_t current_dir();
-void set_current_dir(ino_t ino);
+struct inode_s *current_dir();
+void set_current_dir(struct inode_s *ino);
 
 struct file_s *get_file(int fd);
 

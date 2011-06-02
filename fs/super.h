@@ -3,6 +3,7 @@
 
 /* superblock struct taken from minix v3 */
 
+#include <minios/fs.h>
 #include <sys/types.h>
 
 struct superblock_s {
@@ -29,7 +30,6 @@ block_t empty_block();
 void rm_inode(ino_t ino_num);
 void rm_block(block_t block_num);
 
-#define BLOCK_SIZE     1024
 #define IMAP_BLOCKS    (sb->s_imap_blocks)
 #define ZMAP_BLOCKS    (sb->s_zmap_blocks)
 
@@ -38,7 +38,7 @@ void rm_block(block_t block_num);
 #define ZMAP_OFFSET    (IMAP_OFFSET + IMAP_BLOCKS * BLOCK_SIZE)
 #define INODE_OFFSET   (ZMAP_OFFSET + ZMAP_BLOCKS * BLOCK_SIZE)
 
-#define INODE_SIZE     (sizeof(struct inode_s))
+#define INODE_SIZE     (sizeof(struct real_inode_s))
 #define INODE_MAX      (sb->s_ninodes)
 #define BLOCK_MAX      (sb->s_zones)
 
