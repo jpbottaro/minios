@@ -111,6 +111,9 @@ void free_all_pages(u32_t process_num)
 /* end a process, wake parent if needed, free its pages and reschedule */
 void sys_exit(int status)
 {
+    if (current_process == NULL)
+        debug_panic("sys_exit: trying to exit with NULL current_process");
+
     struct process_state_s *parent = current_process->parent;
 
     /* schedule a wake up if parent was waiting */
@@ -197,6 +200,10 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     char *tmpargv[MAX_ARG];
     struct process_state_s *process;
 
+    /* open target file */
+    if ( (fd = fs_open(filename, O_RDONLY, 0)) < 0)
+        return -1;
+
     /* get process entry for child */
     process = LIST_FIRST(&unused_list);
     if (process == NULL)
@@ -225,10 +232,6 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     process->pages_dir = dirbase;
     /* ident map the directory table (this way its 'user' and not 'system') */
     mm_map_page(dirbase, dirbase, dirbase);
-
-    /* open target file */
-    if ( (fd = fs_open(filename, O_RDONLY, 0)) < 0)
-        return -1;
 
     /* how much did read */
     len = 0;
