@@ -1,0 +1,12 @@
+\section{Introducción}
+
+Para la implementación de la interfáz de los drives, me basé principalmente en
+ideas de Linux. Me desvié un poco de las estructuras proveídas de la cátedra,
+para hacer la implementación de las operaciones de cada dispositivo genéricas
+(sin hacer distinciones de char/block a ese nivel).
+
+En mi sistema tenía implementado ya una forma arcáica de consola y sistema de
+archivos. Lamentablemente portarlas a la nueva interfás terminó no siendo tan
+simple, en especial se verá más adelante que me tomé muchas libertades a la
+hora de implementar los getters y setters de inodos/blocks, y eso terminó
+requiriendo recodear grandes partes del trabajo.
