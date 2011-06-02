@@ -1,15 +1,14 @@
 \section{Abstracción de dispositivos}
 
 Para la abstracción de los drivers me desvié un poco de los headers que nos
-dieron, tomando un poco la idea de linux. Creé una estructura file_operations
+dieron, tomando un poco la idea de linux. Creé una estructura file\_operations
 que cualquier driver que pretende manejar un dispositivo instancia.
 
 Para la creación de dispositivos en /dev el file system exporta una función
 fs\_make\_dev(), que crea dispositivos en la carpeta con los números mayor y
 menor correspondientes.
 
-En el caso de la interrupción, existe la función idt_register(), que le asigna
-un handler a un número de interrupción dado.
-
-Por último un driver debe registrar su estructura de operaciones, que será
-utilizada para interactuar con el mismo.
+En el caso de la interrupción, existe la función idt\_register(), que le asigna
+un handler a un número de interrupción dado. Por último un driver debe
+registrar su estructura de operaciones, que será utilizada para interactuar
+con el mismo.

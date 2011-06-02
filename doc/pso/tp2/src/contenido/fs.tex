@@ -1,5 +1,7 @@
 \section{File System}
 
+Para el sistema de archivos elegí implementar a MinixFs o mfs (similar a ext2).
+
 La parte más interesante de un sistema de archivos tipo Unix como lo es mfs es
 la idea de inodos. Básicamente todo archivo (y como archivo contemplamos también
 a directorios/pipes/links/etc.) es representado por un inodo. Un inodo esta
@@ -20,7 +22,7 @@ A continuación se muestra un gráfico con la estructura general de un inodo en
 mfs (similar a los inodos en ext2 o cualquier otro fs tipo unix):
 
 \begin{center}
-\includegraphics[scale=0.5]{../img/inode.png}
+\includegraphics[scale=0.6]{../img/inode.png}
 \end{center}
 
 Esta imagen (al igual que el resto de las utilizadas en esta sección MinixFS)
@@ -43,7 +45,7 @@ punteros a bloques con la información. Para entender mejor el funcionamiento ve
 el siguiente gráfico:
 
 \begin{center}
-\includegraphics[scale=0.5]{../img/inode_links.png}
+\includegraphics[scale=0.62]{../img/inode_links.png}
 \end{center}
 
 De esta manera se logra expandir el límite del tamaño de un archivo los
@@ -131,15 +133,24 @@ aseguramos que pedir y devolver fds sea siempre $O(1)$. En el caso de get\_fd()
 tenemos:
 
 \begin{verbatim}
-int get_fd(ino_t ino_num, unsigned int pos)
+int get_fd(struct inode_s *ino, unsigned int pos)
 {
-    struct file_s *file = LIST_FIRST(&unused_fd);
+    struct unused_fd_t *unused_fd;
+    struct file_s *file;
+
+    if (current_process != NULL) {
+        unused_fd = &current_process->unused_fd;
+        file = LIST_FIRST(unused_fd);
+        if (file != NULL)
+            LIST_REMOVE(file, unused);
+    } else {
+        file = &tmpfile;
+    }
 
     if (file != NULL) {
-        LIST_REMOVE(file, unused);
-        file->ino = ino_num;
-        file->pos = pos;
-        return file->fd;
+        file->f_ino = ino;
+        file->f_pos = pos;
+        return file->f_fd;
     }
 
     return ERROR;
@@ -153,15 +164,21 @@ fijos.
 
 Con el manejo de fds completo, comienza el código que rearma todo lo ya
 explicado para implementar las llamadas al sistema. Para cada system call unix,
-la función que la recibe tiene el prefijo "sys\_" (por ejemplo, la función
-sys\_open() atiende la llamada open()). Se implementaron las llamadas open(),
+la función que la recibe tiene el prefijo "fs\_" (por ejemplo, la función
+fs\_open() atiende la llamada open()). Se implementaron las llamadas open(),
 close(), write(), read(), lseek(), unlink() y rename() para manejo de archivos,
 chdir(), mkdir(), rmdir() y getdents() para manejo de carpetas.
 
 Las implementación de estas funciones se encuentra en los archivos fs/fs.c y
 fs/fs.h. Veamos como se hicieron algunas de estas funciones.
 
-En el caso de read() y write(), comenzaron siendo funciones distintas, pero
+Hay que tener en cuenta que para abstraer las llamadas a los archivos (si estos son dispositivos o
+archivos comunes), la llamada open le asigna a la estructura del fd correspondiente su
+file\_operations, luego las syscalls hacia lseek, write, read, etc. en realidad son wrappers que
+llaman a la operación definida en esta escructura. Por ejemplo, en caso de abrir el archivo
+/dev/tty0, las operaciones apuntarán a las funciones del driver tty.
+
+Volviendo al fs, en el caso de read() y write(), comenzaron siendo funciones distintas, pero
 rápidamente me di cuenta que el código entre ellas era muy similar, por lo que
 decidí separarlo en la función fs\_readwrite(). Esta se encarga de leer o
 escribir un archivo, dependiendo de la flag que se le provee. Hace algunos
@@ -184,6 +201,7 @@ while (n > 0) {
     n -= size;
     pos += size;
     buf += size;
+    release_block(block);
 }
 \end{verbatim}
 
@@ -192,10 +210,6 @@ read\_map() y, dependiendo si se busca leer o escribir, utiliza la función
 mymemcpy para realizar el trabajo (que es un clon de la función de mismo nombre
 de la biblioteca estándar).
 
-El resto de las llamadas de archivo son simples, open() y close() solo manejan
-fds con las funciones antes descriptas; unlink() llama a find\_inode() pidiendo
-que se borre el archivo; lseek() modifica el puntero al archivo en la lista de 
-fds.
 
 En un principio las funciones search\_inode() y find\_inode() eran muy simples,
 uno le daba un path y devolvian el inodo correspondiente. Cuando comenzé a
@@ -230,3 +244,5 @@ regular/directorio/dispositivo etc. Para recobrar esta información es necesario
 calcular el tamaño de la estructura, sumarlo al inicio de la misma y castear el
 valor de d\_type. Luego recorrer el buffer para el usuario puede ser un poco
 trabajoso (ver la implementación del programa ls).
+
+DISCLAMER: Esta sección la basé en otra entrega de este TP (Orga 2)
