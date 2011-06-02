@@ -22,14 +22,16 @@ void init_fds(unsigned int id)
     dev_file_calls(file, imayor(file->f_ino));
     file++;
     /* use get_inode to increse references (so later is easier to remove) */
-    file->f_ino = get_inode(ino->i_num);
+    file->f_ino = ino;
     file->f_pos = 0; file->f_fd = 1;
     dev_file_calls(file, imayor(file->f_ino));
+    ino->i_refcount++;
     file++;
-    file->f_ino = get_inode(ino->i_num);
+    file->f_ino = ino;
     file->f_pos = 0; file->f_fd = 2;
     dev_file_calls(file, imayor(file->f_ino));
     file++;
+    ino->i_refcount++;
 
     unused_fd = &ps[id].unused_fd;
     LIST_INIT(unused_fd);

@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include "kbd.h"
 
-#define MAX_CONSOLES 3
+#define MAX_CONSOLES 5
 
 struct console_s {
     struct kbd_s kbd;

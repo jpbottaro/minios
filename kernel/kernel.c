@@ -60,7 +60,6 @@ void kernel_init()
     /* add the shell as first program */
     for (i = 0; i < MAX_CONSOLES; ++i) {
         sys_newprocess("/bin/cash", NULL);
-        con_right();
     }
 
     /* enable interruptions (and therefore scheduler) */
