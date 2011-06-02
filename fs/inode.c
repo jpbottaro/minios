@@ -129,7 +129,7 @@ struct dir_entry_s *empty_entry(struct inode_s *dir)
     block_t blocknr;
 
     pos = 0;
-    while ( (blocknr = read_map(dir, pos, FS_READ)) != NO_BLOCK) {
+    while ( (blocknr = read_map(dir, pos, FS_WRITE)) != NO_BLOCK) {
         begin = (struct dir_entry_s *) get_block(blocknr);
         end = begin + BLOCK_SIZE / DIRENTRY_SIZE;
 

@@ -60,7 +60,6 @@ static void fill_inode(struct inode_s *ino, int mode)
     ino->i_mtime  = 0;
     ino->i_ctime  = 0;
     for(i = 0; i < NR_ZONES; i++) ino->i_zone[i] = 0;
-    ino->i_zone[0] = empty_block();
 }
 
 /* open file and return fd; to make our life easier, always open RW */
@@ -462,10 +461,12 @@ int fs_make_dev(const char *name, int type, dev_t major, dev_t minor)
         debug_panic("fs_make_dev: no /dev folder!!");
     dev = get_inode(ino_num);
 
-    if ( (ino_num = find_inode(dev, name, FS_SEARCH_ADD)) == NO_INODE)
+    if ( (ino_num = find_inode(dev, name, FS_SEARCH_CREAT)) == NO_INODE)
         return ERROR;
     ino = get_inode(ino_num);
-    fill_inode(ino, type);
+    /* fill it if it is empty */
+    if (!ino->i_nlinks)
+        fill_inode(ino, type);
     ino->i_zone[0] = major;
     ino->i_zone[1] = minor;
 
