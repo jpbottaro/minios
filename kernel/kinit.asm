@@ -29,6 +29,7 @@ modo_protegido:
     mov ds, ax
     mov es, ax
     mov fs, ax
+    mov gs, ax
     mov ss, ax
     mov eax, [KSTACKSIZE]
     lea ebp, [KSTACK + eax]
