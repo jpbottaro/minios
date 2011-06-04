@@ -6,6 +6,11 @@
 #define OPCODE_CALL_REL  0xE8
 #define OPCODE_CALL_ADDR 0xFF
 
+int is_user_mode()
+{
+    return (rcr3() & 0x3) == 0x3;
+}
+
 #define INTR_FUNC(NAME, NR, ERROR) \
     void isr ## NR() \
     { \
@@ -25,7 +30,13 @@
                           .eflags  = *(ebp + (u32_t)(4 + off)), \
                           .org_esp = *(ebp + (u32_t)(5 + off)), \
                           .org_ss  = *(ebp + (u32_t)(6 + off)) }; \
-        debug_kernelpanic((u32_t *) test.org_esp, &test); \
+        if (is_user_mode()) { \
+            debug_kernelpanic((u32_t *) test.org_esp, &test); \
+        } else { \
+            test.org_esp = resp(); \
+            test.org_ss = rss(); \
+            debug_kernelpanic((u32_t *) resp(), &test); \
+        } \
         for (;;) {} \
     }
 
@@ -98,19 +109,19 @@ void debug_kernelpanic(const u32_t* stack, const exp_state* expst)
     u8_t *instr;
     u32_t address;
 
+    /* diable paging (so we dont get page faults) */
+    lcr0(rcr0() & ~0x80000000);
+
     vga_clear();
     vga_printf(0, 0, "Kernel Panic!");
 
     /* STACK */
-    /* check if there is enough stack to show */
-    if ((((u32_t) stack) & ~0x3FF) < 0xF00) {
-        vga_printf(2, 0, "Stack:");
-        for (i = 0; i < 14; ++i) {
-            st = (stack + i * 4);
-            vga_printf(3 + i, 0, "%8x:%8x %8x %8x %8x",
-                    st, *st, *(st + 1), *(st + 2), *(st + 3));
-            vga_write(3 + i, 45, (char *) st, 16);
-        }
+    vga_printf(2, 0, "Stack:");
+    for (i = 0; i < 14; ++i) {
+        st = (stack + i * 4);
+        vga_printf(3 + i, 0, "%8x:%8x %8x %8x %8x",
+                   st, *st, *(st + 1), *(st + 2), *(st + 3));
+        vga_write(3 + i, 45, (char *) st, 16);
     }
 
     /* REGISTERS */
@@ -142,6 +153,8 @@ void debug_kernelpanic(const u32_t* stack, const exp_state* expst)
         address = call_address(instr);
         vga_printf(i, 0, "At %8x: CALL %8x %s",
                     instr, address, address == 0 ? "<Invalid address>" : "");
+        if (address == 0)
+            break;
         p = (u32_t *) *p;
         /* check if we left the page (avoid another gp or pf) */
         if (((u32_t)p & ~0x3FF) != (expst->ebp & ~0x3FF))

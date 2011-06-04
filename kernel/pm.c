@@ -314,7 +314,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     add_process_page(process, stack);
     mm_map_page(dirbase, (void *) STACK_PAGE, stack);
 
-    /* build kernel stack (we are not using this since everything is ring 0) */
+    /* build kernel stack */
     page = mm_mem_alloc();
     add_process_page(process, page);
     mm_map_page(dirbase, (void *) KSTACK_PAGE, page);
