@@ -69,7 +69,7 @@ static void fill_inode(struct inode_s *ino, int mode)
 int fs_open(const char *filename, int flags, int mode)
 {
     int flag, fd;
-    struct inode_s *ino, *dir;
+    struct inode_s *ino;
 
     flag = (flags & O_CREAT) ? FS_SEARCH_CREAT : FS_SEARCH_GET;
 
@@ -253,7 +253,7 @@ ssize_t sys_write(int fd, char *buf, size_t n)
 /* remove file/dir from fs */
 int fs_unlink(const char *pathname)
 {
-    struct inode_s *dir, *ino;
+    struct inode_s *ino;
 
     if ( (ino = find_inode(current_process->curr_dir, pathname, FS_SEARCH_REMOVE))
                                                                           == NULL)
