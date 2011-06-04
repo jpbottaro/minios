@@ -72,9 +72,8 @@ int fs_open(const char *filename, int flags, int mode)
     struct inode_s *ino, *dir;
 
     flag = (flags & O_CREAT) ? FS_SEARCH_CREAT : FS_SEARCH_GET;
-    dir = current_dir();
 
-    if ( (ino = find_inode(dir, filename, flag)) == NULL)
+    if ( (ino = find_inode(current_process->curr_dir, filename, flag)) == NULL)
         return ERROR;
 
     if (flags & O_CREAT)
@@ -256,9 +255,8 @@ int fs_unlink(const char *pathname)
 {
     struct inode_s *dir, *ino;
 
-    dir = current_dir();
-
-    if ( (ino = find_inode(dir, pathname, FS_SEARCH_REMOVE)) == NULL)
+    if ( (ino = find_inode(current_process->curr_dir, pathname, FS_SEARCH_REMOVE))
+                                                                          == NULL)
         return ERROR;
 
     rm_inode(ino->i_num);
@@ -272,7 +270,7 @@ int fs_chdir(const char *path)
 {
     struct inode_s *ino;
 
-    if ( (ino = find_inode(current_dir(), path, FS_SEARCH_GET)) == NULL)
+    if ( (ino = find_inode(current_process->curr_dir, path, FS_SEARCH_GET)) == NULL)
         return ERROR;
 
     if (!IS_DIR(ino->i_mode))
@@ -352,10 +350,10 @@ int fs_mkdir(const char *pathname, mode_t mode)
     last_component(pathname, name);
 
     /* get inode numbers from parent and new dir */
-    dir = current_dir();
-    if ( (dir = find_inode(dir, pathname, FS_SEARCH_LASTDIR)) == NULL)
+    if ( (dir = find_inode(current_process->curr_dir, pathname, FS_SEARCH_LASTDIR))
+                                                                           == NULL)
         return ERROR;
-    if ( (ino = find_inode(dir, name, FS_SEARCH_ADD)) == NULL)
+    if ( (ino = find_inode(current_process->curr_dir, name, FS_SEARCH_ADD))== NULL)
         return ERROR;
 
     /* fill new dir inode */
@@ -389,13 +387,13 @@ int fs_rmdir(const char *pathname)
     last_component(pathname, name);
 
     /* get inode numbers from parent and new dir */
-    dir = current_dir();
-    if ( (dir = find_inode(dir, pathname, FS_SEARCH_LASTDIR)) == NULL)
+    if ( (dir = find_inode(current_process->curr_dir, pathname, FS_SEARCH_LASTDIR))
+                                                                           == NULL)
         return ERROR;
-    if ( (ino = find_inode(dir, name, FS_SEARCH_GET)) == NULL)
+    if ( (ino = find_inode(current_process->curr_dir, name, FS_SEARCH_GET))== NULL)
         return ERROR;
     
-    /* check if its a dir and it is empty - fscking ugly hacks..*/
+    /* check if its a dir and it is empty - fscking ugly hacks.. */
     if (!IS_DIR(ino->i_mode) || search_inode(ino, NULL, &dentry, 0) == ERROR)
         return ERROR;
 

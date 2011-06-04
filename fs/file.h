@@ -10,9 +10,6 @@
 int get_fd(struct inode_s *ino, unsigned int pos);
 int release_fd(int fd);
 
-struct inode_s *current_dir();
-void set_current_dir(struct inode_s *ino);
-
 struct file_s *get_file(int fd);
 
 #endif /* __FILE_H__ */

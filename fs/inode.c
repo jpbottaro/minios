@@ -103,7 +103,7 @@ struct inode_s *find_inode(struct inode_s *dir, const char *user_path, int flag)
         /* release the last inode we used for the search */
         release_inode(r);
         if (dentry.num == 0)
-            return get_inode(current_dir()->i_num);
+            return current_dir();
         else
             return get_inode(dentry.num);
     }

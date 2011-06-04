@@ -57,6 +57,10 @@ void kernel_init()
 
     /* add the shell as first program */
     sys_newprocess("/bin/cash", NULL);
+    sys_newprocess("/bin/cash", NULL);
+    sys_newprocess("/bin/cash", NULL);
+
+    breakpoint();
 
     /* enable interruptions (and therefore scheduler) */
     sti();

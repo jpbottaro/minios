@@ -130,12 +130,14 @@ void sys_exit(int status)
     free_all_pages(current_process->i);
     mm_dir_free(current_process->pages_dir);
 
+    /* release inodes */
+    fs_closeall(current_process->files);
+    release_inode(current_process->curr_dir);
+
     /* delete process */
     current_process->pid = 0;
     LIST_INSERT_HEAD(&unused_list, current_process, unused);
     sched_unqueue(current_process);
-
-    fs_closeall(current_process->files);
 
     current_process = NULL;
     sched_schedule(0);
@@ -219,10 +221,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     process->gid = 2;
     process->waiting = NULL;
     process->parent = current_process;
-    if (current_process != NULL)
-        process->curr_dir = current_process->curr_dir;
-    else
-        process->curr_dir = root;
+    process->curr_dir = current_dir();
     process->last_mem = (char *) REQUESTED_MEMORY_START;
     process->esp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);
     process->ebp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);

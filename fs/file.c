@@ -21,10 +21,10 @@ void init_fds(unsigned int id)
     file->f_pos = 0; file->f_fd = 0;
     dev_file_calls(file, imayor(file->f_ino));
     file++;
-    /* use get_inode to increse references (so later is easier to remove) */
     file->f_ino = ino;
     file->f_pos = 0; file->f_fd = 1;
     dev_file_calls(file, imayor(file->f_ino));
+    /* increse refcount of inode so that it is easier to remove later */
     ino->i_refcount++;
     file++;
     file->f_ino = ino;
@@ -89,16 +89,23 @@ int release_fd(int fd)
 
 struct inode_s *current_dir()
 {
-    if (current_process == NULL) return NULL;
-    else                         return current_process->curr_dir;
+    struct inode_s *dir;
+
+    if (current_process == NULL)
+        dir = root;
+    else
+        dir = current_process->curr_dir;
+    dir->i_refcount++;
+
+    return dir;
 }
 
 void set_current_dir(struct inode_s *ino)
 {
     if (current_process != NULL) {
         release_inode(current_process->curr_dir);
-        get_inode(ino->i_num);
         current_process->curr_dir = ino;
+        ino->i_refcount++;
     }
 }
 

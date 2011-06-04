@@ -83,6 +83,8 @@ int sys_flush(int fd);
 int fs_end();
 
 void init_fds(unsigned int id);
+struct inode_s *current_dir();
+void set_current_dir(struct inode_s *ino);
 
 /* flags for find_inode */
 #define FS_SEARCH_GET     0x0001
