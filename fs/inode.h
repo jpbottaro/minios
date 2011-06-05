@@ -19,7 +19,7 @@ struct dir_entry_s {
     char name[MAX_NAME];
 };
 
-void inodes_init();
+void cache_init();
 block_t read_map(struct inode_s *ino, unsigned int pos, int flag);
 int empty_entry(struct inode_s *dir, ino_t ino_num, char *name);
 int next_entry(struct inode_s *dir, unsigned int *p, struct dir_entry_s *dent);

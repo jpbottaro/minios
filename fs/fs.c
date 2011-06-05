@@ -27,7 +27,7 @@ int fs_init(dev_t dev)
     fs_dev = &fs_dev_str;
     dev_file_calls(fs_dev, dev);
     read_super();
-    inodes_init();
+    cache_init();
     root = get_inode(1);
 
     /* register sys calls */
@@ -71,12 +71,14 @@ int fs_open(const char *filename, int flags, int mode)
     int flag, fd;
     struct inode_s *ino, *dir;
 
+    ino = dir = NULL;
+
     flag = (flags & O_CREAT) ? FS_SEARCH_CREAT : FS_SEARCH_GET;
 
     dir = current_dir();
 
     if ( (ino = find_inode(dir, filename, flag)) == NULL)
-        return ERROR;
+        goto err;
 
     release_inode(dir);
 
@@ -96,6 +98,11 @@ int fs_open(const char *filename, int flags, int mode)
     }
 
     return fd;
+
+err:
+    release_inode(dir);
+    release_inode(ino);
+    return ERROR;
 }
 
 /* close file; since our fs resides in memory and we dont have to write changes
@@ -106,7 +113,7 @@ int fs_close(int fd)
     struct file_s *flip;
 
     if ( (flip = get_file(fd)) == NULL)
-        return - 1;
+        return ERROR;
     release_inode(flip->f_ino);
 
     return release_fd(fd);
@@ -259,14 +266,21 @@ int fs_unlink(const char *pathname)
 {
     struct inode_s *ino, *dir;
 
+    ino = dir = NULL;
+
     dir = current_dir();
     if ( (ino = find_inode(dir, pathname, FS_SEARCH_REMOVE)) == NULL)
-        return ERROR;
-    release_inode(dir);
+        goto err;
     rm_inode(ino->i_num);
+    release_inode(dir);
     release_inode(ino);
 
     return OK;
+
+err:
+    release_inode(dir);
+    release_inode(ino);
+    return ERROR;
 }
 
 int fs_chdir(const char *path)
@@ -278,8 +292,11 @@ int fs_chdir(const char *path)
         return ERROR;
     release_inode(dir);
 
-    if (!IS_DIR(ino->i_mode))
+    if (!IS_DIR(ino->i_mode)) {
+        release_inode(ino);
         return ERROR;
+    }
+
     set_current_dir(ino);
     release_inode(ino);
 
@@ -350,14 +367,16 @@ int fs_mkdir(const char *pathname, mode_t mode)
     struct inode_s *ino, *dir, *tmpdir;
     char name[MAX_NAME];
 
+    ino = dir = tmpdir = NULL;
+
     last_component(pathname, name);
     tmpdir = current_dir();
     /* get inode numbers from parent and new dir */
     if ( (dir = find_inode(tmpdir, pathname, FS_SEARCH_LASTDIR)) == NULL)
-        return ERROR;
+        goto err;
     release_inode(tmpdir);
     if ( (ino = find_inode(dir, name, FS_SEARCH_ADD)) == NULL)
-        return ERROR;
+        goto err;
 
     /* fill new dir inode */
     fill_inode(ino, mode);
@@ -378,6 +397,12 @@ int fs_mkdir(const char *pathname, mode_t mode)
     release_inode(ino);
 
     return OK;
+
+err:
+    release_inode(tmpdir);
+    release_inode(dir);
+    release_inode(ino);
+    return ERROR;
 }
 
 /* remove directory (only if it is empty) */
@@ -387,18 +412,20 @@ int fs_rmdir(const char *pathname)
     struct inode_s *ino, *dir, *tmpdir;
     char name[MAX_NAME];
 
+    ino = dir = tmpdir = NULL;
+
     last_component(pathname, name);
     tmpdir = current_dir();
     /* get inode numbers from parent and new dir */
     if ( (dir = find_inode(tmpdir, pathname, FS_SEARCH_LASTDIR)) == NULL)
-        return ERROR;
+        goto err;
     release_inode(tmpdir);
     if ( (ino = find_inode(dir, name, FS_SEARCH_ADD)) == NULL)
-        return ERROR;
+        goto err;
 
     /* check if its a dir and it is empty - fscking ugly hacks.. */
     if (!IS_DIR(ino->i_mode) || search_inode(ino, NULL, &dentry, 0) == ERROR)
-        return ERROR;
+        goto err;
 
     /* this cant give an error */
     release_inode(find_inode(dir, name, FS_SEARCH_REMOVE));
@@ -410,6 +437,12 @@ int fs_rmdir(const char *pathname)
     release_inode(ino);
 
     return OK;
+
+err:
+    release_inode(tmpdir);
+    release_inode(dir);
+    release_inode(ino);
+    return ERROR;
 }
 
 int fs_getdents(int fd, char *buf, size_t n)
@@ -468,11 +501,13 @@ int fs_make_dev(const char *name, int type, dev_t major, dev_t minor)
 {
     struct inode_s *ino, *dev;
 
+    ino = dev = NULL;
+
     if ( (dev = find_inode(NULL, "/dev", FS_SEARCH_GET)) == NULL)
         debug_panic("fs_make_dev: no /dev folder!!");
 
     if ( (ino = find_inode(dev, name, FS_SEARCH_CREAT)) == NULL)
-        return ERROR;
+        goto err;
 
     /* fill it if it is empty */
     if (ino->i_free)
@@ -484,11 +519,13 @@ int fs_make_dev(const char *name, int type, dev_t major, dev_t minor)
     release_inode(ino);
 
     return OK;
+
+err:
+    release_inode(dev);
+    release_inode(ino);
+    return ERROR;
 }
 
-/* this one should close all open fds and write buffered changes etc. but,
- * as you probably know already ;), no real need for that
- */
 int fs_end()
 {
     release_inode(root);

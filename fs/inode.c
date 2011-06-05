@@ -16,7 +16,7 @@ LIST_HEAD(used_buffers_t, buf_s) used_buf;
 static char *parse_path(char *path);
 
 /* initialize the inode cache */
-void inodes_init()
+void cache_init()
 {
     int i;
 
