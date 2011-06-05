@@ -69,12 +69,16 @@ static void fill_inode(struct inode_s *ino, int mode)
 int fs_open(const char *filename, int flags, int mode)
 {
     int flag, fd;
-    struct inode_s *ino;
+    struct inode_s *ino, *dir;
 
     flag = (flags & O_CREAT) ? FS_SEARCH_CREAT : FS_SEARCH_GET;
 
-    if ( (ino = find_inode(current_process->curr_dir, filename, flag)) == NULL)
+    dir = current_dir();
+
+    if ( (ino = find_inode(dir, filename, flag)) == NULL)
         return ERROR;
+
+    release_inode(dir);
 
     if (flags & O_CREAT)
         fill_inode(ino, mode);
@@ -253,14 +257,13 @@ ssize_t sys_write(int fd, char *buf, size_t n)
 /* remove file/dir from fs */
 int fs_unlink(const char *pathname)
 {
-    struct inode_s *ino;
+    struct inode_s *ino, *dir;
 
-    if ( (ino = find_inode(current_process->curr_dir, pathname, FS_SEARCH_REMOVE))
-                                                                          == NULL)
+    dir = current_dir();
+    if ( (ino = find_inode(dir, pathname, FS_SEARCH_REMOVE)) == NULL)
         return ERROR;
-
+    release_inode(dir);
     rm_inode(ino->i_num);
-
     release_inode(ino);
 
     return OK;
@@ -268,16 +271,16 @@ int fs_unlink(const char *pathname)
 
 int fs_chdir(const char *path)
 {
-    struct inode_s *ino;
+    struct inode_s *ino, *dir;
 
-    if ( (ino = find_inode(current_process->curr_dir, path, FS_SEARCH_GET)) == NULL)
+    dir = current_dir();
+    if ( (ino = find_inode(dir, path, FS_SEARCH_GET)) == NULL)
         return ERROR;
+    release_inode(dir);
 
     if (!IS_DIR(ino->i_mode))
         return ERROR;
-
     set_current_dir(ino);
-
     release_inode(ino);
 
     return OK;
@@ -344,16 +347,16 @@ int fs_rename(const char *oldpath, const char *newpath)
 /* create new directory */
 int fs_mkdir(const char *pathname, mode_t mode)
 {
-    struct inode_s *ino, *dir;
+    struct inode_s *ino, *dir, *tmpdir;
     char name[MAX_NAME];
 
     last_component(pathname, name);
-
+    tmpdir = current_dir();
     /* get inode numbers from parent and new dir */
-    if ( (dir = find_inode(current_process->curr_dir, pathname, FS_SEARCH_LASTDIR))
-                                                                           == NULL)
+    if ( (dir = find_inode(tmpdir, pathname, FS_SEARCH_LASTDIR)) == NULL)
         return ERROR;
-    if ( (ino = find_inode(current_process->curr_dir, name, FS_SEARCH_ADD))== NULL)
+    release_inode(tmpdir);
+    if ( (ino = find_inode(dir, name, FS_SEARCH_ADD)) == NULL)
         return ERROR;
 
     /* fill new dir inode */
@@ -381,18 +384,18 @@ int fs_mkdir(const char *pathname, mode_t mode)
 int fs_rmdir(const char *pathname)
 {
     struct dir_entry_s dentry;
-    struct inode_s *ino, *dir;
+    struct inode_s *ino, *dir, *tmpdir;
     char name[MAX_NAME];
 
     last_component(pathname, name);
-
+    tmpdir = current_dir();
     /* get inode numbers from parent and new dir */
-    if ( (dir = find_inode(current_process->curr_dir, pathname, FS_SEARCH_LASTDIR))
-                                                                           == NULL)
+    if ( (dir = find_inode(tmpdir, pathname, FS_SEARCH_LASTDIR)) == NULL)
         return ERROR;
-    if ( (ino = find_inode(current_process->curr_dir, name, FS_SEARCH_GET))== NULL)
+    release_inode(tmpdir);
+    if ( (ino = find_inode(dir, name, FS_SEARCH_ADD)) == NULL)
         return ERROR;
-    
+
     /* check if its a dir and it is empty - fscking ugly hacks.. */
     if (!IS_DIR(ino->i_mode) || search_inode(ino, NULL, &dentry, 0) == ERROR)
         return ERROR;
