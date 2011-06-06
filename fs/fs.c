@@ -114,7 +114,6 @@ int fs_close(int fd)
 
     if ( (flip = get_file(fd)) == NULL)
         return ERROR;
-    release_inode(flip->f_ino);
 
     return release_fd(fd);
 }
@@ -158,6 +157,15 @@ size_t fs_lseek(struct file_s *flip, off_t offset, int whence)
 size_t sys_lseek(int fd, off_t offset, int whence)
 {
     struct file_s *flip = get_file(fd);
+
+    if (flip == NULL)
+        return ERROR;
+
+    if (flip->f_op == NULL)
+        debug_panic("sys_read: f_op is NULL");
+
+    if (flip->f_op->lseek == NULL)
+        debug_panic("sys_read: lseek func pointer is NULL");
 
     return flip->f_op->lseek(flip, offset, whence);
 }
@@ -247,6 +255,12 @@ size_t sys_read(int fd, char *buf, size_t n)
     if (flip == NULL)
         return ERROR;
 
+    if (flip->f_op == NULL)
+        debug_panic("sys_read: f_op is NULL");
+
+    if (flip->f_op->read == NULL)
+        debug_panic("sys_read: read func pointer is NULL");
+
     return flip->f_op->read(flip, buf, n);
 }
 
@@ -257,6 +271,12 @@ ssize_t sys_write(int fd, char *buf, size_t n)
 
     if (flip == NULL)
         return ERROR;
+
+    if (flip->f_op == NULL)
+        debug_panic("sys_read: f_op is NULL");
+
+    if (flip->f_op->write == NULL)
+        debug_panic("sys_read: write func pointer is NULL");
 
     return flip->f_op->write(flip, buf, n);
 }
@@ -287,20 +307,25 @@ int fs_chdir(const char *path)
 {
     struct inode_s *ino, *dir;
 
+    ino = dir = NULL;
+
     dir = current_dir();
     if ( (ino = find_inode(dir, path, FS_SEARCH_GET)) == NULL)
-        return ERROR;
+        goto err;
     release_inode(dir);
 
-    if (!IS_DIR(ino->i_mode)) {
-        release_inode(ino);
-        return ERROR;
-    }
+    if (!IS_DIR(ino->i_mode))
+        goto err;
 
     set_current_dir(ino);
     release_inode(ino);
 
     return OK;
+
+err:
+    release_inode(dir);
+    release_inode(ino);
+    return ERROR;
 }
 
 void last_component(const char *path, char *last)
@@ -492,6 +517,15 @@ int fs_getdents(int fd, char *buf, size_t n)
 int sys_flush(int fd)
 {
     struct file_s *flip = get_file(fd);
+
+    if (flip == NULL)
+        return ERROR;
+
+    if (flip->f_op == NULL)
+        debug_panic("sys_read: f_op is NULL");
+
+    if (flip->f_op->flush == NULL)
+        debug_panic("sys_read: flush func pointer is NULL");
 
     return flip->f_op->flush(flip);
 }
