@@ -146,7 +146,6 @@ struct inode_s *find_inode(struct inode_s *dir, const char *user_path, int flag)
 
 err_release:
     release_inode(r);
-    debug_panic("find_inode: goto");
     return NULL;
 }
 
