@@ -11,36 +11,51 @@ void init_fds(unsigned int id)
 {
     int i;
     struct inode_s *ino;
-    struct file_s *file = ps[id].files;
+    struct file_s *file, *parent_file;
     struct unused_fd_t *unused_fd;
-
-    if ( (ino = find_inode(NULL, "/dev/tty", FS_SEARCH_GET)) == NULL)
-        debug_panic("init_fds: no /dev/tty");
-
-    file->f_ino = ino;
-    file->f_pos = 0; file->f_fd = 0;
-    dev_file_calls(file, imayor(file->f_ino));
-    file++;
-    file->f_ino = ino;
-    file->f_pos = 0; file->f_fd = 1;
-    dev_file_calls(file, imayor(file->f_ino));
-    /* increse refcount of inode so that it is easier to remove later */
-    ino->i_refcount++;
-    file++;
-    file->f_ino = ino;
-    file->f_pos = 0; file->f_fd = 2;
-    dev_file_calls(file, imayor(file->f_ino));
-    file++;
-    ino->i_refcount++;
 
     unused_fd = &ps[id].unused_fd;
     LIST_INIT(unused_fd);
-    i = 3;
-    for (; file < &ps[id].files[MAX_FILES]; ++file) {
-        file->f_fd = i++;
-        file->f_ino = NULL;
-        file->f_pos = 0;
-        LIST_INSERT_HEAD(unused_fd, file, unused);
+
+    /* separate instance in where there is a parent to copy fds from, and where
+     * there is not one */
+    if (current_process == NULL) {
+        if ( (ino = find_inode(NULL, "/dev/tty", FS_SEARCH_GET)) == NULL)
+            debug_panic("init_fds: no /dev/tty");
+
+        /* open stdin/out/err */
+        file = ps[id].files;
+        for (i = 0; i < 3; ++i) {
+            file->f_ino = ino;
+            file->f_pos = 0; file->f_fd = i;
+            dev_file_calls(file, imayor(file->f_ino));
+            ino->i_refcount++;
+            file++;
+        }
+        release_inode(ino);
+
+        for (; i < MAX_FILES; ++i) {
+            file->f_fd = i;
+            file->f_ino = NULL;
+            file->f_pos = 0;
+            LIST_INSERT_HEAD(unused_fd, file, unused);
+            file++;
+        }
+    } else {
+        for (i = 0; i < MAX_FILES; ++i) {
+            file = &ps[id].files[i];
+            parent_file = &current_process->files[i];
+
+            file->f_fd = i;
+            file->f_ino = parent_file->f_ino;
+            file->f_pos = parent_file->f_pos;
+            if (file->f_ino == NULL) {
+                LIST_INSERT_HEAD(unused_fd, file, unused);
+            } else {
+                file->f_ino->i_refcount++;
+                dev_file_calls(file, imayor(file->f_ino));
+            }
+        }
     }
 }
 
@@ -77,7 +92,8 @@ int release_fd(int fd)
     struct unused_fd_t *unused_fd = &current_process->unused_fd;
     struct file_s *file = &current_process->files[fd];
 
-    if (file->f_ino != NO_INODE) {
+    if (file->f_ino != NULL) {
+        release_inode(file->f_ino);
         file->f_ino = NULL;
         file->f_pos = 0;
         LIST_INSERT_HEAD(unused_fd, file, unused);
