@@ -6,7 +6,7 @@
 #define OPCODE_CALL_REL  0xE8
 #define OPCODE_CALL_ADDR 0xFF
 
-int is_user_mode()
+inline int is_user_mode()
 {
     return (rcr3() & 0x3) == 0x3;
 }
@@ -110,7 +110,7 @@ void debug_kernelpanic(const u32_t* stack, const exp_state* expst)
     u32_t address;
 
     /* diable paging (so we dont get page faults) */
-    lcr0(rcr0() & ~0x80000000);
+    //lcr0(rcr0() & ~0x80000000);
 
     vga_clear();
     vga_printf(0, 0, "Kernel Panic!");
@@ -119,6 +119,7 @@ void debug_kernelpanic(const u32_t* stack, const exp_state* expst)
     vga_printf(2, 0, "Stack:");
     for (i = 0; i < 14; ++i) {
         st = (stack + i * 4);
+
         vga_printf(3 + i, 0, "%8x:%8x %8x %8x %8x",
                    st, *st, *(st + 1), *(st + 2), *(st + 3));
         vga_write(3 + i, 45, (char *) st, 16);
