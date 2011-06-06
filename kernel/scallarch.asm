@@ -11,7 +11,6 @@ scall_handler:
     push edx
     push ecx
     push ebx
-    sti
     mov eax, [system_calls + eax * 4]
     call eax
     mov [res], eax
