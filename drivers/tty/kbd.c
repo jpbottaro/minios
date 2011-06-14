@@ -58,17 +58,21 @@ void kbd_init(struct kbd_s *k)
 /* save key in a buffer */
 void kbd_buffer_key(struct kbd_s *k, char key)
 {
-    if (key == '\b') {
-        k->end = (k->end == k->pos) ? k->end :
-                 (k->end == 0)      ? MAX_KEYS - 1 :
-                                      k->end - 1;
-    } else {
-        k->buffer[k->end++] = key;
-        k->end %= MAX_KEYS;
-        if (key == '\n') {
-            k->buffer[k->end++] = '\0';
+    switch (key) {
+        case '\b':
+            k->end = (k->end == k->pos) ? k->end :
+                     (k->end == 0)      ? MAX_KEYS - 1 :
+                                          k->end - 1;
+            break;
+        case KEY_LEFT: case KEY_RIGHT:
+            break;
+        default:
+            k->buffer[k->end++] = key;
             k->end %= MAX_KEYS;
-        }
+            if (key == '\n') {
+                k->buffer[k->end++] = '\0';
+                k->end %= MAX_KEYS;
+            }
     }
 }
 
