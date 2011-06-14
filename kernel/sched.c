@@ -101,7 +101,10 @@ void sched_schedule(int force_sched)
     } else if (CIRCLEQ_NEXT(current_process, ready) !=
                CIRCLEQ_PREV(current_process, ready)) {
         last_process = current_process;
-        current_process = CIRCLEQ_NEXT(current_process, ready);
+        if (last_process == CIRCLEQ_LAST(&ready_list))
+            current_process = CIRCLEQ_FIRST(&ready_list);
+        else
+            current_process = CIRCLEQ_NEXT(last_process, ready);
         pm_switchto(current_process->i);
     }
 }
