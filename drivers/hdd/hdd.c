@@ -16,7 +16,42 @@ int hdd_flush(struct file_s *flip)
     return 0;
 }
 
+static struct file_operations_s ops = {
+    .read = hdd_read,
+    .write = hdd_write,
+    .flush = hdd_flush
+};
+
+static int identify()
+{
+    return 0;
+}
+
+static int io_test()
+{
+    return 0;
+}
+
 void hdd_init()
 {
-	
+    /* preparar struct */
+
+    /* Try to identify the device. */
+    if (identify() != 0)
+        panic("hdd_init(): cannot find hdd");
+
+    /* Do a test transaction */
+    if (io_test() != 0)
+        panic("hdd_init(): failed test");
+
+    /* make char device in /dev */
+    fs_make_dev("hdd", I_BLOCK, DEV_HDD, 0);
+
+    /* register interruption handler */
+    idt_register(, hdd_intr, DEFAULT_PL);
+
+    /* register device */
+    dev_register(DEV_HDD, &ops);
+
+    return 0;
 }

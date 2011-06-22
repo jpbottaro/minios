@@ -83,7 +83,7 @@ void pm_init()
     SCALL_REGISTER(20, sys_getpid);
 
     /* register page fault handler */
-    idt_register(14, pf_handler, DEFAULT_PL);
+    //idt_register(14, pf_handler, DEFAULT_PL);
 }
 
 /* do a context switch to process number 'process_num' */
