@@ -13,7 +13,8 @@
 /* temporary, will see what is the better way to load drivers */
 #include "../drivers/tty/con.h"
 #include "../drivers/ramdisk/ramdisk.h"
-extern void serial_init();
+#include "../drivers/hdd/hdd.h"
+#include "../drivers/serial/serial.h"
 
 /* here is where the magic starts */
 void kernel_init()
@@ -42,6 +43,9 @@ void kernel_init()
 
     /* add ramdisk driver */
     ramdisk_init(FS_INITIAL_POS);
+
+    /* add ramdisk driver */
+    hdd_init();
 
     /* initialize our file system */
     fs_init(DEV_RAMDISK);
