@@ -121,8 +121,6 @@ static struct file_operations_s ops = {
     .flush = serial_flush
 };
 
-extern void serial_intr();
-
 int serial_ready()
 {
    return inb(SP_PORT + PORT_LSTAT) & LS_DR;
@@ -146,6 +144,8 @@ void serial_handler()
             break;
     }
 }
+
+extern void serial_intr();
 
 void serial_init()
 {
