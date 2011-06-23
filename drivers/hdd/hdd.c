@@ -58,7 +58,7 @@ void hdd_init()
     fs_make_dev("hdd", I_BLOCK, DEV_HDD, 0);
 
     /* register interruption handler */
-    idt_register(14, hdd_intr, DEFAULT_PL);
+    idt_register(46, hdd_intr, DEFAULT_PL);
 
     /* register device */
     dev_register(DEV_HDD, &ops);
