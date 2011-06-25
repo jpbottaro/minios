@@ -55,7 +55,7 @@ void hdd_init()
         debug_panic("hdd_init(): failed test");
 
     /* make char device in /dev */
-    fs_make_dev("hdd", I_BLOCK, DEV_HDD, 0);
+    //fs_make_dev("hdd", I_BLOCK, DEV_HDD, 0);
 
     /* register interruption handler */
     idt_register(46, hdd_intr, DEFAULT_PL);
