@@ -20,7 +20,7 @@ size_t pipe_read(struct file_s *flip, char *buf, size_t n)
     int i, j;
 
     j = 0;
-    i = flip->pipe_nr;
+    i = flip->f_pipenr;
 
     if (pipes[i].done)
         return -1;
@@ -43,7 +43,7 @@ ssize_t pipe_write(struct file_s *flip, char *buf, size_t n)
     int i, j;
 
     j = 0;
-    i = flip->pipe_nr;
+    i = flip->f_pipenr;
 
     if (pipes[i].done)
         return -1;
@@ -63,7 +63,7 @@ ssize_t pipe_write(struct file_s *flip, char *buf, size_t n)
 
 int pipe_flush(struct file_s *flip)
 {
-    int i = flip->pipe_nr;
+    int i = flip->f_pipenr;
 
     /* release anybody that might be waiting */
     pipes[i].done = 1;

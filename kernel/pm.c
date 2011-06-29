@@ -220,7 +220,7 @@ pid_t sys_fork()
     LIST_INIT(&process->pages_list);
 
     /* copy fds */
-    fs_fd_cpy(current_process->i, process->i);
+    init_fds(process->i);
 
     /* copy the page directory */
     dirbase = mm_dir_cpy(current_process->pages_dir);
