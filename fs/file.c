@@ -59,6 +59,22 @@ void init_fds(unsigned int id)
     }
 }
 
+void fs_fd_cpy(unsigned int pid, unsigned int cid)
+{
+    struct file_s *pfile, *cfile, *pend;
+
+    pfile = ps[pid].files;
+    cfile = ps[cid].files;
+    pend = ps[pid].files + MAX_FILES;
+
+    while (pfile < pend) {
+        *pfile = *cfile;
+        cfile->f_ino->i_refcount++;
+        pfile++;
+        cfile++;
+    }
+}
+
 /* get a new fd */
 int get_fd(struct inode_s *ino, unsigned int pos)
 {

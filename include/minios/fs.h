@@ -84,6 +84,7 @@ int sys_flush(int fd);
 int fs_end();
 
 void init_fds(unsigned int id);
+void fs_fd_cpy(unsigned int pid, unsigned int cid);
 int get_fd_pipe(struct file_operations_s *ops, int nr);
 int release_fd_pipe(int fd);
 struct inode_s *current_dir();
