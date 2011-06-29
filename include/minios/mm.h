@@ -76,10 +76,11 @@ void* mm_mem_alloc();
 void* mm_mem_kalloc();
 void mm_mem_free(void *page);
 
-mm_page* mm_dir_new();
+mm_page *mm_dir_new();
+mm_page *mm_dir_cpy(mm_page *dir);
 void mm_map_page(mm_page *dir, void *vir, void *phy);
 void mm_umap_page(mm_page *dir, void *vir);
-void mm_dir_free(mm_page* d);
+void mm_dir_free(mm_page *d);
 
 void *sys_palloc();
 

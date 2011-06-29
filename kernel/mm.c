@@ -1,6 +1,7 @@
 #include <minios/debug.h>
 #include <minios/scall.h>
 #include <minios/i386.h>
+#include <minios/misc.h>
 #include <minios/mm.h>
 #include <sys/types.h>
 #include "pm.h"
@@ -107,6 +108,26 @@ mm_page* mm_dir_new()
         /* 011 means present, r/w and supervisor */
         *tablebase = make_mm_entry_addr(base, 3);
         tablebase++;
+    }
+
+    return dirbase;
+}
+
+/* copy a page directory table */
+mm_page *mm_dir_cpy(mm_page *dir)
+{
+    mm_page *d, *end;
+    mm_page *dirbase, *tablebase;
+
+    dirbase = (mm_page *) mm_mem_alloc();
+
+    end = (mm_page *) ((char *) dir + PAGE_SIZE);
+    for (d = dir; d < end; d++, dirbase++) {
+        *dirbase = *d;
+        if (d->attr & MM_ATTR_P) {
+            tablebase = (mm_page *) mm_mem_alloc();
+            mymemcpy((char *) (d->base << 12), (char *) tablebase, PAGE_SIZE);
+        }
     }
 
     return dirbase;
