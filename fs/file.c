@@ -69,7 +69,8 @@ void fs_fd_cpy(unsigned int pid, unsigned int cid)
 
     while (pfile < pend) {
         *pfile = *cfile;
-        cfile->f_ino->i_refcount++;
+        if (cfile->f_ino != NULL)
+            cfile->f_ino->i_refcount++;
         pfile++;
         cfile++;
     }
