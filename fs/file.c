@@ -49,6 +49,8 @@ void init_fds(unsigned int id)
             file->f_fd = i;
             file->f_ino = parent_file->f_ino;
             file->f_pos = parent_file->f_pos;
+            file->f_pipenr = parent_file->f_pipenr;
+            file->f_op = parent_file->f_op;
             if (file->f_ino == NULL) {
                 LIST_INSERT_HEAD(unused_fd, file, unused);
             } else {
@@ -56,23 +58,6 @@ void init_fds(unsigned int id)
                 dev_file_calls(file, imayor(file->f_ino));
             }
         }
-    }
-}
-
-void fs_fd_cpy(unsigned int pid, unsigned int cid)
-{
-    struct file_s *pfile, *cfile, *pend;
-
-    pfile = ps[pid].files;
-    cfile = ps[cid].files;
-    pend = ps[pid].files + MAX_FILES;
-
-    while (pfile < pend) {
-        *pfile = *cfile;
-        if (cfile->f_ino != NULL)
-            cfile->f_ino->i_refcount++;
-        pfile++;
-        cfile++;
     }
 }
 
@@ -132,7 +117,7 @@ int get_fd_pipe(struct file_operations_s *ops, int nr)
 
     if (file != NULL) {
         file->f_op = ops;
-        file->pipe_nr = nr;
+        file->f_pipenr = nr;
         return file->f_fd;
     }
 
