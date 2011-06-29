@@ -38,6 +38,7 @@ LS_INLINE unsigned int rss(void);
 LS_INLINE unsigned int redi(void);
 LS_INLINE unsigned int resi(void);
 LS_INLINE unsigned int rebp(void);
+LS_INLINE unsigned int reip(void);
 LS_INLINE unsigned int cmpxchg(volatile unsigned int *addr,
                                         unsigned int oldval,
                                         unsigned int newval);
@@ -210,6 +211,12 @@ LS_INLINE unsigned int resi(void) {
 LS_INLINE unsigned int rebp(void) {
     unsigned int val;
     __asm __volatile("movl %%ebp,%0" : "=r" (val));
+    return val;
+}
+
+LS_INLINE unsigned int reip(void) {
+    unsigned int val;
+    __asm __volatile("pop %0 \n jmp %0" : "=r" (val));
     return val;
 }
 

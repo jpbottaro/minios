@@ -38,6 +38,7 @@
 /* Function Prototypes. */
 extern void _exit(int _status);
 extern void exit(int _status);
+extern pid_t fork();
 extern int chdir(const char *_path);
 extern int close(int _fd);
 extern int newprocess(const char *_path, char *const _argv[]);
@@ -52,5 +53,6 @@ extern unsigned int sleep(unsigned int _seconds);
 extern int unlink(const char *_path);
 extern int write(int _fd, const void *_buf, size_t _n);
 extern int rename(const char *_oldpath, const char *_newpath);
+extern int pipe(int filedes[2]);
 
 #endif /* _UNISTD_H */

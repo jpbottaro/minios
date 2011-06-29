@@ -214,9 +214,6 @@ pid_t sys_fork()
     process->parent = current_process;
     process->curr_dir = current_dir();
     process->last_mem = current_process->last_mem;
-    process->esp = current_process->esp;
-    process->ebp = current_process->ebp;
-    process->eip = 0;
     LIST_INIT(&process->pages_list);
 
     /* copy fds */
@@ -240,6 +237,11 @@ pid_t sys_fork()
 
     /* add to scheduler */
     sched_enqueue(process);
+
+    /* this _has_ to be at the end.. its kinda ugly, but that ship has sailed */
+    process->esp = resp();
+    process->ebp = rebp();
+    process->eip = reip();
 
     return process->pid;
 }
@@ -349,7 +351,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     */
 
     /* close file */
-    fs_close(fd);
+    sys_close(fd);
 
     /* reserve uninitialized space */
     max = pso_header.mem_end - pso_header.mem_start;
