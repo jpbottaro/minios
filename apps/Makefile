@@ -1,6 +1,6 @@
 ODIR=../apps/obj
 OBJ=lineecho.pso echo.pso argc.pso ls.pso cat.pso cp.pso rm.pso cash.pso \
-	mkdir.pso rmdir.pso mv.pso gp.pso init.pso
+	mkdir.pso rmdir.pso mv.pso gp.pso init.pso pipes.pso
 
 CC=gcc
 CFLAGS=-m32 -Wall -Werror -O0 -I ../include -fno-zero-initialized-in-bss -fno-stack-protector -ffreestanding

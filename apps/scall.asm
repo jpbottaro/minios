@@ -2,6 +2,7 @@
 
 global exit
 global _exit
+global fork
 global read
 global write
 global open
@@ -15,6 +16,7 @@ global getpid
 global rename
 global mkdir
 global rmdir
+global pipe
 global palloc
 global getdents
 
@@ -23,6 +25,9 @@ global getdents
 exit:
 _exit:
     mov eax, 1
+    jmp next
+fork:
+    mov eax, 2
     jmp next
 read:
     mov eax, 3
@@ -62,6 +67,9 @@ mkdir:
     jmp next
 rmdir:
     mov eax, 40
+    jmp next
+pipe:
+    mov eax, 42
     jmp next
 palloc:
     mov eax, 45
