@@ -78,6 +78,7 @@ void pm_init()
 
     /* register sys calls */
     SCALL_REGISTER(1, sys_exit);
+    SCALL_REGISTER(2, sys_fork);
     SCALL_REGISTER(7, sys_waitpid);
     SCALL_REGISTER(11, sys_newprocess);
     SCALL_REGISTER(20, sys_getpid);
@@ -129,6 +130,8 @@ void sys_exit(int status)
     /* free process pages */
     free_all_pages(current_process->i);
     mm_dir_free(current_process->pages_dir);
+    mm_mem_free(current_process->stack);
+    mm_mem_free(current_process->kstack);
 
     /* release inodes */
     fs_closeall(current_process->files);
@@ -188,6 +191,57 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
     sched_schedule(1);
 
     return current_process->child_pid;
+}
+
+pid_t sys_fork()
+{
+    mm_page *dirbase;
+    void *page, *stack;
+    struct process_state_s *process;
+
+    /* get process entry for child */
+    process = LIST_FIRST(&unused_list);
+    if (process == NULL)
+        debug_panic("newprocess: No space for new process in ps array!");
+
+    /* fill child entry */
+    LIST_REMOVE(process, unused);
+    process->run = 0;
+    process->pid = pid++;
+    process->uid = current_process->uid;
+    process->gid = current_process->gid;
+    process->waiting = NULL;
+    process->parent = current_process;
+    process->curr_dir = current_dir();
+    process->last_mem = current_process->last_mem;
+    process->esp = current_process->esp;
+    process->ebp = current_process->ebp;
+    process->eip = 0;
+    LIST_INIT(&process->pages_list);
+
+    /* copy fds */
+    fs_fd_cpy(current_process->i, process->i);
+
+    /* copy the page directory */
+    dirbase = mm_dir_cpy(current_process->pages_dir);
+    process->pages_dir = dirbase;
+
+    /* build user stack */
+    stack = mm_mem_alloc();
+    process->stack = stack;
+    mm_map_page(dirbase, (void *) STACK_PAGE, stack);
+    mymemcpy((char *) STACK_PAGE, stack, PAGE_SIZE);
+
+    /* build kernel stack */
+    page = mm_mem_alloc();
+    process->kstack = page;
+    mm_map_page(dirbase, (void *) KSTACK_PAGE, page);
+    mymemcpy((char *) KSTACK_PAGE, page, PAGE_SIZE);
+
+    /* add to scheduler */
+    sched_enqueue(process);
+
+    return process->pid;
 }
 
 /* create a new process, with binary filename, and arguments argv.
@@ -310,12 +364,12 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
 
     /* build user stack */
     stack = mm_mem_alloc();
-    add_process_page(process, stack);
+    process->stack = stack;
     mm_map_page(dirbase, (void *) STACK_PAGE, stack);
 
     /* build kernel stack */
     page = mm_mem_alloc();
-    add_process_page(process, page);
+    process->kstack = page;
     mm_map_page(dirbase, (void *) KSTACK_PAGE, page);
 
     i = j = 0;

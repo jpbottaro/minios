@@ -42,6 +42,8 @@ struct process_state_s {
 
     /* where to map requested memory */
     char *last_mem;
+    void *stack;
+    void *kstack;
 
     /* data to keep track of waitpid sys call */
     struct process_state_s *waiting;
