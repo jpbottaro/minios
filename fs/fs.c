@@ -16,7 +16,7 @@ static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag
 static void fill_inode(struct inode_s *ino, int mode);
 
 static struct file_operations_s ops = {
-    .read = fs_read, 
+    .read = fs_read,
     .write = fs_write,
     .lseek = fs_lseek
 };
@@ -34,7 +34,7 @@ int fs_init(dev_t dev)
     SCALL_REGISTER(3, sys_read);
     SCALL_REGISTER(4, sys_write);
     SCALL_REGISTER(5, fs_open);
-    SCALL_REGISTER(6, fs_close);
+    SCALL_REGISTER(6, sys_close);
     SCALL_REGISTER(10, fs_unlink);
     SCALL_REGISTER(12, fs_chdir);
     SCALL_REGISTER(19, sys_lseek);
@@ -105,17 +105,24 @@ err:
     return ERROR;
 }
 
-/* close file; since our fs resides in memory and we dont have to write changes
- * anywhere, we just release fd
- */
-int fs_close(int fd)
+/* generic close */
+int sys_close(int fd)
 {
-    struct file_s *flip;
+    int r;
+    struct file_s *flip = get_file(fd);
 
-    if ( (flip = get_file(fd)) == NULL)
+    if (flip == NULL)
         return ERROR;
 
-    return release_fd(fd);
+    if (flip->f_op == NULL)
+        debug_panic("sys_close: f_op is NULL");
+
+    if (flip->f_op->close != NULL)
+        r = flip->f_op->close(flip);
+
+    release_fd(fd);
+
+    return r;
 }
 
 int fs_closeall(struct file_s files[])
@@ -165,7 +172,7 @@ size_t sys_lseek(int fd, off_t offset, int whence)
         debug_panic("sys_read: f_op is NULL");
 
     if (flip->f_op->lseek == NULL)
-        debug_panic("sys_read: lseek func pointer is NULL");
+        debug_panic("sys_lseek: lseek func pointer is NULL");
 
     return flip->f_op->lseek(flip, offset, whence);
 }

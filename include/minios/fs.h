@@ -58,6 +58,7 @@ struct file_operations_s {
     ssize_t (*write) (struct file_s *, char *, size_t);
     size_t  (*lseek) (struct file_s *, off_t, int);
     int     (*flush) (struct file_s *);
+    int     (*close) (struct file_s *);
 };
 
 extern struct inode_s *root;
@@ -66,7 +67,7 @@ LIST_HEAD(unused_fd_t, file_s);
 
 int fs_init(dev_t dev);
 int fs_open(const char *filename, int flags, int mode);
-int fs_close(int fd);
+int sys_close(int fd);
 int fs_closeall(struct file_s files[]);
 size_t sys_lseek(int fd, off_t offset, int whence);
 size_t fs_lseek(struct file_s *flip, off_t offset, int whence);
