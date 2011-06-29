@@ -53,9 +53,6 @@ struct process_state_s {
     struct file_s files[MAX_FILES];
     struct inode_s *curr_dir;
 
-    /* dev io data */
-    unsigned int dev;
-
     /* scheduler ready list pointers */
     CIRCLEQ_ENTRY(process_state_s) ready;
 
@@ -79,6 +76,7 @@ unsigned int current_gid();
 void pm_init();
 void pm_switchto(u32_t process_num);
 
+pid_t sys_fork();
 pid_t sys_newprocess(const char *filename, char *const argv[]);
 pid_t sys_waitpid(pid_t pid, int *status, int options);
 pid_t sys_getpid(void);
