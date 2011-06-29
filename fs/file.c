@@ -103,6 +103,37 @@ int release_fd(int fd)
     }
 }
 
+int get_fd_pipe(struct file_operations_s *ops, int nr)
+{
+    struct unused_fd_t *unused_fd;
+    struct file_s *file;
+
+    unused_fd = &current_process->unused_fd;
+    file = LIST_FIRST(unused_fd);
+    if (file != NULL)
+        LIST_REMOVE(file, unused);
+
+    if (file != NULL) {
+        file->f_op = ops;
+        file->pipe_nr = nr;
+        return file->f_fd;
+    }
+
+    return ERROR;
+}
+
+int release_fd_pipe(int fd)
+{
+    struct unused_fd_t *unused_fd = &current_process->unused_fd;
+    struct file_s *file = &current_process->files[fd];
+
+    file->f_ino = NULL;
+    file->f_pos = 0;
+    LIST_INSERT_HEAD(unused_fd, file, unused);
+
+    return OK;
+}
+
 struct inode_s *current_dir()
 {
     struct inode_s *dir;

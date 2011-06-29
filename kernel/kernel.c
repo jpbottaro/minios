@@ -3,6 +3,7 @@
 #include <minios/idt.h>
 #include <minios/vga.h>
 #include <minios/i386.h>
+#include <minios/pipe.h>
 #include <minios/sched.h>
 #include <minios/debug.h>
 #include "scall.h"
@@ -49,6 +50,9 @@ void kernel_init()
 
     /* initialize our file system */
     fs_init(DEV_RAMDISK);
+
+    /* init the pipe module */
+    pipe_init();
 
     /* init console driver */
     con_init();
