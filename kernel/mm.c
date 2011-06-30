@@ -116,10 +116,10 @@ mm_page* mm_dir_new()
 /* copy a page directory table */
 mm_page *mm_dir_cpy(mm_page *dir)
 {
-    mm_page *d, *end;
+    mm_page *d, *ret, *end;
     mm_page *dirbase, *tablebase;
 
-    dirbase = (mm_page *) mm_mem_alloc();
+    ret = dirbase = (mm_page *) mm_mem_alloc();
 
     end = dir + (PAGE_SIZE / sizeof(mm_page *));
     for (d = dir; d < end; d++, dirbase++) {
@@ -132,7 +132,7 @@ mm_page *mm_dir_cpy(mm_page *dir)
         }
     }
 
-    return dirbase;
+    return ret;
 }
 
 /* free directory page and all its present tables */
