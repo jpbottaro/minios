@@ -16,7 +16,6 @@ struct command {
     u8_t	sector;
     u8_t	cyl_lo;
     u8_t	cyl_hi;
-    u8_t	ldh;
     u8_t	command;
 
     /* The following at for LBA48 */
@@ -65,13 +64,6 @@ int com_out(struct command *cmd)
 {
     w_waitfor(STATUS_BSY, 0);
 
-    /* Select drive. */
-    outb(HDD_CMD + REG_LDH, cmd->ldh);
-
-    w_waitfor(STATUS_BSY, 0);
-    if (wn.w_status == 0)
-        debug_panic("hard disk does not exist!!");
-
     wn.w_status = STATUS_ADMBSY;
     outb(HDD_CTL + REG_CTL, wn.pheads >= 8 ? CTL_EIGHTHEADS : 0);
     outb(HDD_CMD + REG_PRECOMP, cmd->precomp);
@@ -104,7 +96,7 @@ int com_simple(struct command *cmd)
     /* A controller command, only one interrupt and no data-out phase. */
     int r;
 
-    if ((r = com_out(cmd)) == 0)
+    if (com_out(cmd) == 0)
         r = at_intr_wait();
 
     return r;
@@ -123,7 +115,14 @@ static int identify()
     int size, r;
     struct command cmd;
 
-    cmd.ldh     = LDH_DEFAULT;
+    /* Select drive. */
+    outb(HDD_CMD + REG_LDH, LDH_DEFAULT);
+    inb(HDD_CMD + REG_STATUS);
+    inb(HDD_CMD + REG_STATUS);
+    inb(HDD_CMD + REG_STATUS);
+    inb(HDD_CMD + REG_STATUS);
+    w_waitfor(STATUS_BSY, 0);
+
     cmd.command = ATA_IDENTIFY;
     r = com_simple(&cmd);
 
@@ -139,19 +138,11 @@ static int identify()
         wn.psectors = id_word(6);
         size = (u32_t) wn.pcylinders * wn.pheads * wn.psectors;
 
-        /* assume LBA */
-        if (id_longword(102)) {
-            /* If no. of sectors doesn't fit in 32 bits,
-             * trunacte to this. So it's LBA32 for now.
-             * This can still address devices up to 2TB
-             * though.
-             */
-            size = ULONG_MAX;
-        } else {
-            /* Actual number of sectors fits in 32 bits. */
-            size = id_longword(100);
-        }
-        wn.size = size;
+        /* assume LBA28 */
+        wn.size = id_word(60);
+        
+        /* assume LBA48 */
+        //wn.size = id_longword(100);
     }
 
     return 0;
