@@ -245,7 +245,10 @@ pid_t sys_fork()
     process->ebp = rebp();
     process->eip = reip();
 
-    return process->pid;
+    if (current_process == process)
+        return 0;
+    else
+        return process->pid;
 }
 
 /* create a new process, with binary filename, and arguments argv.
