@@ -1,5 +1,8 @@
 global save_process_state
 global load_process_state
+global __pm_switchto
+global reip
+extern last_process
 
 ; this works because save and load have the same stack call size (only the
 ; process_state pointer and return address)
@@ -18,14 +21,21 @@ global load_process_state
 %define DATA_UID      0x20
 %define EFLAGS_MASK   0x00000202
 
+reip:
+    pop eax
+    jmp eax
+
+__pm_switchto:
+    mov ecx, [last_process]
+    cmp ecx, 0
+    je load_process_state
 save_process_state:
-    mov eax, [esp + 4]
+    mov eax, [last_process]
     mov [eax + DATA_EBP], ebp
     mov [eax + DATA_ESP], esp
     mov edx, cr3
     mov [eax + DATA_DIRPAGES], edx
-    ret
-
+    mov dword [eax + DATA_EIP], end_pm_switchto
 load_process_state:
     mov eax, [esp + 4]
     mov ebp, [eax + DATA_EBP]
@@ -63,4 +73,6 @@ go_on:
     iret
 finish_line:
     mov esp, [eax + DATA_ESP]
+    push dword [eax + DATA_EIP]
+end_pm_switchto:
     ret

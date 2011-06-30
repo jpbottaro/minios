@@ -87,12 +87,12 @@ void pm_init()
     //idt_register(14, pf_handler, DEFAULT_PL);
 }
 
+extern void __pm_switchto(struct process_state_s *);
+
 /* do a context switch to process number 'process_num' */
 void pm_switchto(u32_t process_num)
 {
-    if (last_process != NULL)
-        save_process_state(last_process);
-    load_process_state(&ps[process_num]);
+    __pm_switchto(&ps[process_num]);
 }
 
 /* add a page to the processes' list of used pages */
@@ -193,6 +193,8 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
     return current_process->child_pid;
 }
 
+extern unsigned int reip();
+
 pid_t sys_fork()
 {
     mm_page *dirbase;
@@ -206,7 +208,7 @@ pid_t sys_fork()
 
     /* fill child entry */
     LIST_REMOVE(process, unused);
-    process->run = 0;
+    process->run = 1;
     process->pid = pid++;
     process->uid = current_process->uid;
     process->gid = current_process->gid;
@@ -227,13 +229,13 @@ pid_t sys_fork()
     stack = mm_mem_alloc();
     process->stack = stack;
     mm_map_page(dirbase, (void *) STACK_PAGE, stack);
-    mymemcpy((char *) STACK_PAGE, stack, PAGE_SIZE);
+    mymemcpy(stack, (char *) STACK_PAGE, PAGE_SIZE);
 
     /* build kernel stack */
     page = mm_mem_alloc();
     process->kstack = page;
     mm_map_page(dirbase, (void *) KSTACK_PAGE, page);
-    mymemcpy((char *) KSTACK_PAGE, page, PAGE_SIZE);
+    mymemcpy(page, (char *) KSTACK_PAGE, PAGE_SIZE);
 
     /* add to scheduler */
     sched_enqueue(process);
