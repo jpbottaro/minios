@@ -36,7 +36,7 @@ int main(void)
     }
 
     /* Create the child process. */
-    pid = fork ();
+    pid = fork();
     if (pid == (pid_t) 0) {
         /* This is the child process.
            Close other end first. */
