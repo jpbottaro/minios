@@ -125,7 +125,7 @@ mm_page *mm_dir_cpy(mm_page *dir)
     for (d = dir; d < end; d++, dirbase++) {
         if (d->attr & MM_ATTR_P) {
             tablebase = (mm_page *) mm_mem_alloc();
-            mymemcpy((char *) (d->base << 12), (char *) tablebase, PAGE_SIZE);
+            mymemcpy((char *) tablebase, (char *) (d->base << 12), PAGE_SIZE);
             *dirbase = make_mm_entry_addr(tablebase, d->attr);
         } else {
             *dirbase = make_mm_entry_addr(0, 0);
