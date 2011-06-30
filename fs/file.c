@@ -112,10 +112,8 @@ int get_fd_pipe(struct file_operations_s *ops, int nr)
 
     unused_fd = &current_process->unused_fd;
     file = LIST_FIRST(unused_fd);
-    if (file != NULL)
-        LIST_REMOVE(file, unused);
-
     if (file != NULL) {
+        LIST_REMOVE(file, unused);
         file->f_op = ops;
         file->f_pipenr = nr;
         return file->f_fd;
