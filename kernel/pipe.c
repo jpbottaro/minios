@@ -6,7 +6,8 @@
 struct pipe_s {
     int i;
     unsigned char buffer[MAX_SIZE];
-    int pos;
+    int init;
+    int end;
     int done;
     sem_t mutex, empty, full;
 
@@ -30,7 +31,7 @@ size_t pipe_read(struct file_s *flip, char *buf, size_t n)
         if (pipes[i].done)
             return -1;
         sem_wait(&pipes[i].mutex);
-        buf[j++] = pipes[i].buffer[--pipes[i].pos];
+        buf[j++] = pipes[i].buffer[pipes[i].init++];
         sem_signal(&pipes[i].mutex);
         sem_signal(&pipes[i].empty);
     }
@@ -53,7 +54,7 @@ ssize_t pipe_write(struct file_s *flip, char *buf, size_t n)
         if (pipes[i].done)
             return -1;
         sem_wait(&pipes[i].mutex);
-        pipes[i].buffer[pipes[i].pos++] = buf[j++];
+        pipes[i].buffer[pipes[i].end++] = buf[j++];
         sem_signal(&pipes[i].mutex);
         sem_signal(&pipes[i].full);
     }
@@ -105,7 +106,8 @@ int sys_pipe(int filedes[2])
     if (pipe != NULL) {
         LIST_REMOVE(pipe, unused);
 
-        pipe->pos = 0;
+        pipe->init = 0;
+        pipe->end = 0;
         pipe->done = 0;
         sem_init(&pipe->empty, MAX_SIZE);
         sem_init(&pipe->full, 0);
