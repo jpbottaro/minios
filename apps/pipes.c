@@ -21,7 +21,7 @@ void read_from_pipe(int file)
 
 void write_to_pipe(int file)
 {
-    write(file, ERR_PIPE, sizeof(ERR_PIPE) - 1);
+    write(file, HELLO, sizeof(HELLO) - 1);
 }
 
 int main(void)
