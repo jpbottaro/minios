@@ -6,8 +6,9 @@
 #define ERR_FORK "Error in fork()\n"
 #define HELLO "How you doin'?\n"
 
-/* Read characters from the pipe and echo them to stdout. */
 /* Taken from http://www.gnu.org/s/hello/manual/libc/Creating-a-Pipe.html */
+
+/* Read characters from the pipe and echo them to stdout. */
 
 void read_from_pipe(int file)
 {
