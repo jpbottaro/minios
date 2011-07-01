@@ -1,4 +1,5 @@
 #include <minios/i386.h>
+#include <minios/idt.h>
 #include "pic.h"
 
 #define PIC1_PORT 0x20
@@ -23,9 +24,14 @@ void reset_pic() {
 	outb(PIC2_PORT+1, 0xFF); /* Enmasca todas! */
 }
 
+extern void handler_void();
+
 void enable_pic() {
 	outb(PIC1_PORT+1, 0x00);
 	outb(PIC2_PORT+1, 0x00);
+
+    /* Ignore the 0x27 interrupt, its just the PIC being an asshole */
+    idt_register(0x27, handler_void, DEFAULT_PL);
 }
 
 void disable_pic() {
