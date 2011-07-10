@@ -12,7 +12,7 @@
 
 #define READ_SIZE 0x1000
 
-/* Output to stdout the contents of a pipe */
+/* output to stdout the contents of a pipe */
 int reader(int fd)
 {
     int r;
@@ -28,19 +28,18 @@ int reader(int fd)
 /* negate a buffer (which is the same as a XOR with a 111... key) */
 void negate(char *buf, int r)
 {
-    char i, *b, *end;
+    char *b, *end;
 
     if (r < 0)
         return;
 
-    i = ~0;
     b = buf;
     end = buf + r;
     while (b < end)
-        *(b++) ^= i;
+        *(b++) ^= ~0;
 }
 
-/* Encrypt the contents of a pipe and output to another */
+/* encrypt the contents of a pipe and output to another */
 int encrypt(int fd_from, int fd_to)
 {
     int r;
@@ -64,7 +63,7 @@ int encrypt(int fd_from, int fd_to)
     return 0;
 }
 
-/* Write a file to the pipe */
+/* write a file to the pipe */
 int writer(int file, int fd)
 {
     int r;
@@ -99,7 +98,7 @@ int main(int argc, char *argv[])
         _exit(-1);
     }
 
-    /* Create 2 pipes. */
+    /* create 2 pipes */
     if (pipe(encrypt2reader) < 0 || pipe(writer2encrypt) < 0) {
         write(STDOUT_FILENO, ERR_PIPE, sizeof(ERR_PIPE) - 1);
         return -1;
@@ -132,7 +131,7 @@ int main(int argc, char *argv[])
             close(encrypt2reader[1]);
             close(writer2encrypt[0]);
 
-            /* Open the file to encrypt */
+            /* open the file to encrypt */
             if ( (fd = open(argv[1], O_RDONLY, 0)) < 0) {
                 write(STDOUT_FILENO, ERR_OPEN, sizeof(ERR_OPEN) - 1);
                 return -1;
@@ -143,6 +142,5 @@ int main(int argc, char *argv[])
         }
     }
 
-    /* unreachable */
-    return -1;
+    return 0;
 }
