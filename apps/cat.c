@@ -18,7 +18,7 @@ void main(int argc, char *argv[])
             write(STDOUT_FILENO, ERR_OPEN, sizeof(ERR_OPEN) - 1);
             _exit(-1);
         }
-        if ( (len = read(fd, buf, MAX_BUF)) < 0 ) {
+        if ( (len = read(fd, buf, MAX_BUF)) < 0) {
             write(STDOUT_FILENO, ERR_READ, sizeof(ERR_READ) - 1);
             _exit(-1);
         }
