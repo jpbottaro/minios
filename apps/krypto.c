@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
         close(writer2encrypt[1]);
         close(encrypt2reader[1]);
 
-        /* READER process. */
+        /* READER process */
         return reader(encrypt2reader[0]);
     } else {
         pid = fork();
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
             close(encrypt2reader[0]);
             close(writer2encrypt[1]);
 
-            /* ENCRYPT process. */
+            /* ENCRYPT process */
             return encrypt(writer2encrypt[0], encrypt2reader[1]);
         } else {
             close(encrypt2reader[0]);
@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
                 return -1;
             }
 
-            /* WRITER process. */
+            /* WRITER process */
             return writer(fd, writer2encrypt[1]);
         }
     }
