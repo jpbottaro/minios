@@ -12,15 +12,25 @@
 
 #define READ_SIZE 0x1000
 
-/* output to stdout the contents of a pipe */
-int reader(int fd)
+/* output to a file the contents of a pipe */
+int reader(int fd, int file)
 {
     int r;
     char buf[READ_SIZE];
 
-    while ( (r = read(fd, buf, READ_SIZE)) > 0)
-        write(STDOUT_FILENO, buf, r);
+    while ( (r = read(fd, buf, READ_SIZE)) > 0) {
+        if (write(file, buf, r) != r) {
+            write(STDOUT_FILENO, ERR_WRITE, sizeof(ERR_WRITE) - 1);
+            _exit(-1);
+        }
+    }
 
+    if (r < 0) {
+        write(STDOUT_FILENO, ERR_READ, sizeof(ERR_READ) - 1);
+        _exit(-1);
+    }
+
+    close(file);
     close(fd);
     return 0;
 }
@@ -113,8 +123,17 @@ int main(int argc, char *argv[])
         close(writer2encrypt[1]);
         close(encrypt2reader[1]);
 
+        if (argc > 2) {
+            if ( (fd = open(argv[2], O_CREAT | O_RDWR, 0)) < 0) {
+                write(STDOUT_FILENO, ERR_OPEN, sizeof(ERR_OPEN) - 1);
+                return -1;
+            }
+        } else {
+            fd = STDOUT_FILENO;
+        }
+
         /* READER process */
-        return reader(encrypt2reader[0]);
+        return reader(encrypt2reader[0], fd);
     } else {
         pid = fork();
         if (pid < (pid_t) 0) {
