@@ -54,5 +54,6 @@ extern int unlink(const char *_path);
 extern int write(int _fd, const void *_buf, size_t _n);
 extern int rename(const char *_oldpath, const char *_newpath);
 extern int pipe(int filedes[2]);
+extern void *palloc();
 
 #endif /* _UNISTD_H */
