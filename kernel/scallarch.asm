@@ -15,7 +15,6 @@ scall_handler:
     call eax
     mov [res], eax
     add esp, 12
-    call reset_intr_pic1
     call reset_intr_pic2
     popad
     mov eax, [res]
