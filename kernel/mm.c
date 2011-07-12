@@ -24,7 +24,7 @@ void pf_handler()
     if (valid_page(rcr2())) {
         mm_page *page = mm_mem_alloc();
         add_process_page(current_process, page);
-        mm_map_page(current_process->pages_dir, (mm_page *)rcr2(), page);
+        mm_map_page(current_process->pages_dir, (mm_page *) rcr2(), page);
     } else if (current_process == NULL || current_process->uid == 1) {
         isr14();
     } else {
