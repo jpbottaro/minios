@@ -1,14 +1,36 @@
-#include <minios/debug.h>
 #include <minios/scall.h>
 #include <minios/i386.h>
 #include <minios/misc.h>
+#include <minios/idt.h>
 #include <minios/mm.h>
 #include <sys/types.h>
+#include "debug.h"
 #include "pm.h"
+
+extern void _pf_handler();
 
 struct page_s pages[PAGES_LEN];
 
 LIST_HEAD(free_pages_t, page_s) free_pages;
+
+int valid_page(unsigned int page)
+{
+    return 1;
+}
+
+/* new handler for page fault to force exit of ring3 tasks who force it */
+void pf_handler()
+{
+    if (valid_page(rcr2())) {
+        mm_page *page = mm_mem_alloc();
+        add_process_page(current_process, page);
+        mm_map_page(current_process->pages_dir, (mm_page *)rcr2(), page);
+    } else if (current_process == NULL || current_process->uid == 1) {
+        isr14();
+    } else {
+        sys_exit(-1);
+    }
+}
 
 /* init memory manager */
 void mm_init()
@@ -23,6 +45,9 @@ void mm_init()
 
     /* register sys calls */
     SCALL_REGISTER(45, sys_palloc);
+
+    /* register page fault handler */
+    idt_register(14, _pf_handler, DEFAULT_PL);
 }
 
 /* alloc page */
@@ -53,7 +78,7 @@ void mm_mem_free(void *page)
 }
 
 /* map a page in the PDT */
-void mm_map_page(mm_page *dir, void *vir, void *phy)
+void mm_map_page_attr(mm_page *dir, void *vir, void *phy, int attr)
 {
     mm_page *dir_entry, *table_entry;
 
@@ -68,8 +93,13 @@ void mm_map_page(mm_page *dir, void *vir, void *phy)
 
     table_entry = (mm_page *) (dir_entry->base << 12) +
                               (((u32_t) vir >> 12) & 0x3FF);
-    *table_entry = make_mm_entry_addr(phy,  7);
+    *table_entry = make_mm_entry_addr(phy,  attr);
     tlbflush();
+}
+
+void mm_map_page(mm_page *dir, void *vir, void *phy)
+{
+    mm_map_page_attr(dir, vir, phy, 7);
 }
 
 /* umap a page in the PDT */
@@ -148,15 +178,11 @@ void mm_dir_free(mm_page* d)
 /* return a 4kb page to a process (fix this, the last_mem thing sucks) */
 void *sys_palloc()
 {
-    void *page, *virt;
-
-    page = mm_mem_alloc();
-    add_process_page(current_process, page);
+    void *virt;
 
     virt = current_process->last_mem;
     current_process->last_mem += PAGE_SIZE;
-
-    mm_map_page(current_process->pages_dir, virt, page);
+    mm_map_page_attr(current_process->pages_dir, virt, 0, 7);
 
     return virt;
 }
