@@ -112,7 +112,7 @@ int get_data(int port, u8_t *buf, int size)
 
 static int identify()
 {
-    int size, r;
+    int r;
     struct command cmd;
 
     /* Select drive. */
@@ -136,7 +136,6 @@ static int identify()
         wn.pcylinders = id_word(1);
         wn.pheads = id_word(3);
         wn.psectors = id_word(6);
-        size = (u32_t) wn.pcylinders * wn.pheads * wn.psectors;
 
         /* assume LBA28 */
         wn.size = id_word(60);
