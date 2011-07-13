@@ -55,6 +55,9 @@ void *mm_copypage(struct process_state_s *p, mm_page *page)
     mymemcpy(new_page, 0, PAGE_SIZE);
     mm_umap_page(p->pages_dir, 0);
 
+    /* decrease refcount of oldpage */
+    decrease_refcount_page(old_page);
+
     return new_page;
 }
 
@@ -130,6 +133,8 @@ void *mm_mem_alloc()
     for (; start < end; start++)
         *start = 0;
 
+    page->refcount = 1;
+
     return page->base;
 }
 
@@ -138,7 +143,8 @@ void mm_mem_free(void *page)
 {
     if (page < (void *) KERNEL_PAGES || page > (void *) CODE_OFFSET)
         debug_panic("mm_mem_free: page off limits");
-    LIST_INSERT_HEAD(&free_pages, &pages[hash_page(page)], status);
+    if (decrease_refcount_page(page) == 0)
+        LIST_INSERT_HEAD(&free_pages, &pages[hash_page(page)], status);
 }
 
 /* map a page in the PDT */
@@ -200,6 +206,8 @@ void copy_table_fork(mm_page *to, mm_page *from)
         if (!(from->attr & MM_SHARED))
             from->attr &= ~MM_ATTR_RW;
         *to = *from;
+        if (from->attr & MM_ATTR_P)
+            increase_refcount_page(from->base << 12);
         to++;
         from++;
     }
