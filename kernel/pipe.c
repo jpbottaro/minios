@@ -17,9 +17,6 @@ struct pipe_s {
 
 LIST_HEAD(unused_pipe_t, pipe_s) unused_pipes;
 
-#include <minios/debug.h>
-#include <minios/vga.h>
-
 size_t pipe_read(struct file_s *flip, char *buf, size_t n)
 {
     int i, j;
