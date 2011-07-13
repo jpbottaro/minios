@@ -7,15 +7,6 @@
 #include "debug.h"
 #include "pm.h"
 
-#define MM_NOCREAT 0x0
-#define MM_CREAT   0x1
-
-#define MM_PRESENT 0x1
-#define MM_RDWR    0x2
-#define MM_USER    0x4
-#define MM_VALID   0x100
-#define MM_SHARED  0x200
-
 extern void _pf_handler();
 
 struct page_s pages[PAGES_LEN];
@@ -82,12 +73,12 @@ void pf_handler()
     if (page == NULL)
         goto bad_pf;
 
-    if (!(page->attr & MM_USER) && !superuser) {
+    if (!(page->attr & MM_ATTR_US) && !superuser) {
         goto bad_pf;
-    } else if (!(page->attr & MM_PRESENT)) {
+    } else if (!(page->attr & MM_ATTR_P)) {
         if (page->attr & MM_VALID)
             res = mm_newpage(current_process, page);
-    } else if (!(page->attr & MM_RDWR)) {
+    } else if (!(page->attr & MM_ATTR_RW)) {
         if (!(page->attr & MM_SHARED))
             mm_copypage(current_process, page); /* copy on write */
     }
@@ -117,6 +108,7 @@ void mm_init()
 
     /* register sys calls */
     SCALL_REGISTER(45, sys_palloc);
+    SCALL_REGISTER(46, sys_share_page);
 
     /* register page fault handler */
     idt_register(14, _pf_handler, DEFAULT_PL);
@@ -200,6 +192,19 @@ mm_page* mm_dir_new()
     return dirbase;
 }
 
+void copy_table_fork(mm_page *to, mm_page *from)
+{
+    mm_page *end = from + (PAGE_SIZE / sizeof(mm_page *));
+
+    while (from < end) {
+        if (!(from->attr & MM_SHARED))
+            from->attr &= ~MM_ATTR_RW;
+        *to = *from;
+        to++;
+        from++;
+    }
+}
+
 /* copy a page directory table */
 mm_page *mm_dir_cpy(mm_page *dir)
 {
@@ -212,7 +217,9 @@ mm_page *mm_dir_cpy(mm_page *dir)
     for (d = dir; d < end; d++, dirbase++) {
         if (d->attr & MM_ATTR_P) {
             tablebase = (mm_page *) mm_mem_alloc();
-            mymemcpy((char *) tablebase, (char *) (d->base << 12), PAGE_SIZE);
+            mm_map_page(dirbase, tablebase, tablebase);
+            /* map pages in cr3 - TODO */
+            copy_table_fork(tablebase, (mm_page *) (d->base << 12));
             *dirbase = make_mm_entry_addr(tablebase, d->attr);
         } else {
             *dirbase = make_mm_entry_addr(0, 0);
@@ -243,4 +250,15 @@ void *sys_palloc()
     mm_map_page_attr(current_process->pages_dir, virt, 0, 6 | MM_VALID);
 
     return virt;
+}
+
+int sys_share_page(void *page)
+{
+    mm_page *entry;
+
+    entry = search_page(current_process->pages_dir, page, MM_NOCREAT);
+    if (entry == NULL)
+        return -1;
+    entry->attr |= MM_SHARED;
+    return 0;
 }

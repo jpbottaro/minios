@@ -214,13 +214,13 @@ pid_t sys_fork()
     /* build user stack */
     stack = mm_mem_alloc();
     process->stack = stack;
-    mm_map_page(dirbase, (void *) STACK_PAGE, stack);
+    mm_map_page_attr(dirbase, (void *) STACK_PAGE, stack, 7 | MM_SHARED);
     mymemcpy(stack, (char *) STACK_PAGE, PAGE_SIZE);
 
     /* build kernel stack */
     page = mm_mem_alloc();
     process->kstack = page;
-    mm_map_page(dirbase, (void *) KSTACK_PAGE, page);
+    mm_map_page_attr(dirbase, (void *) KSTACK_PAGE, page, 7 | MM_SHARED);
     mymemcpy(page, (char *) KSTACK_PAGE, PAGE_SIZE);
 
     /* add to scheduler */
@@ -358,12 +358,12 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     /* build user stack */
     stack = mm_mem_alloc();
     process->stack = stack;
-    mm_map_page(dirbase, (void *) STACK_PAGE, stack);
+    mm_map_page_attr(dirbase, (void *) STACK_PAGE, stack, 7 | MM_SHARED);
 
     /* build kernel stack */
     page = mm_mem_alloc();
     process->kstack = page;
-    mm_map_page(dirbase, (void *) KSTACK_PAGE, page);
+    mm_map_page_attr(dirbase, (void *) KSTACK_PAGE, page, 7 | MM_SHARED);
 
     i = j = 0;
     if (argv != NULL) {

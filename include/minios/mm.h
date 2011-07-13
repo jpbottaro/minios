@@ -22,6 +22,12 @@
 
 #define MM_ATTR_USR   0xE00 // bits for kernel
 
+#define MM_NOCREAT 0x0
+#define MM_CREAT   0x1
+
+#define MM_VALID   0x100
+#define MM_SHARED  0x200
+
 /* Control Register flags */
 #define CR0_PE		0x00000001	// Protection Enable
 #define CR0_MP		0x00000002	// Monitor coProcessor
@@ -79,9 +85,11 @@ void mm_mem_free(void *page);
 mm_page *mm_dir_new();
 mm_page *mm_dir_cpy(mm_page *dir);
 void mm_map_page(mm_page *dir, void *vir, void *phy);
+void mm_map_page_attr(mm_page *dir, void *vir, void *phy, int attr);
 void mm_umap_page(mm_page *dir, void *vir);
 void mm_dir_free(mm_page *d);
 
 void *sys_palloc();
+int sys_share_page(void *page);
 
 #endif /* _MM_H */
