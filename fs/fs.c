@@ -82,7 +82,7 @@ int fs_open(const char *filename, int flags, int mode)
 
     release_inode(dir);
 
-    if (flags & O_CREAT)
+    if (ino->i_zone[0] == 0 && (flags & O_CREAT))
         fill_inode(ino, mode);
 
     if (flags & O_TRUNC)
