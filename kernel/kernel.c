@@ -26,18 +26,18 @@ void kernel_init()
     /* clear the screen */
     vga_clear();
 
+    /* initialize interrupt table */
+    idt_init();
+
+    /* initialize debug info (and indirectly most exception handlers) */
+    debug_init();
+
     /* initialize memory managment unit */
     mm_init();
 
     /* enable paging (kernel is identity mapped from 0x0 to 0x400000) */
     lcr3((unsigned int) mm_dir_new());
     lcr0(rcr0() | 0x80000000);
-
-    /* initialize interrupt table */
-    idt_init();
-
-    /* initialize debug info (and indirectly most exception handlers) */
-    debug_init();
 
     /* set hw clock to 50hz */
     clock_init(50);
