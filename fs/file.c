@@ -27,6 +27,7 @@ void init_fds(unsigned int id)
         file = ps[id].files;
         for (i = 0; i < 3; ++i) {
             file->f_ino = ino;
+            file->f_used = 1;
             file->f_pos = 0; file->f_fd = i;
             dev_file_calls(file, imayor(file->f_ino));
             ino->i_refcount++;
@@ -37,6 +38,7 @@ void init_fds(unsigned int id)
         for (; i < MAX_FILES; ++i) {
             file->f_fd = i;
             file->f_ino = NULL;
+            file->f_used = 0;
             file->f_pos = 0;
             LIST_INSERT_HEAD(unused_fd, file, unused);
             file++;
@@ -51,11 +53,11 @@ void init_fds(unsigned int id)
             file->f_pos = parent_file->f_pos;
             file->f_pipenr = parent_file->f_pipenr;
             file->f_op = parent_file->f_op;
-            if (file->f_ino == NULL) {
+            file->f_used = parent_file->f_used;
+            if (!parent_file->f_used) {
                 LIST_INSERT_HEAD(unused_fd, file, unused);
-            } else {
+            } else if (file->f_ino != NULL) {
                 file->f_ino->i_refcount++;
-                dev_file_calls(file, imayor(file->f_ino));
             }
         }
     }
@@ -77,6 +79,7 @@ int get_fd(struct inode_s *ino, unsigned int pos)
     }
 
     if (file != NULL) {
+        file->f_used  = 1;
         file->f_ino = ino;
         file->f_pos = pos;
         return file->f_fd;
@@ -98,6 +101,7 @@ int release_fd(int fd)
         release_inode(file->f_ino);
         file->f_ino = NULL;
         file->f_pos = 0;
+        file->f_used  = 0;
         LIST_INSERT_HEAD(unused_fd, file, unused);
         return OK;
     } else {
@@ -114,6 +118,7 @@ int get_fd_pipe(struct file_operations_s *ops, int nr)
     file = LIST_FIRST(unused_fd);
     if (file != NULL) {
         LIST_REMOVE(file, unused);
+        file->f_used = 1;
         file->f_op = ops;
         file->f_pipenr = nr;
         return file->f_fd;
@@ -127,6 +132,7 @@ int release_fd_pipe(int fd)
     struct unused_fd_t *unused_fd = &current_process->unused_fd;
     struct file_s *file = &current_process->files[fd];
 
+    file->f_used  = 0;
     file->f_ino = NULL;
     file->f_pos = 0;
     LIST_INSERT_HEAD(unused_fd, file, unused);

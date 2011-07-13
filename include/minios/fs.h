@@ -46,6 +46,7 @@ struct file_s {
     int f_fd;
     u32_t f_pos;
     int f_pipenr;
+    int f_used;
     struct inode_s *f_ino;
 
     struct file_operations_s *f_op;
