@@ -66,8 +66,6 @@ typedef struct str_mm_page {
 
 #define PAGES_LEN ((CODE_OFFSET - KERNEL_PAGES) / PAGE_SIZE)
 #define hash_page(base) ((((u32_t) (base)) - KERNEL_PAGES) / PAGE_SIZE)
-#define increase_refcount_page(base) (++pages[hash_page(base)].refcount)
-#define decrease_refcount_page(base) (--pages[hash_page(base)].refcount)
 
 struct page_s {
     /* starting address */

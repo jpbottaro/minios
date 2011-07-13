@@ -13,6 +13,22 @@ struct page_s pages[PAGES_LEN];
 
 LIST_HEAD(free_pages_t, page_s) free_pages;
 
+int increase_refcount_page(void *page)
+{
+    if (page < (void *) KERNEL_PAGES || page > (void *) CODE_OFFSET)
+        return -1;
+    struct page_s *p = &pages[hash_page(page)];
+    return ++p->refcount;
+}
+
+int decrease_refcount_page(void *page)
+{
+    if (page < (void *) KERNEL_PAGES || page > (void *) CODE_OFFSET)
+        return -1;
+    struct page_s *p = &pages[hash_page(page)];
+    return --p->refcount;
+}
+
 mm_page *search_page(mm_page *dir, void *vir, int flag)
 {
     mm_page *dir_entry;
@@ -56,7 +72,7 @@ void *mm_copypage(struct process_state_s *p, mm_page *page)
     mm_umap_page(p->pages_dir, 0);
 
     /* decrease refcount of oldpage */
-    decrease_refcount_page(old_page);
+    decrease_refcount_page((void *) old_page);
 
     return new_page;
 }
@@ -143,7 +159,7 @@ void mm_mem_free(void *page)
 {
     if (page < (void *) KERNEL_PAGES || page > (void *) CODE_OFFSET)
         debug_panic("mm_mem_free: page off limits");
-    if (decrease_refcount_page(page) == 0)
+    if (decrease_refcount_page((void *) page) == 0)
         LIST_INSERT_HEAD(&free_pages, &pages[hash_page(page)], status);
 }
 
@@ -207,7 +223,7 @@ void copy_table_fork(mm_page *to, mm_page *from)
             from->attr &= ~MM_ATTR_RW;
         *to = *from;
         if (from->attr & MM_ATTR_P)
-            increase_refcount_page(from->base << 12);
+            increase_refcount_page((void *) (from->base << 12));
         to++;
         from++;
     }
