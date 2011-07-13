@@ -18,7 +18,7 @@ global mkdir
 global rmdir
 global pipe
 global palloc
-global share_mem
+global share_page
 global getdents
 
 ; ------- code
@@ -75,7 +75,7 @@ pipe:
 palloc:
     mov eax, 45
     jmp next
-share_mem:
+share_page:
     mov eax, 46
     jmp next
 getdents:

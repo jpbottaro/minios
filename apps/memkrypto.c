@@ -14,19 +14,24 @@
 #define READ_SIZE 0x1000
 
 /* output to stdout the contents of a pipe */
-int reader(int fd, int file, char *buf, int *len)
+int reader(int file, int to_encrypt, int to_writer, char *buf, int *len)
 {
     int tmp;
 
-    while (read(fd, &tmp, 1) > 0) {
+    while (read(to_encrypt, &tmp, 1) > 0) {
         if (write(file, buf, *len) != *len) {
+            write(STDOUT_FILENO, ERR_WRITE, sizeof(ERR_WRITE) - 1);
+            _exit(-1);
+        }
+        if (write(to_writer, &tmp, 1) != 1) {
             write(STDOUT_FILENO, ERR_WRITE, sizeof(ERR_WRITE) - 1);
             _exit(-1);
         }
     }
 
     close(file);
-    close(fd);
+    close(to_encrypt);
+    close(to_writer);
     return 0;
 }
 
@@ -66,15 +71,17 @@ int encrypt(int fd_from, char *buf_from, int *len_from,
 }
 
 /* write a file to the pipe */
-int writer(int file, int fd, char *buf, int *len)
+int writer(int file, int to_encrypt, int to_reader, char *buf, int *len)
 {
     int tmp;
 
     while ( (*len = read(file, buf, READ_SIZE)) > 0) {
-        if (write(fd, &tmp, 1) != 1) {
+        if (write(to_encrypt, &tmp, 1) != 1) {
             write(STDOUT_FILENO, ERR_WRITE, sizeof(ERR_WRITE) - 1);
             _exit(-1);
         }
+        if (read(to_reader, &tmp, 1) <= 0)
+            break;
     }
 
     if (*len < 0) {
@@ -83,7 +90,8 @@ int writer(int file, int fd, char *buf, int *len)
     }
 
     close(file);
-    close(fd);
+    close(to_encrypt);
+    close(to_reader);
     return 0;
 }
 
@@ -93,6 +101,7 @@ int main(int argc, char *argv[])
     int fd;
     int writer2encrypt[2];
     int encrypt2reader[2];
+    int reader2writer[2];
     char *buf_writer, *buf_reader;
     int *r;
 
@@ -102,7 +111,7 @@ int main(int argc, char *argv[])
     }
 
     /* create 2 pipes */
-    if (pipe(encrypt2reader) < 0 || pipe(writer2encrypt) < 0) {
+    if (pipe(encrypt2reader) < 0 || pipe(writer2encrypt) < 0 || pipe(reader2writer) < 0) {
         write(STDOUT_FILENO, ERR_PIPE, sizeof(ERR_PIPE) - 1);
         return -1;
     }
@@ -110,6 +119,9 @@ int main(int argc, char *argv[])
     buf_reader = (char *) palloc();
     buf_writer = (char *) palloc();
     r = (int *) palloc();
+    share_page((void *) buf_reader);
+    share_page((void *) buf_writer);
+    share_page((void *) r);
 
     pid = fork();
     if (pid < (pid_t) 0) {
@@ -119,6 +131,7 @@ int main(int argc, char *argv[])
         close(writer2encrypt[0]);
         close(writer2encrypt[1]);
         close(encrypt2reader[1]);
+        close(reader2writer[0]);
 
         if (argc > 2) {
             if ( (fd = open(argv[2], O_CREAT | O_RDWR, 0)) < 0) {
@@ -130,7 +143,7 @@ int main(int argc, char *argv[])
         }
 
         /* READER process */
-        return reader(encrypt2reader[0], fd, buf_reader, r+1);
+        return reader(fd, encrypt2reader[0], reader2writer[1], buf_reader, r+1);
     } else {
         pid = fork();
         if (pid < (pid_t) 0) {
@@ -147,6 +160,7 @@ int main(int argc, char *argv[])
             close(encrypt2reader[0]);
             close(encrypt2reader[1]);
             close(writer2encrypt[0]);
+            close(reader2writer[1]);
 
             /* open the file to encrypt */
             if ( (fd = open(argv[1], O_RDONLY, 0)) < 0) {
@@ -155,7 +169,7 @@ int main(int argc, char *argv[])
             }
 
             /* WRITER process */
-            return writer(fd, writer2encrypt[1], buf_writer, r);
+            return writer(fd, writer2encrypt[1], reader2writer[0], buf_writer, r);
         }
     }
 
