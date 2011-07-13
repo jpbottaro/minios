@@ -10,7 +10,7 @@
 #define ERR_FORK1 "Error in first fork()\n"
 #define ERR_FORK2 "Error in second fork()\n"
 
-#define READ_SIZE 0x1000
+#define READ_SIZE 0x100
 
 /* output to a file the contents of a pipe */
 int reader(int fd, int file)
