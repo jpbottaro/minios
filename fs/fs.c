@@ -108,7 +108,7 @@ err:
 /* generic close */
 int sys_close(int fd)
 {
-    int r;
+    int r = 0;
     struct file_s *flip = get_file(fd);
 
     if (flip == NULL)
@@ -529,10 +529,10 @@ int sys_flush(int fd)
         return ERROR;
 
     if (flip->f_op == NULL)
-        debug_panic("sys_read: f_op is NULL");
+        debug_panic("sys_flush: f_op is NULL");
 
     if (flip->f_op->flush == NULL)
-        debug_panic("sys_read: flush func pointer is NULL");
+        debug_panic("sys_flush: flush func pointer is NULL");
 
     return flip->f_op->flush(flip);
 }
