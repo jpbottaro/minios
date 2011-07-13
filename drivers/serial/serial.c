@@ -102,10 +102,12 @@ size_t serial_read(struct file_s *flip, char *buf, size_t n)
 
 ssize_t serial_write(struct file_s *flip, char *buf, size_t n)
 {
-    int i;
+    int i, j;
 
-    for (i = 0; i < n; i++)
+    for (i = 0; i < n; i++) {
         outb(SP_PORT, buf[i]);
+        for (j = 0; j < 10000; j++);
+    }
 
     return i;
 }
