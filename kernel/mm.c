@@ -7,29 +7,101 @@
 #include "debug.h"
 #include "pm.h"
 
+#define MM_NOCREAT 0x0
+#define MM_CREAT   0x1
+
+#define MM_PRESENT 0x1
+#define MM_RDWR    0x2
+#define MM_USER    0x4
+#define MM_VALID   0x100
+#define MM_SHARED  0x200
+
 extern void _pf_handler();
 
 struct page_s pages[PAGES_LEN];
 
 LIST_HEAD(free_pages_t, page_s) free_pages;
 
-int valid_page(unsigned int page)
+mm_page *search_page(mm_page *dir, void *vir, int flag)
 {
-    return 1;
+    mm_page *dir_entry;
+
+    dir_entry = dir + ((u32_t) vir >> 22);
+
+    /* table not present? */
+    if (!(dir_entry->attr & MM_ATTR_P)) {
+        if (flag == MM_NOCREAT)
+            return NULL;
+        void *table_page = mm_mem_alloc();
+        *dir_entry = make_mm_entry_addr(table_page, 7);
+        mm_map_page(dir, table_page, table_page);
+    }
+
+    return (mm_page *) (dir_entry->base << 12) +
+                       (((u32_t) vir >> 12) & 0x3FF);
+}
+
+void *mm_newpage(struct process_state_s *p, mm_page *page)
+{
+    mm_page *new_page = mm_mem_alloc();
+    if (new_page == NULL)
+        return NULL;
+    add_process_page(p, new_page);
+    *page = make_mm_entry_addr(new_page,  7);
+    tlbflush();
+    return new_page;
+}
+
+void *mm_copypage(struct process_state_s *p, mm_page *page)
+{
+    char *old_page, *new_page;
+
+    old_page = (char *) (page->base << 12);
+    new_page = (char *) mm_newpage(p, page);
+
+    /* copy the page */
+    mm_map_page(p->pages_dir, 0, old_page);
+    mymemcpy(new_page, 0, PAGE_SIZE);
+    mm_umap_page(p->pages_dir, 0);
+
+    return new_page;
 }
 
 /* new handler for page fault to force exit of ring3 tasks who force it */
 void pf_handler()
 {
-    if (valid_page(rcr2())) {
-        mm_page *page = mm_mem_alloc();
-        add_process_page(current_process, page);
-        mm_map_page(current_process->pages_dir, (mm_page *) rcr2(), page);
-    } else if (current_process == NULL || current_process->uid == 1) {
-        isr14();
-    } else {
-        sys_exit(-1);
+    mm_page *page, *res;
+    int superuser;
+
+    superuser = 1;
+    if (current_process == NULL)
+        goto bad_pf;
+    res = NULL;
+    superuser = (current_process->uid == 1);
+    page = search_page(current_process->pages_dir, (void *) rcr2(), MM_NOCREAT);
+    if (page == NULL)
+        goto bad_pf;
+
+    if (!(page->attr & MM_USER) && !superuser) {
+        goto bad_pf;
+    } else if (!(page->attr & MM_PRESENT)) {
+        if (page->attr & MM_VALID)
+            res = mm_newpage(current_process, page);
+    } else if (!(page->attr & MM_RDWR)) {
+        if (!(page->attr & MM_SHARED))
+            mm_copypage(current_process, page); /* copy on write */
     }
+
+    if (res == NULL)
+        goto bad_pf;
+
+    return;
+
+bad_pf:
+    if (superuser)
+        isr14();
+    else
+        sys_exit(-1);
 }
 
 /* init memory manager */
@@ -80,23 +152,14 @@ void mm_mem_free(void *page)
 /* map a page in the PDT */
 void mm_map_page_attr(mm_page *dir, void *vir, void *phy, int attr)
 {
-    mm_page *dir_entry, *table_entry;
+    mm_page *table_entry;
 
-    dir_entry = dir + ((u32_t) vir >> 22);
-
-    /* table not present? */
-    if (!(dir_entry->attr & MM_ATTR_P)) {
-        void *table_page = mm_mem_alloc();
-        *dir_entry = make_mm_entry_addr(table_page, 7);
-        mm_map_page(dir, table_page, table_page);
-    }
-
-    table_entry = (mm_page *) (dir_entry->base << 12) +
-                              (((u32_t) vir >> 12) & 0x3FF);
+    table_entry = search_page(dir, vir, MM_CREAT);
     *table_entry = make_mm_entry_addr(phy,  attr);
     tlbflush();
 }
 
+/* map a page in the PDT marked user, r/w, present */
 void mm_map_page(mm_page *dir, void *vir, void *phy)
 {
     mm_map_page_attr(dir, vir, phy, 7);
@@ -105,16 +168,10 @@ void mm_map_page(mm_page *dir, void *vir, void *phy)
 /* umap a page in the PDT */
 void mm_umap_page(mm_page *dir, void *vir)
 {
-    mm_page *dir_entry, *table_entry;
+    mm_page *table_entry;
 
-    dir_entry = dir + ((u32_t) vir >> 22);
-    table_entry = (mm_page *) (dir_entry->base << 12) +
-                                                (((u32_t) vir >> 12) & 0x3FF);
-
-    /* page not mapped? */
-    if (!(dir_entry->attr & MM_ATTR_P) || !(table_entry->attr & MM_ATTR_P))
+    if ( (table_entry = search_page(dir, vir, MM_NOCREAT)) == NULL)
         debug_panic("mm_umap_page: page not mapped");
-
     table_entry->attr = 0;
     tlbflush();
 }
@@ -182,7 +239,8 @@ void *sys_palloc()
 
     virt = current_process->last_mem;
     current_process->last_mem += PAGE_SIZE;
-    mm_map_page_attr(current_process->pages_dir, virt, 0, 7);
+    /* set bit to remember that this page is valid */
+    mm_map_page_attr(current_process->pages_dir, virt, 0, 6 | MM_VALID);
 
     return virt;
 }
