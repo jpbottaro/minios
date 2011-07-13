@@ -5,9 +5,8 @@
 #include <sys/queue.h>
 #include <sys/dir.h>
 
-#define MAX_FILES 10
+#define MAX_FILES 15
 #define NR_ZONES  10
-
 #define BLOCK_SIZE 1024
 
 struct inode_s {
