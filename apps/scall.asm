@@ -20,6 +20,7 @@ global pipe
 global palloc
 global share_page
 global getdents
+global flush
 
 ; ------- code
 
@@ -80,6 +81,9 @@ share_page:
     jmp next
 getdents:
     mov eax, 141
+    jmp next
+flush:
+    mov eax, 200
     jmp next
 
 next:

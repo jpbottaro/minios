@@ -31,7 +31,7 @@ int reader(int fd, int file)
     }
 
     close(file);
-    close(fd);
+    flush(fd);
     return 0;
 }
 
@@ -68,8 +68,8 @@ int encrypt(int fd_from, int fd_to)
         _exit(-1);
     }
 
-    close(fd_from);
-    close(fd_to);
+    flush(fd_from);
+    flush(fd_to);
     return 0;
 }
 
@@ -92,7 +92,7 @@ int writer(int file, int fd)
     }
 
     close(file);
-    close(fd);
+    flush(fd);
     return 0;
 }
 
@@ -119,10 +119,6 @@ int main(int argc, char *argv[])
         write(STDOUT_FILENO, ERR_FORK1, sizeof(ERR_FORK1) - 1);
         return -1;
     } else if (pid == (pid_t) 0) {
-        close(writer2encrypt[0]);
-        close(writer2encrypt[1]);
-        close(encrypt2reader[1]);
-
         if (argc > 2) {
             if ( (fd = open(argv[2], O_CREAT | O_RDWR, 0)) < 0) {
                 write(STDOUT_FILENO, ERR_OPEN, sizeof(ERR_OPEN) - 1);
@@ -131,6 +127,9 @@ int main(int argc, char *argv[])
         } else {
             fd = STDOUT_FILENO;
         }
+        close(writer2encrypt[0]);
+        close(writer2encrypt[1]);
+        close(encrypt2reader[1]);
 
         /* READER process */
         return reader(encrypt2reader[0], fd);
@@ -146,15 +145,14 @@ int main(int argc, char *argv[])
             /* ENCRYPT process */
             return encrypt(writer2encrypt[0], encrypt2reader[1]);
         } else {
-            close(encrypt2reader[0]);
-            close(encrypt2reader[1]);
-            close(writer2encrypt[0]);
-
             /* open the file to encrypt */
             if ( (fd = open(argv[1], O_RDONLY, 0)) < 0) {
                 write(STDOUT_FILENO, ERR_OPEN, sizeof(ERR_OPEN) - 1);
                 return -1;
             }
+            close(encrypt2reader[0]);
+            close(encrypt2reader[1]);
+            close(writer2encrypt[0]);
 
             /* WRITER process */
             return writer(fd, writer2encrypt[1]);

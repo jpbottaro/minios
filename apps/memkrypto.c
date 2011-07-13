@@ -30,8 +30,8 @@ int reader(int file, int to_encrypt, int to_writer, char *buf, int *len)
     }
 
     close(file);
-    close(to_encrypt);
-    close(to_writer);
+    flush(to_encrypt);
+    flush(to_writer);
     return 0;
 }
 
@@ -65,8 +65,8 @@ int encrypt(int fd_from, char *buf_from, int *len_from,
         }
     }
 
-    close(fd_from);
-    close(fd_to);
+    flush(fd_from);
+    flush(fd_to);
     return 0;
 }
 
@@ -90,8 +90,8 @@ int writer(int file, int to_encrypt, int to_reader, char *buf, int *len)
     }
 
     close(file);
-    close(to_encrypt);
-    close(to_reader);
+    flush(to_encrypt);
+    flush(to_reader);
     return 0;
 }
 
