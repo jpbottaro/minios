@@ -18,6 +18,7 @@ struct pipe_s {
 LIST_HEAD(unused_pipe_t, pipe_s) unused_pipes;
 
 #include <minios/debug.h>
+#include <minios/vga.h>
 
 size_t pipe_read(struct file_s *flip, char *buf, size_t n)
 {
@@ -27,22 +28,25 @@ size_t pipe_read(struct file_s *flip, char *buf, size_t n)
     i = flip->f_pipenr;
 
     if (pipes[i].done) {
-        j = MIN(n, pipes[i].end - pipes[i].init);
-        pipes[i].init += j;
-        mymemcpy(buf, &pipes[i].buffer[pipes[i].init], j);
+        while (j < n && pipes[i].init < pipes[i].end) {
+            buf[j++] = pipes[i].buffer[pipes[i].init++];
+            if (pipes[i].init == MAX_SIZE) pipes[i].init = 0;
+        }
         return j;
     }
 
-    while (n--) {
+    for (; n > 0; n--) {
         sem_wait(&pipes[i].full);
         if (pipes[i].done) {
-            int min = MIN(n, pipes[i].end - pipes[i].init);
-            pipes[i].init += min;
-            mymemcpy(&buf[j], &pipes[i].buffer[pipes[i].init], min);
-            return j + min;
+            while (j < n && pipes[i].init < pipes[i].end) {
+                buf[j++] = pipes[i].buffer[pipes[i].init++];
+                if (pipes[i].init == MAX_SIZE) pipes[i].init = 0;
+            }
+            return j;
         }
         sem_wait(&pipes[i].mutex);
         buf[j++] = pipes[i].buffer[pipes[i].init++];
+        if (pipes[i].init == MAX_SIZE) pipes[i].init = 0;
         sem_signal(&pipes[i].mutex);
         sem_signal(&pipes[i].empty);
     }
@@ -66,6 +70,7 @@ ssize_t pipe_write(struct file_s *flip, char *buf, size_t n)
             return j;
         sem_wait(&pipes[i].mutex);
         pipes[i].buffer[pipes[i].end++] = buf[j++];
+        if (pipes[i].end == MAX_SIZE) pipes[i].end = 0;
         sem_signal(&pipes[i].mutex);
         sem_signal(&pipes[i].full);
     }
