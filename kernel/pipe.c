@@ -1,11 +1,12 @@
 #include <minios/scall.h>
 #include <minios/pipe.h>
+#include <minios/misc.h>
 #include <minios/sem.h>
 #include <minios/fs.h>
 
 struct pipe_s {
     int i;
-    unsigned char buffer[MAX_SIZE];
+    char buffer[MAX_SIZE];
     int init;
     int end;
     int done;
@@ -16,6 +17,8 @@ struct pipe_s {
 
 LIST_HEAD(unused_pipe_t, pipe_s) unused_pipes;
 
+#include <minios/debug.h>
+
 size_t pipe_read(struct file_s *flip, char *buf, size_t n)
 {
     int i, j;
@@ -23,13 +26,21 @@ size_t pipe_read(struct file_s *flip, char *buf, size_t n)
     j = 0;
     i = flip->f_pipenr;
 
-    if (pipes[i].done)
-        return -1;
+    if (pipes[i].done) {
+        j = MIN(n, pipes[i].end - pipes[i].init);
+        pipes[i].init += j;
+        mymemcpy(buf, &pipes[i].buffer[pipes[i].init], j);
+        return j;
+    }
 
     while (n--) {
         sem_wait(&pipes[i].full);
-        if (pipes[i].done)
-            return -1;
+        if (pipes[i].done) {
+            int min = MIN(n, pipes[i].end - pipes[i].init);
+            pipes[i].init += min;
+            mymemcpy(&buf[j], &pipes[i].buffer[pipes[i].init], min);
+            return j + min;
+        }
         sem_wait(&pipes[i].mutex);
         buf[j++] = pipes[i].buffer[pipes[i].init++];
         sem_signal(&pipes[i].mutex);
@@ -47,12 +58,12 @@ ssize_t pipe_write(struct file_s *flip, char *buf, size_t n)
     i = flip->f_pipenr;
 
     if (pipes[i].done)
-        return -1;
+        return n;
 
     while (n--) {
         sem_wait(&pipes[i].empty);
         if (pipes[i].done)
-            return -1;
+            return j;
         sem_wait(&pipes[i].mutex);
         pipes[i].buffer[pipes[i].end++] = buf[j++];
         sem_signal(&pipes[i].mutex);
