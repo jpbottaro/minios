@@ -260,5 +260,13 @@ int sys_share_page(void *page)
     if (entry == NULL)
         return -1;
     entry->attr |= MM_SHARED;
+
+    /* if we are going to share it, create it now so everybody knows it later */
+    if (entry->attr & MM_VALID) {
+        if ((entry->attr & MM_ATTR_P))
+            mm_newpage(current_process, entry);
+        entry->attr &= ~MM_VALID;
+    }
+
     return 0;
 }
