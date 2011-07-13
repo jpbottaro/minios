@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#define ERR_LEN "Error in len != 0\n"
 #define ERR_ARGC "Too few arguments\n"
 #define ERR_OPEN "Error in open()\n"
 #define ERR_READ "Error in read()\n"
@@ -57,8 +58,8 @@ int encrypt(int fd_from, char *buf_from, int *len_from,
 
     while (read(fd_from, &tmp, 1) > 0) {
         mymemcpy(buf_to, buf_from, *len_from);
-        negate(buf_to, *len_from);
         *len_to = *len_from;
+        negate(buf_to, *len_to);
         if (write(fd_to, &tmp, 1) != 1) {
             write(STDOUT_FILENO, ERR_WRITE, sizeof(ERR_WRITE) - 1);
             _exit(-1);
@@ -84,8 +85,8 @@ int writer(int file, int to_encrypt, int to_reader, char *buf, int *len)
             break;
     }
 
-    if (*len < 0) {
-        write(STDOUT_FILENO, ERR_READ, sizeof(ERR_READ) - 1);
+    if (*len != 0) {
+        write(STDOUT_FILENO, ERR_LEN, sizeof(ERR_LEN) - 1);
         _exit(-1);
     }
 
