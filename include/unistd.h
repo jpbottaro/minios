@@ -41,6 +41,7 @@ extern void exit(int _status);
 extern pid_t fork();
 extern int chdir(const char *_path);
 extern int close(int _fd);
+extern int flush(int _fd);
 extern int newprocess(const char *_path, char *const _argv[]);
 extern int waitpid(unsigned int pid, int *status, int options);
 extern gid_t getgid(void);
