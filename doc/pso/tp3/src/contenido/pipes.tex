@@ -1,3 +1,24 @@
 \section{Pipes}
 
-COMPLETAR
+El primer método y más simple que se presenta es el de pipes. Éstas simulan una
+tubería con 1 sola salida y 1 sola entrada. En general un proceso mantiene el
+extremo de entrada o input, en donde vuelca sus datos, y otro proceso maneja el
+otro extremo, donde los lee.
+
+En nuestro caso estas operaciones (lectura y escritura) son bloqueantes. La
+manera que resolví implementarlo fue simplemente crear un arreglo de
+estructuras $pipe\_s$ que mantienen información de una pipe en particular. Ya
+que se maneja como un buffer circular, se mantienen además del buffer, su
+indice actual y hasta cuanto esta escrito. Para manejar la concurrencia se
+utilizaron 3 semáforos, y el algoritmo para leer/escribir de una pipe sigue el
+método clásico de semáforos para el problema del lector/escritor (ver
+$pipe\_read$ y $pipe\_write$).
+
+La manera en que se pide una nueva pipes es similar a *nix, con la system call
+$pipe$. Aquí se reserva una nueva estructura para la pipe, se inicializan los
+semaforos/variables/buffer, y por último se crean los file descriptors de cada
+extremo de la pipe. Estos file descriptors siguen el sistema que se detalló en
+el tp2, es decir que tienen una estructura $file\_operations\_s$ que detalla a
+quien llamar en caso de recibir un read/write/etc. sobre ese file descriptor.
+Aquí mismo se proveen las 2 funciones de lectura/escritura, dependiendo del
+extremo.

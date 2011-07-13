@@ -1,3 +1,15 @@
 \section{Programa Krypto}
 
-COMPLETAR
+Para mostrar un poco esta nueva funcionalidad, se crearon 2 aplicaciones:
+krypto y memkrypto.
+
+La primera consiste en 3 procesos, uno que lee un archivo y lo escribe en una
+pipe, otro que lee esta pipe, lo ecripta y lo reenvia por otra pipe, y por
+último un proceso que lee este archivo encriptado y lo reproduce en stdout (o
+un archivo/dispositivo en el disco). Esto muestra un poco el manejo de las
+pipes y su funcionalidad.
+
+La otra aplicación es memkrypto, en donde también utilizamos las pipes pero
+para sincronización (como mutexes). Luego el verdadero paso de datos se hace
+por memoria compartida, utilizando como se explicó anteriormente palloc() y
+share\_page().

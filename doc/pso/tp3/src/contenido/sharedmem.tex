@@ -1,3 +1,34 @@
 \section{Memoria Compartida}
 
-COMPLETAR
+El segundo mecanismo que se presenta es el de memoria compartida. En este caso,
+al pedirle páginas al kernel con la llamada palloc(), uno también puede
+marcarlas como compartidas con la llamada share\_page(). Esto hará que todos
+los procesos hijos usen la misma página para leer/escribir.
+
+Esto se logró simplemente marcando en el directorio de páginas que la página se
+encuentra compartida (utilizando uno de los bits disponibles para el
+desarrollador). Luego al realizar un fork(), el kernel no copiará esta página,
+sino que le dejará la entrada igual a todos los procesos, efectivamente
+habilitandolos para utilizar el mismo espacio de memoria entre todos.
+
+También cabe destacar el mecanismo de palloc(), que no crea la página que
+provee, sino que espera a que esta sea utilizada para obtenerla. Logra esto
+usando otro de los bits de las entradas en el directorio de páginas, y marcando
+la página como no presente. Luego al igual que en el mecanismo anterior, se
+evalúa la situación al recibir un page fault, y si se encuentra que la página
+no esta presente pero esta marcada como válida, se la crea y continua la
+ejecución.
+
+Por último, en el caso de que una página se halla creado con palloc, pero no se
+halla compartido entre los procesos, ésta no será duplicada hasta que no sea
+escrita. Esto se logra marcando la página como de solo lectura, pero dejando
+seteado que puede escribirse. Luego el procesa que intente escribirla disparará
+un page fault, que tomará la página, la copiará y le devolverá el control a la
+aplicación (copy-on-write).
+
+A la hora de tener que manejar la liberación de estos recursos, cada página es
+manejada por una estructura que contiene un contador de referencias. Éste
+contador aumenta obviamente cada vez que alguien tiene como usada esta página.
+Luego la página se libera únicamente cuando este contador llega a 0, y no
+antes. Así nos ahorramos el problema de que una página compartida sea liberada
+por un proceso, si que el resto pueda utilizarla.

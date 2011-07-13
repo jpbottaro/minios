@@ -1,3 +1,23 @@
 \section{Fork}
 
-COMPLETAR
+Todo el manejo de pipes no tiene demasiado sentido si no se provee una forma de
+que 2 procesos compartan estos nuevos file descriptos creados. De aquí surge
+fork, la llamada al sistema de *nix que realiza una copia exacta del programa
+en ejecución, y encola a ambos para correr.
+
+Como ambos comparten los fds (además de las páginas y otras cosas), se pueden
+comunicar utilizando las pipes antees creadas.
+
+El fork es muy similar a la llamada newprocess(), solo que en este caso no
+cargamos un nuevo ejecutable, sino que utilizamos las mismas páginas que ya
+tenemos. Luego debemos: tomar una nueva estructura $process\_state\_s$;
+inicializar sus valores generales como pid/gid/uid/parent/etc; copiar los fds
+del proceso padre; copiar el directorio de páginas (tomando algunas
+precauciones que ya veremos más adelante); crear nuevas pilas (copiando las del
+padre); y por último encolar el proceso como listo.
+
+A la hora de tener que copiar el directorio de páginas, hay que tener en cuenta
+si las páginas estan compartidas o no. Ya veremos más adelante este mecanismo,
+pero básicamente si una página no está compartida, la seteamos como solo
+lectura y ambos la utilizan. Luego en el caso de que alguno quiera escribirla,
+esto generará una excepción y se disparará el mecanismo de copy-on-write.
