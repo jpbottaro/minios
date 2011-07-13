@@ -483,6 +483,7 @@ debugger_log: -
 #=======================================================================
 #com1: enabled=1, mode=term, dev=/dev/ttyp9
 #com1: enabled=1, mode=socket-server, dev=localhost:9999
+com1: enabled=1, mode=file, dev=serial.out
 
 
 #=======================================================================
