@@ -46,7 +46,7 @@ void kernel_init()
     ramdisk_init(FS_INITIAL_POS);
 
     /* add ramdisk driver */
-    //hdd_init();
+    hdd_init();
 
     /* initialize our file system */
     fs_init(DEV_RAMDISK);

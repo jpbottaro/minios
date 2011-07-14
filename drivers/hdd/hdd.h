@@ -1,74 +1,118 @@
+/* This driver is _heavily_ based in a version made by Ezequiel Aguerre,
+ * and is intended for public use.
+ */
+
 #ifndef __HDD_H__
 #define __HDD_H__
 
 #include <minios/dev.h>
 #include <sys/types.h>
 
-#define HDD_CMD 0x1F0
-#define HDD_CTL 0x3F6
+/* Offsets de los puertos */
+#define ATA_REG_DATA       0x00
+#define ATA_REG_ERROR      0x01
+#define ATA_REG_FEATURES   0x01
+#define ATA_REG_SECCOUNT   0x02
+#define ATA_REG_LBA_LOW    0x03
+#define ATA_REG_LBA_MED    0x04
+#define ATA_REG_LBA_HIGH   0x05
+#define ATA_REG_HDDEVSEL   0x06
+#define ATA_REG_COMMAND    0x07
+#define ATA_REG_STATUS     0x07
+#define ATA_REG_LBA3       0x03
+#define ATA_REG_LBA4       0x04
+#define ATA_REG_LBA5       0x05
 
-#define REG_DATA	    0	/* data register (offset from the base reg.) */
-#define REG_PRECOMP	    1	/* start of write precompensation */
-#define REG_COUNT	    2	/* sectors to transfer */
-#define REG_SECTOR	    3	/* sector number */
-#define REG_CYL_LO	    4	/* low byte of cylinder number */
-#define REG_CYL_HI	    5	/* high byte of cylinder number */
-#define REG_LDH		    6	/* lba, drive and head */
-#define   LDH_DEFAULT		0xA0	/* ECC enable, 512 bytes per sector */
+#define ATA_REG_CONTROL    0x02
+#define ATA_REG_ALTSTATUS  0x02
+#define ATA_REG_DEVADDRESS 0x0D
 
-/* Read only registers */
-#define REG_STATUS	    7	/* status */
-#define   STATUS_BSY		0x80	/* controller busy */
-#define	  STATUS_RDY		0x40	/* drive ready */
-#define	  STATUS_WF		0x20	/* write fault */
-#define	  STATUS_SC		0x10	/* seek complete (obsolete) */
-#define	  STATUS_DRQ		0x08	/* data transfer request */
-#define	  STATUS_CRD		0x04	/* corrected data */
-#define	  STATUS_IDX		0x02	/* index pulse */
-#define	  STATUS_ERR		0x01	/* error */
-#define	  STATUS_ADMBSY	       0x100	/* administratively busy (software) */
-#define REG_ERROR	    1	/* error code */
-#define	  ERROR_BB		0x80	/* bad block */
-#define	  ERROR_ECC		0x40	/* bad ecc bytes */
-#define	  ERROR_ID		0x10	/* id not found */
-#define	  ERROR_AC		0x04	/* aborted command */
-#define	  ERROR_TK		0x02	/* track zero error */
-#define	  ERROR_DM		0x01	/* no data address mark */
+#define ATA_REG_BMICOM     0x00
+#define ATA_REG_BMISTA     0x02
+#define ATA_REG_BMIDTP     0x04
 
-/* Write only registers */
-#define REG_COMMAND	    7	/* command */
-#define   CMD_IDLE		0x00	/* for w_command: drive idle */
-#define   CMD_RECALIBRATE	0x10	/* recalibrate drive */
-#define   CMD_READ		0x20	/* read data */
-#define   CMD_READ_EXT		0x24	/* read data (LBA48 addressed) */
-#define   CMD_READ_DMA_EXT	0x25	/* read data using DMA (w/ LBA48) */
-#define   CMD_WRITE		0x30	/* write data */
-#define	  CMD_WRITE_EXT		0x34	/* write data (LBA48 addressed) */
-#define   CMD_WRITE_DMA_EXT	0x35	/* write data using DMA (w/ LBA48) */
-#define   CMD_READVERIFY	0x40	/* read verify */
-#define   CMD_FORMAT		0x50	/* format track */
-#define   CMD_SEEK		0x70	/* seek cylinder */
-#define   CMD_DIAG		0x90	/* execute device diagnostics */
-#define   CMD_SPECIFY		0x91	/* specify parameters */
-#define   CMD_READ_DMA		0xC8	/* read data using DMA */
-#define   CMD_WRITE_DMA		0xCA	/* write data using DMA */
-#define   CMD_FLUSH_CACHE	0xE7	/* flush the write cache */
-#define   ATA_IDENTIFY		0xEC	/* identify drive */
-/* #define REG_CTL		0x206	*/ /* control register */
-#define REG_CTL		0	/* control register */
-#define   CTL_NORETRY		0x80	/* disable access retry */
-#define   CTL_NOECC		0x40	/* disable ecc retry */
-#define   CTL_EIGHTHEADS	0x08	/* more than eight heads */
-#define   CTL_RESET		0x04	/* reset controller */
-#define   CTL_INTDISABLE	0x02	/* disable interrupts */
-#define REG_CTL_ALTSTAT 0	/* alternate status register */
+/* STATUS */
+#define ATA_SR_BSY     0x80
+#define ATA_SR_DRDY    0x40
+#define ATA_SR_DF      0x20
+#define ATA_SR_DSC     0x10
+#define ATA_SR_DRQ     0x08
+#define ATA_SR_CORR    0x04
+#define ATA_SR_IDX     0x02
+#define ATA_SR_ERR     0x01
 
-#define LBA48_CHECK_SIZE	0x0f000000
-#define LBA_MAX_SIZE		0x0fffffff	/* Highest sector size for reg LBA */
+/* FEATURES/ERROR PORT */
+#define ATA_ER_BBK      0x80
+#define ATA_ER_UNC      0x40
+#define ATA_ER_MC       0x20
+#define ATA_ER_IDNF     0x10
+#define ATA_ER_MCR      0x08
+#define ATA_ER_ABRT     0x04
+#define ATA_ER_TK0NF    0x02
+#define ATA_ER_AMNF     0x01
 
-#define   CTL_EIGHTHEADS	0x08	/* more than eight heads */
+/* COMMAND PORT */
+#define ATA_CMD_READ_PIO          0x20
+#define ATA_CMD_READ_PIO_EXT      0x24
+#define ATA_CMD_READ_DMA          0xC8
+#define ATA_CMD_READ_DMA_EXT      0x25
+#define ATA_CMD_WRITE_PIO         0x30
+#define ATA_CMD_WRITE_PIO_EXT     0x34
+#define ATA_CMD_WRITE_DMA         0xCA
+#define ATA_CMD_WRITE_DMA_EXT     0x35
+#define ATA_CMD_CACHE_FLUSH       0xE7
+#define ATA_CMD_CACHE_FLUSH_EXT   0xEA
+#define ATA_CMD_PACKET            0xA0
+#define ATA_CMD_IDENTIFY_PACKET   0xA1
+#define ATA_CMD_IDENTIFY          0xEC
+#define ATAPI_CMD_READ            0xA8
+#define ATAPI_CMD_EJECT           0x1B
 
-#define SECTOR_SIZE 512
+/* IDENTIFICATION SPACE */
+#define ATA_IDENT_DEVICETYPE   0
+#define ATA_IDENT_CYLINDERS    2
+#define ATA_IDENT_HEADS        6
+#define ATA_IDENT_SECTORS      12
+#define ATA_IDENT_SERIAL       20
+#define ATA_IDENT_MODEL        54
+#define ATA_IDENT_CAPABILITIES 98
+#define ATA_IDENT_FIELDVALID   106
+#define ATA_IDENT_MAX_LBA      120
+#define ATA_IDENT_COMMANDSETS  164
+#define ATA_IDENT_MAX_LBA_EXT  200
+
+/* CONTROL PORT */
+#define ATA_CTRL_NIEN  0x02
+#define ATA_CTRL_SRST  0x04
+#define ATA_CTRL_HOB   0x08
+
+
+/* Interfaces */
+#define IDE_ATA        0x00
+#define IDE_ATAPI      0x01
+
+/* Discos */
+#define ATA_MASTER     0x00
+#define ATA_SLAVE      0x01
+
+/* Canales */
+#define ATA_PRIMARY    0x00
+#define ATA_SECONDARY  0x01
+
+/* Direcciones */
+#define ATA_READ       0x00
+#define ATA_WRITE      0x01
+
+#define ATA_USE_BUS(x) sem_wait(&((x)->sem_op))
+#define ATA_FREE_BUS(x) sem_signal(&((x)->sem_op))
+#define ATA_WAIT_IRQ(x) sem_wait(&((x)->sem_irq))
+
+static inline void iowait()
+{
+    inb(0x1F0 + ATA_REG_STATUS);
+}
+
+#define ATA_DELAY() do { iowait();iowait();iowait();iowait();iowait(); } while(0)
 
 void hdd_init();
 

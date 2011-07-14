@@ -48,6 +48,14 @@ LS_INLINE unsigned char inb(int port) {
     return val;
 }
 
+LS_INLINE void insw(unsigned short port, void *addr, unsigned int cnt)
+{
+   __asm volatile("rep; insw"
+       : "+D" (addr), "+c" (cnt)
+       : "d" (port)
+       : "memory");
+}
+
 LS_INLINE void outb(int port, unsigned char data) {
     __asm __volatile("outb %0,%w1" : : "a" (data), "d" (port));
 }

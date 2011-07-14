@@ -1,155 +1,225 @@
-/* HEAVILY based on at_wini driver from minix v3 */
+/* This driver is _heavily_ based in a version made by Ezequiel Aguerre,
+ * and is intended for public use.
+ */
 
+#include <minios/debug.h>
 #include <minios/i386.h>
-#include <minios/debug.h>
-#include <minios/debug.h>
+#include <minios/misc.h>
+#include <minios/sem.h>
 #include <minios/dev.h>
 #include <minios/idt.h>
 #include "hdd.h"
 
-#define ULONG_MAX 4294967295UL
+struct ata_controller {
+    u16_t port;
+    u16_t cport;
+    u8_t selected_drive;
+    u8_t last_status;
+    int irq;
+    int channel;
+    sem_t sem_irq;
+    sem_t sem_op;
+} controller;
 
-/* Common command block */
-struct command {
-    u8_t	precomp;	/* REG_PRECOMP, etc. */
-    u8_t	count;
-    u8_t	sector;
-    u8_t	cyl_lo;
-    u8_t	cyl_hi;
-    u8_t	command;
+static struct ide_device {
+    int present;
+    int drive;
+    int type;
+    int signature;
+    int capabilities;
+    int cmdset;
+    u32_t size_in_sectors;
+    int lba48;
+    struct ata_controller *controller;
+} drive;
 
-    /* The following at for LBA48 */
-    u8_t	count_prev;
-    u8_t	sector_prev;
-    u8_t	cyl_lo_prev;
-    u8_t	cyl_hi_prev;
-};
+u8_t tmp_buf[512];
 
-static struct wini {
-    unsigned state;         /* drive state: deaf, initialized, dead */
-    unsigned short w_status;    /* device status register */
-    unsigned lcylinders;        /* logical number of cylinders (BIOS) */
-    unsigned lheads;        /* logical number of heads */
-    unsigned lsectors;      /* logical number of sectors per track */
-    unsigned pcylinders;    /* physical number of cylinders (translated) */
-    unsigned pheads;        /* physical number of heads */
-    unsigned psectors;      /* physical number of sectors per track */
-    unsigned open_ct;       /* in-use count */
-    unsigned long size;     /* total size */
-} wn;
-
-u8_t tmp_buf[SECTOR_SIZE];
-
-#define id_byte(n)	(&tmp_buf[2 * (n)])
-#define id_word(n)	(((u16_t) id_byte(n)[0] <<  0) \
-        | ((u16_t) id_byte(n)[1] <<  8))
-#define id_longword(n)	(((u32_t) id_byte(n)[0] <<  0) \
-        | ((u32_t) id_byte(n)[1] <<  8) \
-        | ((u32_t) id_byte(n)[2] << 16) \
-        | ((u32_t) id_byte(n)[3] << 24))
-
-int w_waitfor(mask, value)
+void hdd_wait_idle(struct ata_controller *ata)
 {
-    int s;
+    u8_t status;
+    int i, limit = 1000;
 
-    /* wtf polling ! we should have a timeout here or smth */
-    while ( ((s = inb(HDD_CMD + REG_STATUS)) & mask) != value)
-        ;
-    wn.w_status = s;
-
-    return 1;
+    /* wait 10ms and then timeout */
+    do {
+        /* (should be 10ms or smth) */
+        for (i = 0; i < 10000; i++);
+        status = inb(ata->port + ATA_REG_STATUS);
+        limit--;
+    } while (status != 0xff && (status & (ATA_SR_BSY | ATA_SR_DRQ)) && limit);
+    if (!limit)
+        debug_panic("hdd_wait_idle: timeout");
 }
 
-int com_out(struct command *cmd)
+int hdd_wait_status(struct ata_controller *ata)
 {
-    w_waitfor(STATUS_BSY, 0);
+    u8_t status;
+    int i, j;
 
-    wn.w_status = STATUS_ADMBSY;
-    outb(HDD_CTL + REG_CTL, wn.pheads >= 8 ? CTL_EIGHTHEADS : 0);
-    outb(HDD_CMD + REG_PRECOMP, cmd->precomp);
-    outb(HDD_CMD + REG_COUNT, cmd->count);
-    outb(HDD_CMD + REG_SECTOR, cmd->sector);
-    outb(HDD_CMD + REG_CYL_LO, cmd->cyl_lo);
-    outb(HDD_CMD + REG_CYL_HI, cmd->cyl_hi);
-    outb(HDD_CMD + REG_COMMAND, cmd->command);
+    for (i = 0; i < 1000; i++) {
+        status = inb(ata->port + ATA_REG_STATUS);
+        if ((status & (ATA_SR_BSY | ATA_SR_DRQ)) == ATA_SR_DRQ)
+            return 0;
+        if (status & (ATA_SR_ERR | ATA_SR_DF))
+            return -1;
+        if (!status)
+            return -1;
 
+        /* add delay (should be 10ms or smth) */
+        for (j = 0; j < 10000; j++);
+    }
+
+    return -1;
+}
+
+int hdd_select(struct ide_device *ide)
+{
+    struct ata_controller *ata = ide->controller;
+    u8_t drive = 0xA0 | (ide->drive << 4);
+
+    if (ata->selected_drive == drive)
+        return 0;
+
+    hdd_wait_idle(ata);
+
+    outb(ata->port + ATA_REG_HDDEVSEL, drive);
+    inb(ata->cport + ATA_REG_ALTSTATUS);
+    ATA_DELAY();
+
+    hdd_wait_idle(ata);
+    ata->selected_drive = drive;
     return 0;
 }
 
-int at_intr_wait()
+void hdd_reset(struct ata_controller *ata)
 {
-    /* Wait for an interrupt */
-    int r;
+    outb(ata->cport + ATA_REG_CONTROL, ATA_CTRL_SRST);
+    ATA_DELAY();
+    outb(ata->cport + ATA_REG_CONTROL, ATA_CTRL_NIEN);
+    ATA_DELAY();
 
-    w_waitfor(STATUS_BSY, 0);
-    if ((wn.w_status & (STATUS_BSY | STATUS_WF | STATUS_ERR)) == 0) {
-        r = 0;
-    } else {
-        debug_panic("at_intr_wait: wtf error");
+    hdd_wait_idle(ata);
+}
+
+void hdd_identify(struct ide_device *ide) {
+    struct ata_controller *ata = ide->controller;
+
+    /* select device */
+    if (hdd_select(ide)) {
+        ide->present = 0;
+        return;
     }
-    wn.w_status |= STATUS_ADMBSY;   /* assume still busy with I/O */
-    return r;
+
+    /* ask to identify */
+    outb(ata->port + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
+    ATA_DELAY();
+    hdd_wait_idle(ata);
+
+    if (hdd_wait_status(ata)) {
+        ide->present = 0;
+        return;
+    }
+
+    insw(ata->port + ATA_REG_DATA, tmp_buf, 128);
+
+    ide->present = 1;
+    ide->type = IDE_ATA;
+    ide->signature = *((u16_t *) (tmp_buf + ATA_IDENT_DEVICETYPE));
+    ide->capabilities = *((u16_t *) (tmp_buf + ATA_IDENT_CAPABILITIES));
+    ide->cmdset = *((u32_t *) (tmp_buf + ATA_IDENT_COMMANDSETS));
+    ide->lba48 = (ide->cmdset & (1 << 26)) == (1 << 26);
+
+    if (ide->lba48)
+        ide->size_in_sectors = *((u32_t *) (tmp_buf + ATA_IDENT_MAX_LBA_EXT));
+    else
+        ide->size_in_sectors = *((u32_t *) (tmp_buf + ATA_IDENT_MAX_LBA));
 }
 
-int com_simple(struct command *cmd)
+/* quik n dirty */
+size_t hdd_lseek(struct file_s *flip, off_t offset, int whence)
 {
-    /* A controller command, only one interrupt and no data-out phase. */
-    int r;
-
-    if (com_out(cmd) == 0)
-        r = at_intr_wait();
-
-    return r;
-}
-
-int get_data(int port, u8_t *buf, int size)
-{
-    int i;
-    for (i = 0; i < size; i++)
-        buf[i] = inb(port);
+    flip->f_pos = offset;
     return 0;
 }
 
-static int identify()
-{
-    int r;
-    struct command cmd;
+static int hdd_pio_read(struct ide_device *ide, u32_t lba,
+                        u32_t seccount, void *buffer) {
+	struct ata_controller *ata = ide->controller;
 
-    /* Select drive. */
-    outb(HDD_CMD + REG_LDH, LDH_DEFAULT);
-    inb(HDD_CMD + REG_STATUS);
-    inb(HDD_CMD + REG_STATUS);
-    inb(HDD_CMD + REG_STATUS);
-    inb(HDD_CMD + REG_STATUS);
-    w_waitfor(STATUS_BSY, 0);
+	ATA_USE_BUS(ata);
+	if ( ide->lba48 ) {
+		outb(ata->port + ATA_REG_HDDEVSEL, 0x40 | (ide->drive << 4));
+		outb(ata->port + ATA_REG_SECCOUNT, (u8_t) (seccount >> 8));
+		outb(ata->port + ATA_REG_LBA_LOW, (u8_t) (lba >> 24));
+		outb(ata->port + ATA_REG_LBA_MED, 0); /* LBA32 */
+		outb(ata->port + ATA_REG_LBA_HIGH, 0); /* LBA32 */
+	} else {
+		outb(ata->port + ATA_REG_HDDEVSEL, 0xE0 | (ide->drive << 4) | (lba >> 24));
+	}
 
-    cmd.command = ATA_IDENTIFY;
-    r = com_simple(&cmd);
+	outb(ata->port + ATA_REG_SECCOUNT, (u8_t) seccount);
+	outb(ata->port + ATA_REG_LBA_LOW, (u8_t) lba);
+	outb(ata->port + ATA_REG_LBA_MED, (u8_t) (lba >> 8));
+	outb(ata->port + ATA_REG_LBA_HIGH, (u8_t) (lba >> 16));
+	outb(ata->port + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
 
-    if (r == 0 && w_waitfor(STATUS_DRQ, STATUS_DRQ) &&
-            !(wn.w_status & (STATUS_ERR|STATUS_WF))) {
-
-        /* Device information. */
-        if (get_data(HDD_CMD + REG_DATA, tmp_buf, SECTOR_SIZE) != 0)
-            debug_panic("identify: call to get_data() failed");
-
-        wn.pcylinders = id_word(1);
-        wn.pheads = id_word(3);
-        wn.psectors = id_word(6);
-
-        /* assume LBA28 */
-        wn.size = id_word(60);
-        
-        /* assume LBA48 */
-        //wn.size = id_longword(100);
+    while (seccount--) {
+        ATA_WAIT_IRQ(ata);
+        insw(ata->port + ATA_REG_DATA, buffer, 256);
+        buffer += 256;
     }
-
+    ATA_FREE_BUS(ide->controller);
     return 0;
 }
 
 size_t hdd_read(struct file_s *flip, char *buf, size_t n)
 {
-    return 0;
+    void *temp = NULL;
+    u32_t first_sector = flip->f_pos >> 9;
+    u32_t last_sector  = (flip->f_pos + n + 511) >> 9;
+    u32_t seccount = last_sector - first_sector;
+    u32_t orig_size = n;
+
+    /* check if it is easy */
+    if (flip->f_pos == (first_sector << 9) && n % 512 == 0) {
+        if (hdd_pio_read(&drive, first_sector, seccount, buf))
+            return -1;
+        return n;
+    }
+
+    /* do it the hard way */
+    temp = mm_mem_alloc();
+    if (!temp) return -1;
+
+    /* read the unaligned first sector */
+    u32_t offset = flip->f_pos % 512;
+    u32_t sz = n < 512 - offset ? n : 512 - offset;
+    if (hdd_pio_read(&drive, first_sector, 1, temp)) goto error;
+    mymemcpy(buf, temp + offset, sz);
+
+    /* read the middle part */
+    first_sector++;
+    n -= sz;
+    offset += sz;
+    while (n > 512) {
+        if (hdd_pio_read(&drive, first_sector, 1, buf + offset)) goto error;
+        n -= 512;
+        offset += 512;
+        first_sector++;
+    }
+
+    /* read the unaligned last sector */
+    if (n > 0) {
+        if (hdd_pio_read(&drive, first_sector, 1, temp)) goto error;
+        mymemcpy(buf + offset, temp, n);
+    }
+
+    mm_mem_free(temp);
+    flip->f_pos += orig_size;
+    return orig_size;
+error:
+    if (temp) mm_mem_free(temp);
+    return -1;
 }
 
 ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
@@ -165,6 +235,7 @@ int hdd_flush(struct file_s *flip)
 static struct file_operations_s ops = {
     .read = hdd_read,
     .write = hdd_write,
+    .lseek = hdd_lseek,
     .flush = hdd_flush
 };
 
@@ -177,18 +248,30 @@ extern void hdd_intr();
 
 void hdd_init()
 {
-    /* preparar struct */
-
-    /* Try to identify the device. */
-    if (identify() != 0)
-        debug_panic("hdd_init(): cannot find hdd");
-
-    /* make char device in /dev */
-    //fs_make_dev("hdd", I_BLOCK, DEV_HDD, 0);
+    /* prepare structs */
+    controller.port = 0x1F0;
+    controller.port = 0x3F4;
+    sem_init(&controller.sem_irq, 0);
+    sem_init(&controller.sem_op, 1);
+    drive.controller = &controller;
+    drive.drive = ATA_MASTER;
 
     /* register interruption handler */
     idt_register(46, hdd_intr, DEFAULT_PL);
 
+    /* try to identify the device. */
+    hdd_reset(&controller);
+    hdd_identify(&drive);
+
+    /* enable interruptions */
+    inb(controller.port + ATA_REG_STATUS);
+    outb(controller.cport + ATA_REG_CONTROL, 0);
+
+    /* make char device in /dev */
+    //fs_make_dev("hdd", I_BLOCK, DEV_HDD, 0);
+
     /* register device */
     dev_register(DEV_HDD, &ops);
+
+    vga_printf(20, 0, "Size: %i", drive.size_in_sectors);
 }
