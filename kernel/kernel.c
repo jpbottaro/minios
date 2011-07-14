@@ -45,11 +45,11 @@ void kernel_init()
     /* add ramdisk driver */
     ramdisk_init(FS_INITIAL_POS);
 
-    /* add ramdisk driver */
-    hdd_init();
-
     /* initialize our file system */
     fs_init(DEV_RAMDISK);
+
+    /* add ramdisk driver */
+    hdd_init();
 
     /* init the pipe module */
     pipe_init();
