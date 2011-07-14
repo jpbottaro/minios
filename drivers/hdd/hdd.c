@@ -139,34 +139,58 @@ size_t hdd_lseek(struct file_s *flip, off_t offset, int whence)
     return 0;
 }
 
-static int hdd_pio_read(struct ide_device *ide, u32_t lba,
-                        u32_t seccount, void *buffer) {
-	struct ata_controller *ata = ide->controller;
+static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
+                            u32_t seccount, void *buffer, int flag) {
+    struct ata_controller *ata = ide->controller;
+    u8_t cmd = flag == ATA_READ ? ATA_CMD_READ_PIO : ATA_CMD_WRITE_PIO;
+    u8_t flush = ATA_CMD_CACHE_FLUSH;
 
-	ATA_USE_BUS(ata);
-	if ( ide->lba48 ) {
-		outb(ata->port + ATA_REG_HDDEVSEL, 0x40 | (ide->drive << 4));
-		outb(ata->port + ATA_REG_SECCOUNT, (u8_t) (seccount >> 8));
-		outb(ata->port + ATA_REG_LBA_LOW, (u8_t) (lba >> 24));
-		outb(ata->port + ATA_REG_LBA_MED, 0); /* LBA32 */
-		outb(ata->port + ATA_REG_LBA_HIGH, 0); /* LBA32 */
-	} else {
-		outb(ata->port + ATA_REG_HDDEVSEL, 0xE0 | (ide->drive << 4) | (lba >> 24));
-	}
+    ATA_USE_BUS(ata);
+    if ( ide->lba48 ) {
+        outb(ata->port + ATA_REG_HDDEVSEL, 0x40 | (ide->drive << 4));
+        outb(ata->port + ATA_REG_SECCOUNT, (u8_t) (seccount >> 8));
+        outb(ata->port + ATA_REG_LBA_LOW, (u8_t) (lba >> 24));
+        outb(ata->port + ATA_REG_LBA_MED, 0); /* LBA32 */
+        outb(ata->port + ATA_REG_LBA_HIGH, 0); /* LBA32 */
+        cmd = flag == ATA_READ ? ATA_CMD_READ_PIO_EXT : ATA_CMD_WRITE_PIO_EXT;
+        flush = ATA_CMD_CACHE_FLUSH_EXT;
+    } else {
+        outb(ata->port + ATA_REG_HDDEVSEL, 0xE0 | (ide->drive << 4) | (lba >> 24));
+    }
 
-	outb(ata->port + ATA_REG_SECCOUNT, (u8_t) seccount);
-	outb(ata->port + ATA_REG_LBA_LOW, (u8_t) lba);
-	outb(ata->port + ATA_REG_LBA_MED, (u8_t) (lba >> 8));
-	outb(ata->port + ATA_REG_LBA_HIGH, (u8_t) (lba >> 16));
-	outb(ata->port + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
+    outb(ata->port + ATA_REG_SECCOUNT, (u8_t) seccount);
+    outb(ata->port + ATA_REG_LBA_LOW, (u8_t) lba);
+    outb(ata->port + ATA_REG_LBA_MED, (u8_t) (lba >> 8));
+    outb(ata->port + ATA_REG_LBA_HIGH, (u8_t) (lba >> 16));
+    outb(ata->port + ATA_REG_COMMAND, cmd);
 
-    while (seccount--) {
+    if (flag == ATA_READ) {
+        while (seccount--) {
+            hdd_wait_status(ata);
+            insw(ata->port + ATA_REG_DATA, buffer, 256);
+            buffer += 256;
+        }
+    } else {
+        while (seccount--) {
+            outsw(ata->port + ATA_REG_DATA, buffer, 256);
+            buffer += 256;
+            hdd_wait_status(ata);
+        }
+        outb(ata->port + ATA_REG_COMMAND, flush);
         hdd_wait_status(ata);
-        insw(ata->port + ATA_REG_DATA, buffer, 256);
-        buffer += 256;
     }
     ATA_FREE_BUS(ata);
+
     return 0;
+}
+
+static int hdd_pio_read(struct ide_device *ide, u32_t lba, u32_t seccount, void *buffer)
+{
+    return hdd_pio_transfer(ide, lba, seccount, buffer, ATA_READ);
+}
+static int hdd_pio_write(struct ide_device *ide, u32_t lba, u32_t seccount, const void *buffer)
+{
+    return hdd_pio_transfer(ide, lba, seccount, (void *) buffer, ATA_WRITE);
 }
 
 size_t hdd_read(struct file_s *flip, char *buf, size_t n)
@@ -219,13 +243,17 @@ error:
     return -1;
 }
 
+/* only works for 1 aligned sector */
 ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
 {
-    return 0;
+    //if (hdd_pio_write(&drive, flip->f_pos, n / 512, buf))
+    //    return -1;
+    return n;
 }
 
 int hdd_flush(struct file_s *flip)
 {
+    hdd_pio_write(&drive, 0, 0, 0);
     return 0;
 }
 
@@ -250,7 +278,7 @@ void hdd_init()
     hdd_identify(&drive);
 
     /* make char device in /dev */
-    //fs_make_dev("hdd", I_BLOCK, DEV_HDD, 0);
+    fs_make_dev("hdd", I_BLOCK, DEV_HDD, 0);
 
     /* register device */
     dev_register(DEV_HDD, &ops);

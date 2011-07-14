@@ -104,6 +104,13 @@ LS_INLINE void insw(unsigned short port, void *addr, unsigned int cnt)
             : "memory");
 }
 
+LS_INLINE void outsw(unsigned short port, const void *addr, unsigned int cnt)
+{
+    __asm volatile("rep; outsw"
+            : "+S" (addr), "+c" (cnt)
+            : "d" (port));
+}
+
 LS_INLINE void outb(int port, unsigned char data) {
     __asm __volatile("outb %0,%w1" : : "a" (data), "d" (port));
 }
