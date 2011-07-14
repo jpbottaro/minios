@@ -1,6 +1,6 @@
+#include <minios/misc.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <minios/misc.h>
 #include "fs.h"
 
 struct superblock_s superblock;
