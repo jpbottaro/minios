@@ -42,6 +42,54 @@ LS_INLINE unsigned int cmpxchg(volatile unsigned int *addr,
                                         unsigned int oldval,
                                         unsigned int newval);
 
+
+
+/* [Linux] Taken from Linux arch/x86/lib/delay.c */
+LS_INLINE void delay_loop(unsigned long loops)
+{
+    __asm __volatile(
+            "       test %0,%0      \n"
+            "       jz 3f           \n"
+            "       jmp 1f          \n"
+
+            ".align 16              \n"
+            "1:     jmp 2f          \n"
+
+            ".align 16              \n"
+            "2:     dec %0          \n"
+            "       jnz 2b          \n"
+            "3:     dec %0          \n"
+
+            : /* we don't need output */
+            :"a" (loops)
+            );
+}
+
+LS_INLINE void __const_udelay(unsigned long xloops)
+{
+    int d0;
+
+    xloops *= 4;
+    __asm __volatile ("mull %%edx"
+            :"=d" (xloops), "=&a" (d0)
+            :"1" (xloops));
+
+    delay_loop(++xloops);
+}
+
+LS_INLINE void udelay(unsigned long usecs)
+{
+    __const_udelay(usecs * 0x000010c7); /* 2**32 / 1000000 (rounded up) */
+}
+/* [\Linux] */
+
+
+LS_INLINE void iowait() {
+    unsigned char data = 0;
+    int port = 0x80;
+    __asm __volatile("outb %0,%w1" : : "a" (data), "d" (port));
+}
+
 LS_INLINE unsigned char inb(int port) {
     unsigned char val;
     __asm __volatile("inb %%dx,%0" : "=a" (val) : "d" (port));
@@ -50,10 +98,10 @@ LS_INLINE unsigned char inb(int port) {
 
 LS_INLINE void insw(unsigned short port, void *addr, unsigned int cnt)
 {
-   __asm volatile("rep; insw"
-       : "+D" (addr), "+c" (cnt)
-       : "d" (port)
-       : "memory");
+    __asm volatile("rep; insw"
+            : "+D" (addr), "+c" (cnt)
+            : "d" (port)
+            : "memory");
 }
 
 LS_INLINE void outb(int port, unsigned char data) {
@@ -109,7 +157,7 @@ LS_INLINE unsigned int rcr4(void) {
     __asm __volatile("movl %%cr4,%0" : "=r" (cr4));
     return cr4;
 }
- 
+
 LS_INLINE unsigned int resp(void) {
     unsigned int esp;
     __asm __volatile("movl %%esp,%0" : "=r" (esp));
@@ -222,15 +270,15 @@ LS_INLINE unsigned int rebp(void) {
 }
 
 LS_INLINE unsigned int cmpxchg(volatile unsigned int *addr,
-                                        unsigned int oldval,
-                                        unsigned int newval)
+        unsigned int oldval,
+        unsigned int newval)
 {
     unsigned char result;
 
     // The + in "+m" denotes a read-modify-write operand.
     __asm __volatile("lock cmpxchgl %3, %1 \n setzb %0" :
-                     "=qm" (result), "+m" (*addr) :
-                     "a" (oldval), "r" (newval));
+            "=qm" (result), "+m" (*addr) :
+            "a" (oldval), "r" (newval));
     return result;
 }
 
