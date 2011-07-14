@@ -144,6 +144,7 @@ static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
     struct ata_controller *ata = ide->controller;
     u8_t cmd = flag == ATA_READ ? ATA_CMD_READ_PIO : ATA_CMD_WRITE_PIO;
     u8_t flush = ATA_CMD_CACHE_FLUSH;
+    int i;
 
     ATA_USE_BUS(ata);
     if ( ide->lba48 ) {
@@ -172,7 +173,8 @@ static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
         }
     } else {
         while (seccount--) {
-            outsw(ata->port + ATA_REG_DATA, buffer, 256);
+            for (i = 0; i < 512; ++i)
+                outb(ata->port + ATA_REG_DATA, *((char *) buffer + i));
             buffer += 256;
             hdd_wait_status(ata);
         }
@@ -278,7 +280,7 @@ void hdd_init()
     hdd_identify(&drive);
 
     /* make char device in /dev */
-    fs_make_dev("hdd", I_BLOCK, DEV_HDD, 0);
+    //fs_make_dev("hdd", I_BLOCK, DEV_HDD, 0);
 
     /* register device */
     dev_register(DEV_HDD, &ops);
