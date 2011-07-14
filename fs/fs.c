@@ -550,9 +550,6 @@ int fs_make_dev(const char *name, int type, dev_t major, dev_t minor)
     if ( (ino = find_inode(dev, name, FS_SEARCH_CREAT)) == NULL)
         goto err;
 
-    /* fill it if it is empty */
-    if (ino->i_free)
-        fill_inode(ino, type);
     ino->i_zone[0] = major;
     ino->i_zone[1] = minor;
 
