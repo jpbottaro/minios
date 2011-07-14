@@ -169,13 +169,13 @@ static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
         while (seccount--) {
             hdd_wait_status(ata);
             insw(ata->port + ATA_REG_DATA, buffer, 256);
-            buffer += 256;
+            buffer += 512;
         }
     } else {
         while (seccount--) {
             for (i = 0; i < 512; ++i)
                 outb(ata->port + ATA_REG_DATA, *((char *) buffer + i));
-            buffer += 256;
+            buffer += 512;
             hdd_wait_status(ata);
         }
         outb(ata->port + ATA_REG_COMMAND, flush);
