@@ -8,7 +8,7 @@
 #include <minios/dev.h>
 #include <sys/types.h>
 
-/* Offsets de los puertos */
+/* port offsets */
 #define ATA_REG_DATA       0x00
 #define ATA_REG_ERROR      0x01
 #define ATA_REG_FEATURES   0x01
@@ -31,7 +31,7 @@
 #define ATA_REG_BMISTA     0x02
 #define ATA_REG_BMIDTP     0x04
 
-/* STATUS */
+/* status */
 #define ATA_SR_BSY     0x80
 #define ATA_SR_DRDY    0x40
 #define ATA_SR_DF      0x20
@@ -41,7 +41,7 @@
 #define ATA_SR_IDX     0x02
 #define ATA_SR_ERR     0x01
 
-/* FEATURES/ERROR PORT */
+/* features/errors port */
 #define ATA_ER_BBK      0x80
 #define ATA_ER_UNC      0x40
 #define ATA_ER_MC       0x20
@@ -51,7 +51,7 @@
 #define ATA_ER_TK0NF    0x02
 #define ATA_ER_AMNF     0x01
 
-/* COMMAND PORT */
+/* command port */
 #define ATA_CMD_READ_PIO          0x20
 #define ATA_CMD_READ_PIO_EXT      0x24
 #define ATA_CMD_READ_DMA          0xC8
@@ -68,7 +68,7 @@
 #define ATAPI_CMD_READ            0xA8
 #define ATAPI_CMD_EJECT           0x1B
 
-/* IDENTIFICATION SPACE */
+/* ident space */
 #define ATA_IDENT_DEVICETYPE   0
 #define ATA_IDENT_CYLINDERS    2
 #define ATA_IDENT_HEADS        6
@@ -81,37 +81,29 @@
 #define ATA_IDENT_COMMANDSETS  164
 #define ATA_IDENT_MAX_LBA_EXT  200
 
-/* CONTROL PORT */
+/* control port */
 #define ATA_CTRL_NIEN  0x02
 #define ATA_CTRL_SRST  0x04
 #define ATA_CTRL_HOB   0x08
 
-
-/* Interfaces */
+/* interfaces */
 #define IDE_ATA        0x00
 #define IDE_ATAPI      0x01
 
-/* Discos */
+/* disks */
 #define ATA_MASTER     0x00
 #define ATA_SLAVE      0x01
 
-/* Canales */
+/* channels */
 #define ATA_PRIMARY    0x00
 #define ATA_SECONDARY  0x01
 
-/* Direcciones */
+/* direcctions */
 #define ATA_READ       0x00
 #define ATA_WRITE      0x01
 
-#define ATA_USE_BUS(x) sem_wait(&((x)->sem_op))
-#define ATA_FREE_BUS(x) sem_signal(&((x)->sem_op))
-#define ATA_WAIT_IRQ(x) sem_wait(&((x)->sem_irq))
-
-static inline void iowait()
-{
-    inb(0x1F0 + ATA_REG_STATUS);
-}
-
+#define ATA_USE_BUS(x) sem_wait(&((x)->sem_transfer))
+#define ATA_FREE_BUS(x) sem_signal(&((x)->sem_transfer))
 #define ATA_DELAY() do { iowait();iowait();iowait();iowait();iowait(); } while(0)
 
 void hdd_init();

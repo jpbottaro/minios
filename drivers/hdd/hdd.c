@@ -7,7 +7,6 @@
 #include <minios/misc.h>
 #include <minios/sem.h>
 #include <minios/dev.h>
-#include <minios/idt.h>
 #include "hdd.h"
 
 struct ata_controller {
@@ -15,10 +14,7 @@ struct ata_controller {
     u16_t cport;
     u8_t selected_drive;
     u8_t last_status;
-    int irq;
-    int channel;
-    sem_t sem_irq;
-    sem_t sem_op;
+    sem_t sem_transfer;
 } controller;
 
 static struct ide_device {
@@ -38,23 +34,20 @@ u8_t tmp_buf[512];
 void hdd_wait_idle(struct ata_controller *ata)
 {
     u8_t status;
-    int i, limit = 1000;
+    int limit = 1000;
 
     /* wait 10ms and then timeout */
     do {
-        /* (should be 10ms or smth) */
-        for (i = 0; i < 10000; i++);
+        udelay(10000);
         status = inb(ata->port + ATA_REG_STATUS);
         limit--;
     } while (status != 0xff && (status & (ATA_SR_BSY | ATA_SR_DRQ)) && limit);
-    if (!limit)
-        debug_panic("hdd_wait_idle: timeout");
 }
 
 int hdd_wait_status(struct ata_controller *ata)
 {
     u8_t status;
-    int i, j;
+    int i;
 
     for (i = 0; i < 1000; i++) {
         status = inb(ata->port + ATA_REG_STATUS);
@@ -65,8 +58,7 @@ int hdd_wait_status(struct ata_controller *ata)
         if (!status)
             return -1;
 
-        /* add delay (should be 10ms or smth) */
-        for (j = 0; j < 10000; j++);
+        udelay(10000);
     }
 
     return -1;
@@ -87,6 +79,7 @@ int hdd_select(struct ide_device *ide)
     ATA_DELAY();
 
     hdd_wait_idle(ata);
+
     ata->selected_drive = drive;
     return 0;
 }
@@ -164,11 +157,10 @@ static int hdd_pio_read(struct ide_device *ide, u32_t lba,
 	outb(ata->port + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
 
     while (seccount--) {
-        ATA_WAIT_IRQ(ata);
         insw(ata->port + ATA_REG_DATA, buffer, 256);
         buffer += 256;
     }
-    ATA_FREE_BUS(ide->controller);
+    ATA_FREE_BUS(ata);
     return 0;
 }
 
@@ -251,13 +243,9 @@ void hdd_init()
     /* prepare structs */
     controller.port = 0x1F0;
     controller.port = 0x3F4;
-    sem_init(&controller.sem_irq, 0);
-    sem_init(&controller.sem_op, 1);
+    sem_init(&controller.sem_transfer, 1);
     drive.controller = &controller;
     drive.drive = ATA_MASTER;
-
-    /* register interruption handler */
-    idt_register(46, hdd_intr, DEFAULT_PL);
 
     /* try to identify the device. */
     hdd_reset(&controller);
@@ -274,4 +262,5 @@ void hdd_init()
     dev_register(DEV_HDD, &ops);
 
     vga_printf(20, 0, "Size: %i", drive.size_in_sectors);
+    breakpoint();
 }
