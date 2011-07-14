@@ -104,6 +104,10 @@ void hdd_identify(struct ide_device *ide) {
     }
 
     /* ask to identify */
+    outb(ata->port + ATA_REG_SECCOUNT, ATA_CMD_IDENTIFY);
+    outb(ata->port + ATA_REG_LBA_LOW, ATA_CMD_IDENTIFY);
+    outb(ata->port + ATA_REG_LBA_MED, ATA_CMD_IDENTIFY);
+    outb(ata->port + ATA_REG_LBA_HIGH, ATA_CMD_IDENTIFY);
     outb(ata->port + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
     ATA_DELAY();
     hdd_wait_idle(ata);
@@ -113,7 +117,7 @@ void hdd_identify(struct ide_device *ide) {
         return;
     }
 
-    insw(ata->port + ATA_REG_DATA, tmp_buf, 128);
+    insw(ata->port + ATA_REG_DATA, tmp_buf, 256);
 
     ide->present = 1;
     ide->type = IDE_ATA;
@@ -157,6 +161,7 @@ static int hdd_pio_read(struct ide_device *ide, u32_t lba,
 	outb(ata->port + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
 
     while (seccount--) {
+        hdd_wait_status(ata);
         insw(ata->port + ATA_REG_DATA, buffer, 256);
         buffer += 256;
     }
@@ -231,18 +236,11 @@ static struct file_operations_s ops = {
     .flush = hdd_flush
 };
 
-void hdd_handler()
-{
-
-}
-
-extern void hdd_intr();
-
 void hdd_init()
 {
     /* prepare structs */
     controller.port = 0x1F0;
-    controller.port = 0x3F4;
+    controller.cport = 0x3F4;
     sem_init(&controller.sem_transfer, 1);
     drive.controller = &controller;
     drive.drive = ATA_MASTER;
@@ -251,16 +249,9 @@ void hdd_init()
     hdd_reset(&controller);
     hdd_identify(&drive);
 
-    /* enable interruptions */
-    inb(controller.port + ATA_REG_STATUS);
-    outb(controller.cport + ATA_REG_CONTROL, 0);
-
     /* make char device in /dev */
     //fs_make_dev("hdd", I_BLOCK, DEV_HDD, 0);
 
     /* register device */
     dev_register(DEV_HDD, &ops);
-
-    vga_printf(20, 0, "Size: %i", drive.size_in_sectors);
-    breakpoint();
 }

@@ -1,7 +1,7 @@
 DRIVER_NAME=hdd
 DRIVER_DIR=drivers
 ODIR=obj
-_OBJ=hdd.o hdd_intr.o
+_OBJ=hdd.o
 OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
 DEP=$(patsubst %,../$(DRIVER_DIR)/$(DRIVER_NAME)/$(ODIR)/%,$(_OBJ))
 
