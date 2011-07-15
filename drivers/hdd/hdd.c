@@ -199,14 +199,14 @@ size_t hdd_read(struct file_s *flip, char *buf, size_t n)
 {
     void *temp = NULL;
     u32_t first_sector = ATA_TO_SECTOR(flip->f_pos);
-    u32_t last_sector = ATA_TO_SECTOR((flip->f_pos + n + SECTOR_SIZE - 1));
+    u32_t last_sector = ATA_TO_SECTOR((flip->f_pos + n + ATA_SECTOR_SIZE - 1));
     u32_t seccount;
     u32_t orig_size;
 
     /* check limits */
     if (last_sector > drive.size_in_sectors) {
         last_sector = drive.size_in_sectors;
-        n = drive.size_in_sectors * SECTOR_SIZE - flip->f_pos;
+        n = drive.size_in_sectors * ATA_SECTOR_SIZE - flip->f_pos;
     }
     seccount = last_sector - first_sector;
     orig_size = n;
@@ -257,27 +257,27 @@ error:
 ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
 {
     /* hacky fix when buffer does not span in different sectors */
-    char *src, tmp[512];
+    char *src, tmp[ATA_SECTOR_SIZE];
     int i, j, pos, offset, sector;
 
     src = buf;
     pos = flip->f_pos;
-    offset = pos % 512;
-    sector = pos >> 9;
-    if (offset + n < 512) {
+    offset = pos % ATA_SECTOR_SIZE;
+    sector = ATA_TO_SECTOR(pos);
+    if (offset + n < ATA_SECTOR_SIZE) {
         hdd_pio_read(&drive, sector, 1, tmp);
         i = offset;
         j = 0;
         while (j < n)
             tmp[i++] = buf[j++];
         src = tmp;
-        n = 512;
-    } else if (n % 512 != 0 || offset != 0) {
+        n = ATA_SECTOR_SIZE;
+    } else if (n % ATA_SECTOR_SIZE != 0 || offset != 0) {
         debug_panic("hdd_write: random writes not supported");
     }
     /* hacky fix when buffer does not span in different sectors */
 
-    if (hdd_pio_write(&drive, sector, n / 512, src))
+    if (hdd_pio_write(&drive, sector, n / ATA_SECTOR_SIZE, src))
         return -1;
     return n;
 }
