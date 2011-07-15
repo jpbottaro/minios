@@ -144,10 +144,9 @@ static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
     struct ata_controller *ata = ide->controller;
     u8_t cmd = flag == ATA_READ ? ATA_CMD_READ_PIO : ATA_CMD_WRITE_PIO;
     u8_t flush = ATA_CMD_CACHE_FLUSH;
-    int i;
 
     ATA_USE_BUS(ata);
-    if ( ide->lba48 ) {
+    if (ide->lba48) {
         outb(ata->port + ATA_REG_HDDEVSEL, 0x40 | (ide->drive << 4));
         outb(ata->port + ATA_REG_SECCOUNT, (u8_t) (seccount >> 8));
         outb(ata->port + ATA_REG_LBA_LOW, (u8_t) (lba >> 24));
@@ -156,7 +155,7 @@ static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
         cmd = flag == ATA_READ ? ATA_CMD_READ_PIO_EXT : ATA_CMD_WRITE_PIO_EXT;
         flush = ATA_CMD_CACHE_FLUSH_EXT;
     } else {
-        outb(ata->port + ATA_REG_HDDEVSEL, 0xE0 | (ide->drive << 4) | (lba >> 24));
+        outb(ata->port + ATA_REG_HDDEVSEL, 0xE0 | (ide->drive << 4) | ((lba >> 24) & 0x0F));
     }
 
     outb(ata->port + ATA_REG_SECCOUNT, (u8_t) seccount);
@@ -167,19 +166,24 @@ static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
 
     if (flag == ATA_READ) {
         while (seccount--) {
-            hdd_wait_status(ata);
+            if (hdd_wait_status(ata))
+                return -1;
             insw(ata->port + ATA_REG_DATA, buffer, 256);
             buffer += 512;
         }
     } else {
+        if (hdd_wait_status(ata))
+            return -1;
+        /* cant do outsw for writes, we need to do it by hand */
         while (seccount--) {
-            for (i = 0; i < 512; ++i)
-                outb(ata->port + ATA_REG_DATA, *((char *) buffer + i));
+            outsw_delay(ata->port + ATA_REG_DATA, buffer, 256);
             buffer += 512;
-            hdd_wait_status(ata);
+            if (hdd_wait_status(ata))
+                return -1;
         }
         outb(ata->port + ATA_REG_COMMAND, flush);
-        hdd_wait_status(ata);
+        if (hdd_wait_status(ata))
+            return -1;
     }
     ATA_FREE_BUS(ata);
 
