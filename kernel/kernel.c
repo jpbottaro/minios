@@ -9,8 +9,6 @@
 #include "scall.h"
 #include "clock.h"
 
-#define FS_INITIAL_POS 0x20000
-
 /* temporary, will see what is the better way to load drivers */
 #include "../drivers/tty/con.h"
 #include "../drivers/ramdisk/ramdisk.h"
@@ -41,9 +39,6 @@ void kernel_init()
 
     /* set hw clock to 50hz */
     clock_init(50);
-
-    /* add ramdisk driver */
-    ramdisk_init(FS_INITIAL_POS);
 
     /* add ramdisk driver */
     hdd_init();

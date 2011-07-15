@@ -38,7 +38,7 @@ void hdd_wait_idle(struct ata_controller *ata)
 
     /* wait 10ms and then timeout */
     do {
-        udelay(10000);
+        udelay(10);
         status = inb(ata->port + ATA_REG_STATUS);
         limit--;
     } while (status != 0xff && (status & (ATA_SR_BSY | ATA_SR_DRQ)) && limit);
@@ -58,7 +58,7 @@ int hdd_wait_status(struct ata_controller *ata)
         if (!status)
             return -1;
 
-        udelay(10000);
+        udelay(10);
     }
 
     return -1;
@@ -198,10 +198,18 @@ static int hdd_pio_write(struct ide_device *ide, u32_t lba, u32_t seccount, cons
 size_t hdd_read(struct file_s *flip, char *buf, size_t n)
 {
     void *temp = NULL;
-    u32_t first_sector = flip->f_pos >> 9;
-    u32_t last_sector  = (flip->f_pos + n + 511) >> 9;
-    u32_t seccount = last_sector - first_sector;
-    u32_t orig_size = n;
+    u32_t first_sector = ATA_TO_SECTOR(flip->f_pos);
+    u32_t last_sector = ATA_TO_SECTOR((flip->f_pos + n + SECTOR_SIZE - 1));
+    u32_t seccount;
+    u32_t orig_size;
+
+    /* check limits */
+    if (last_sector > drive.size_in_sectors) {
+        last_sector = drive.size_in_sectors;
+        n = drive.size_in_sectors * SECTOR_SIZE - flip->f_pos;
+    }
+    seccount = last_sector - first_sector;
+    orig_size = n;
 
     /* check if it is easy */
     if (flip->f_pos == (first_sector << 9) && n % 512 == 0) {
