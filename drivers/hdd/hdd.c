@@ -216,7 +216,7 @@ size_t hdd_read(struct file_s *flip, char *buf, size_t n)
 
     /* read the unaligned first sector */
     u32_t offset = flip->f_pos % 512;
-    u32_t sz = n < 512 - offset ? n : 512 - offset;
+    u32_t sz = MIN(n, 512 - offset);
     if (hdd_pio_read(&drive, first_sector, 1, temp)) goto error;
     mymemcpy(buf, temp + offset, sz);
 
@@ -245,11 +245,32 @@ error:
     return -1;
 }
 
-/* only works for 1 aligned sector */
+/* only works for 1 aligned sector, or data with size less than 512 */
 ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
 {
-    //if (hdd_pio_write(&drive, flip->f_pos, n / 512, buf))
-    //    return -1;
+    /* hacky fix when buffer does not span in different sectors */
+    char *src, tmp[512];
+    int i, j, pos, offset, sector;
+
+    src = buf;
+    pos = flip->f_pos;
+    offset = pos % 512;
+    sector = pos >> 9;
+    if (offset + n < 512) {
+        hdd_pio_read(&drive, sector, 1, tmp);
+        i = offset;
+        j = 0;
+        while (j < n)
+            tmp[i++] = buf[j++];
+        src = tmp;
+        n = 512;
+    } else if (n % 512 != 0 || offset != 0) {
+        debug_panic("hdd_write: random writes not supported");
+    }
+    /* hacky fix when buffer does not span in different sectors */
+
+    if (hdd_pio_write(&drive, sector, n / 512, src))
+        return -1;
     return n;
 }
 
