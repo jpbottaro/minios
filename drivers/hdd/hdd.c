@@ -29,7 +29,7 @@ static struct ide_device {
     struct ata_controller *controller;
 } drive;
 
-u8_t tmp_buf[512];
+static u8_t temp[ATA_SECTOR_SIZE];
 
 void hdd_wait_idle(struct ata_controller *ata)
 {
@@ -117,19 +117,19 @@ void hdd_identify(struct ide_device *ide) {
         return;
     }
 
-    insw(ata->port + ATA_REG_DATA, tmp_buf, 256);
+    insw(ata->port + ATA_REG_DATA, temp, 256);
 
     ide->present = 1;
     ide->type = IDE_ATA;
-    ide->signature = *((u16_t *) (tmp_buf + ATA_IDENT_DEVICETYPE));
-    ide->capabilities = *((u16_t *) (tmp_buf + ATA_IDENT_CAPABILITIES));
-    ide->cmdset = *((u32_t *) (tmp_buf + ATA_IDENT_COMMANDSETS));
+    ide->signature = *((u16_t *) (temp + ATA_IDENT_DEVICETYPE));
+    ide->capabilities = *((u16_t *) (temp + ATA_IDENT_CAPABILITIES));
+    ide->cmdset = *((u32_t *) (temp + ATA_IDENT_COMMANDSETS));
     ide->lba48 = (ide->cmdset & (1 << 26)) == (1 << 26);
 
     if (ide->lba48)
-        ide->size_in_sectors = *((u32_t *) (tmp_buf + ATA_IDENT_MAX_LBA_EXT));
+        ide->size_in_sectors = *((u32_t *) (temp + ATA_IDENT_MAX_LBA_EXT));
     else
-        ide->size_in_sectors = *((u32_t *) (tmp_buf + ATA_IDENT_MAX_LBA));
+        ide->size_in_sectors = *((u32_t *) (temp + ATA_IDENT_MAX_LBA));
 }
 
 /* quik n dirty */
@@ -169,7 +169,7 @@ static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
             if (hdd_wait_status(ata))
                 return -1;
             insw(ata->port + ATA_REG_DATA, buffer, 256);
-            buffer += 512;
+            buffer += ATA_SECTOR_SIZE;
         }
     } else {
         if (hdd_wait_status(ata))
@@ -177,7 +177,7 @@ static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
         /* cant do outsw for writes, we need to do it by hand */
         while (seccount--) {
             outsw_delay(ata->port + ATA_REG_DATA, buffer, 256);
-            buffer += 512;
+            buffer += ATA_SECTOR_SIZE;
             if (hdd_wait_status(ata))
                 return -1;
         }
@@ -201,14 +201,15 @@ static int hdd_pio_write(struct ide_device *ide, u32_t lba, u32_t seccount, cons
 
 size_t hdd_read(struct file_s *flip, char *buf, size_t n)
 {
-    void *temp = NULL;
     u32_t first_sector = ATA_TO_SECTOR(flip->f_pos);
     u32_t last_sector = ATA_TO_SECTOR((flip->f_pos + n + ATA_SECTOR_SIZE - 1));
     u32_t seccount;
     u32_t orig_size;
+    u32_t temp_off, buf_off, sz;
 
     /* check limits */
     if (last_sector > drive.size_in_sectors) {
+        debug_panic("hdd_read: trying to read beyond disk limit");
         last_sector = drive.size_in_sectors;
         n = drive.size_in_sectors * ATA_SECTOR_SIZE - flip->f_pos;
     }
@@ -216,74 +217,103 @@ size_t hdd_read(struct file_s *flip, char *buf, size_t n)
     orig_size = n;
 
     /* check if it is easy */
-    if (flip->f_pos == (first_sector << 9) && n % 512 == 0) {
+    if (flip->f_pos == (first_sector << 9) && n % ATA_SECTOR_SIZE == 0) {
         if (hdd_pio_read(&drive, first_sector, seccount, buf))
             return -1;
         return n;
     }
 
-    /* do it the hard way */
-    temp = mm_mem_alloc();
-    if (!temp) return -1;
-
     /* read the unaligned first sector */
-    u32_t offset = flip->f_pos % 512;
-    u32_t sz = MIN(n, 512 - offset);
-    if (hdd_pio_read(&drive, first_sector, 1, temp)) goto error;
-    mymemcpy(buf, temp + offset, sz);
+    temp_off = flip->f_pos % ATA_SECTOR_SIZE;
+    sz = MIN(n, ATA_SECTOR_SIZE - temp_off);
+    if (hdd_pio_read(&drive, first_sector, 1, temp))
+        return -1;
+    mymemcpy(buf, (char *) (temp + temp_off), sz);
 
     /* read the middle part */
     first_sector++;
     n -= sz;
-    offset += sz;
-    while (n > 512) {
-        if (hdd_pio_read(&drive, first_sector, 1, buf + offset)) goto error;
-        n -= 512;
-        offset += 512;
+    buf_off = sz;
+    while (n >= ATA_SECTOR_SIZE) {
+        if (hdd_pio_read(&drive, first_sector, 1, buf + buf_off))
+            return -1;
+        n -= ATA_SECTOR_SIZE;
+        buf_off += ATA_SECTOR_SIZE;
         first_sector++;
     }
 
-    /* read the unaligned last sector */
+    /* read the (possibly) unaligned last sector */
     if (n > 0) {
-        if (hdd_pio_read(&drive, first_sector, 1, temp)) goto error;
-        mymemcpy(buf + offset, temp, n);
+        if (hdd_pio_read(&drive, first_sector, 1, temp))
+            return -1;   
+        mymemcpy(buf + buf_off, (char *) temp, n);
     }
 
-    mm_mem_free(temp);
     flip->f_pos += orig_size;
     return orig_size;
-error:
-    if (temp) mm_mem_free(temp);
-    return -1;
 }
 
-/* only works for 1 aligned sector, or data with size less than 512 */
 ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
 {
-    /* hacky fix when buffer does not span in different sectors */
-    char *src, tmp[ATA_SECTOR_SIZE];
-    int i, j, pos, offset, sector;
+    u32_t first_sector = ATA_TO_SECTOR(flip->f_pos);
+    u32_t last_sector = ATA_TO_SECTOR((flip->f_pos + n + ATA_SECTOR_SIZE - 1));
+    u32_t seccount;
+    u32_t orig_size;
+    u32_t buf_off, temp_off, sz;
 
-    src = buf;
-    pos = flip->f_pos;
-    offset = pos % ATA_SECTOR_SIZE;
-    sector = ATA_TO_SECTOR(pos);
-    if (offset + n < ATA_SECTOR_SIZE) {
-        hdd_pio_read(&drive, sector, 1, tmp);
-        i = offset;
-        j = 0;
-        while (j < n)
-            tmp[i++] = buf[j++];
-        src = tmp;
-        n = ATA_SECTOR_SIZE;
-    } else if (n % ATA_SECTOR_SIZE != 0 || offset != 0) {
-        debug_panic("hdd_write: random writes not supported");
+    /* check limits */
+    if (last_sector > drive.size_in_sectors) {
+        debug_panic("hdd_write: trying to write beyond disk limit");
+        last_sector = drive.size_in_sectors;
+        n = drive.size_in_sectors * ATA_SECTOR_SIZE - flip->f_pos;
     }
-    /* hacky fix when buffer does not span in different sectors */
+    seccount = last_sector - first_sector;
+    orig_size = n;
 
-    if (hdd_pio_write(&drive, sector, n / ATA_SECTOR_SIZE, src))
-        return -1;
-    return n;
+    /* check if it is easy */
+    if (flip->f_pos == (first_sector << 9) && n % ATA_SECTOR_SIZE == 0) {
+        if (hdd_pio_write(&drive, first_sector, seccount, buf))
+            return -1;
+        return n;
+    }
+
+    /* do it the hard way - first sector */
+    buf_off = 0;
+    temp_off = flip->f_pos % ATA_SECTOR_SIZE;
+    sz = MIN(n, ATA_SECTOR_SIZE - temp_off);
+    if (temp_off != 0 || sz < ATA_SECTOR_SIZE) {
+        if (hdd_pio_read(&drive, first_sector, 1, temp))
+            return -1;
+        while (buf_off < sz)
+            temp[temp_off++] = buf[buf_off++];
+        if (hdd_pio_write(&drive, first_sector, 1, temp))
+            return -1;
+        first_sector++;
+        n -= sz;
+    }
+
+    /* write the middle part */
+    while (n >= ATA_SECTOR_SIZE) {
+        if (hdd_pio_write(&drive, first_sector, 1, buf + buf_off))
+            return -1;
+        n -= ATA_SECTOR_SIZE;
+        buf_off += ATA_SECTOR_SIZE;
+        first_sector++;
+    }
+
+    /* write the (possibly) unaligned last sector */
+    if (n > 0) {
+        if (hdd_pio_read(&drive, first_sector, 1, temp))
+            return -1;
+        temp_off = 0;
+        while (temp_off < n)
+            temp[temp_off++] = buf[buf_off++];
+        if (hdd_pio_write(&drive, first_sector, 1, temp))
+            return -1;
+    }
+
+    flip->f_pos += orig_size;
+    return orig_size;
 }
 
 int hdd_flush(struct file_s *flip)
