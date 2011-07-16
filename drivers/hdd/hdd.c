@@ -145,7 +145,8 @@ static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
     u8_t cmd = flag == ATA_READ ? ATA_CMD_READ_PIO : ATA_CMD_WRITE_PIO;
     u8_t flush = ATA_CMD_CACHE_FLUSH;
 
-    ATA_USE_BUS(ata);
+
+//    ATA_USE_BUS(ata);
     if (ide->lba48) {
         outb(ata->port + ATA_REG_HDDEVSEL, 0x40 | (ide->drive << 4));
         outb(ata->port + ATA_REG_SECCOUNT, (u8_t) (seccount >> 8));
@@ -185,7 +186,7 @@ static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
         if (hdd_wait_status(ata))
             return -1;
     }
-    ATA_FREE_BUS(ata);
+//    ATA_FREE_BUS(ata);
 
     return 0;
 }
