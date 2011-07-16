@@ -22,7 +22,6 @@ BIN_BOOT=../boot/floppyboot.bin
 
 # misc
 BIN_KERN=kernel.bin
-FSIMAGE=fsimage
 # 0x20000 - 0x1200
 KERNELMEM=126464
 
@@ -39,7 +38,7 @@ $(ODIR)/%.o: $(SRC)/%.c
 $(ODIR)/%.o: $(SRC)/%.asm
 	$(NASM) $(NASMFLAGS) -o $@ $^
 
-$(IMG_FLOPPY): $(BIN_BOOT) $(BIN_KERN) $(FSIMAGE)
+$(IMG_FLOPPY): $(BIN_BOOT) $(BIN_KERN)
 	@dd if=/dev/zero of=$@ bs=512 count=2880 2>/dev/null
 	$(MKFS) -F 12 -f 2 -n $(DISK_LABEL) $@
 	dd if=$< of=$@ bs=1 count=3 conv=notrunc 2>/dev/null
