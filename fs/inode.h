@@ -10,8 +10,8 @@
 
 #define MAX_PATH 120
 #define MAX_NAME 30
-#define MAX_INODES_CACHE 50
-#define MAX_BUFFERS_CACHE 10
+#define MAX_INODES_CACHE 10
+#define MAX_BUFFERS_CACHE 5
 #define NO_LINK  ((nlink_t) 0)
 
 struct dir_entry_s {
