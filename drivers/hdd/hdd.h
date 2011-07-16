@@ -104,8 +104,8 @@
 
 #define ATA_SECTOR_SIZE 512
 #define ATA_TO_SECTOR(x) (x >> 9)
-#define ATA_USE_BUS(x) (sem_wait(&((x)->sem_transfer)))
-#define ATA_FREE_BUS(x) (sem_signal(&((x)->sem_transfer)))
+#define ATA_USE_TRANSFER(x) (sem_wait(&((x)->sem_transfer)))
+#define ATA_FREE_TRANSFER(x) (sem_signal(&((x)->sem_transfer)))
 #define ATA_DELAY() do { iowait();iowait();iowait();iowait();iowait(); } while(0)
 
 void hdd_init();
