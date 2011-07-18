@@ -61,6 +61,7 @@ int hdd_wait_status(struct ata_controller *ata)
         udelay(10);
     }
 
+    debug_panic("hdd_wait_status: timeout");
     return -1;
 }
 
@@ -94,7 +95,8 @@ void hdd_reset(struct ata_controller *ata)
     hdd_wait_idle(ata);
 }
 
-void hdd_identify(struct ide_device *ide) {
+void hdd_identify(struct ide_device *ide)
+{
     struct ata_controller *ata = ide->controller;
 
     /* select device */
@@ -140,7 +142,8 @@ size_t hdd_lseek(struct file_s *flip, off_t offset, int whence)
 }
 
 static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
-                            u32_t seccount, void *buffer, int flag) {
+                            u32_t seccount, void *buffer, int flag)
+{
     struct ata_controller *ata = ide->controller;
     u8_t cmd = flag == ATA_READ ? ATA_CMD_READ_PIO : ATA_CMD_WRITE_PIO;
     u8_t flush = ATA_CMD_CACHE_FLUSH;
@@ -174,7 +177,6 @@ static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
     } else {
         if (hdd_wait_status(ata))
             goto err;
-        /* cant do outsw for writes, we need to do it by hand */
         while (seccount--) {
             outsw_delay(ata->port + ATA_REG_DATA, buffer, 256);
             buffer += ATA_SECTOR_SIZE;
@@ -261,9 +263,7 @@ ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
 {
     u32_t first_sector = ATA_TO_SECTOR(flip->f_pos);
     u32_t last_sector = ATA_TO_SECTOR((flip->f_pos + n + ATA_SECTOR_SIZE - 1));
-    u32_t seccount;
-    u32_t orig_size;
-    u32_t buf_off, temp_off, sz;
+    u32_t seccount, orig_size, buf_off, temp_off, sz;
 
     /* check limits */
     if (last_sector > drive.size_in_sectors) {
@@ -271,15 +271,7 @@ ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
         last_sector = drive.size_in_sectors;
         n = drive.size_in_sectors * ATA_SECTOR_SIZE - flip->f_pos;
     }
-    seccount = last_sector - first_sector;
     orig_size = n;
-
-    /* check if it is easy */
-    if (flip->f_pos == (first_sector << 9) && n % ATA_SECTOR_SIZE == 0) {
-        if (hdd_pio_write(&drive, first_sector, seccount, buf))
-            return -1;
-        return n;
-    }
 
     /* do it the hard way - first sector */
     buf_off = 0;
@@ -287,33 +279,34 @@ ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
     sz = MIN(n, ATA_SECTOR_SIZE - temp_off);
     if (temp_off != 0 || sz < ATA_SECTOR_SIZE) {
         if (hdd_pio_read(&drive, first_sector, 1, temp))
-            return -1;
+            debug_panic("hdd_write: read first");
         while (buf_off < sz)
             temp[temp_off++] = buf[buf_off++];
         if (hdd_pio_write(&drive, first_sector, 1, temp))
-            return -1;
+            debug_panic("hdd_write: write first");
         first_sector++;
         n -= sz;
     }
 
     /* write the middle part */
-    while (n >= ATA_SECTOR_SIZE) {
-        if (hdd_pio_write(&drive, first_sector, 1, buf + buf_off))
-            return -1;
-        n -= ATA_SECTOR_SIZE;
-        buf_off += ATA_SECTOR_SIZE;
-        first_sector++;
+    if (n >= ATA_SECTOR_SIZE) {
+        seccount = n / ATA_SECTOR_SIZE;
+        if (hdd_pio_write(&drive, first_sector, seccount, buf + buf_off))
+            debug_panic("hdd_write: write middle");
+        n %= ATA_SECTOR_SIZE;
+        buf_off += seccount * ATA_SECTOR_SIZE;
+        first_sector += seccount;
     }
 
     /* write the (possibly) unaligned last sector */
     if (n > 0) {
         if (hdd_pio_read(&drive, first_sector, 1, temp))
-            return -1;
+            debug_panic("hdd_write: read last");
         temp_off = 0;
         while (temp_off < n)
             temp[temp_off++] = buf[buf_off++];
         if (hdd_pio_write(&drive, first_sector, 1, temp))
-            return -1;
+            debug_panic("hdd_write: write last");
     }
 
     flip->f_pos += orig_size;
@@ -333,6 +326,16 @@ static struct file_operations_s ops = {
     .flush = hdd_flush
 };
 
+int hdd_test()
+{
+    if (hdd_pio_read(&drive, 0, 1, temp))
+        debug_panic("hdd_test: error in read");
+    /* this is kinda risky... but what the heck, carpe diem */
+    if (hdd_pio_write(&drive, 0, 1, temp))
+        debug_panic("hdd_test: error in write");
+    return 0;
+}
+
 void hdd_init()
 {
     /* prepare structs */
@@ -345,6 +348,9 @@ void hdd_init()
     /* try to identify the device. */
     hdd_reset(&controller);
     hdd_identify(&drive);
+
+    /* test the ata device, check if it actually works of if its a lier */
+    hdd_test(&drive);
 
     /* make char device in /dev */
     //fs_make_dev("hdd", I_BLOCK, DEV_HDD, 0);
