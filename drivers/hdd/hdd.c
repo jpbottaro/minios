@@ -141,6 +141,7 @@ size_t hdd_lseek(struct file_s *flip, off_t offset, int whence)
 
 static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
                             u32_t seccount, void *buffer, int flag) {
+    int i;
     struct ata_controller *ata = ide->controller;
     u8_t cmd = flag == ATA_READ ? ATA_CMD_READ_PIO : ATA_CMD_WRITE_PIO;
     u8_t flush = ATA_CMD_CACHE_FLUSH;
