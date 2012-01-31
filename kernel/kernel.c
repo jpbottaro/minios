@@ -24,13 +24,13 @@ void kernel_init()
     /* clear the screen */
     vga_clear();
 
-    /* initialize interrupt table */
+    /* interrupt table */
     idt_init();
 
-    /* initialize debug info (and indirectly most exception handlers) */
+    /* debug info (and indirectly most exception handlers) */
     debug_init();
 
-    /* initialize memory managment unit */
+    /* memory managment unit */
     mm_init();
 
     /* enable paging (kernel is identity mapped from 0x0 to 0x400000) */
@@ -40,22 +40,22 @@ void kernel_init()
     /* set hw clock to 50hz */
     clock_init(50);
 
-    /* add ramdisk driver */
+    /* hard disk driver */
     hdd_init();
 
-    /* initialize our file system */
+    /* file system */
     fs_init(DEV_HDD);
 
-    /* init the pipe module */
+    /* pipe module */
     pipe_init();
 
-    /* init console driver */
+    /* console driver */
     con_init();
 
-    /* init serial driver */
+    /* serial driver */
     serial_init();
 
-    /* initialize scheduler */
+    /* scheduler */
     sched_init();
 
     /* add the shell as first program */
@@ -64,5 +64,6 @@ void kernel_init()
     /* enable interruptions (and therefore scheduler) */
     sti();
 
+    /* block until the first clock interruption happens, and here we go! */
     for(;;) {}
 }
