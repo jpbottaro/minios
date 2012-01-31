@@ -1,8 +1,9 @@
 - Most of the issues come from changing the fs image from linux. Apparently
-  when removing/moving/copying files, it clears blocks that it should not...
+  when removing/moving/copying files, it clears blocks that it should not... It
+  is probably doing something I'm not aware it's valid in minixfs
 
   Also, there is something wrong with the block/inode arrays, its reporting
-  that used blocks arent.. if I create files or folders, it overrides the
+  that used blocks aren't, if I create files or folders, it overrides the
   contents of the file "readme" for example.
 
 - The header of the apps have a wrong size, they report much more that they
