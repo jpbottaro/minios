@@ -1,50 +1,46 @@
-Mini-Kernel 0.01
-----------------
+Minios 0.01
+-----------
 
-Carpetas
-========
+Folders
+=======
 
-- apps: algunas aplicaciones para utilizar en el entorno de Mini-Kernel 0.01
-- bin: elementos para compilar/testear kernel
-- doc: documentacion del trabajo
-- fs: codigo del file system
-- include: algunos archivos .h utiles
-- kernel: el codigo del kernel con funcionalidad super-basica (incluye mmu,
-  interrupciones y hasta el scheduler)
-- lib: funciones varias de uso en general (ej mystrncpy, mystrncmp, etc)
+- apps: some applications to use with the system
+- bin: build system (makefile et al)
+- doc: docs (mainly in spanish)
+- fs: file system source
+- include: system-wide include files (eg. the list interface)
+- kernel: basic kernel, including mm, interrupt handles, scheduler...
+- lib: various generic functions (eg mystrncpy, mystrncmp)
 
 
-Compilacion - Uso
+Compilation - Use
 =================
 
-La carpeta bin contiene los elementos para compilar/testear el kernel
+Everything is done in the bin folder:
 
-make            - crea kernel.bin y imagen de diskette para bootear en bochs
-make kernel.bin - crea kernel.bin
-make clean      - limpia el ambiente
-make test       - limpia, crea todo y lanza bochs con la nueva imagen
+make            - create kernel.bin y and diskette image to boot bochs
+make kernel.bin - create kernel.bin
+make clean      - clean all
+make test       - clean, build everything and start bochs with the new image
 
-El archivo 'fsimage' corresponde a una imagen de un Minix FS, que es el 
-utilizado por el kernel al bootear. Tener en cuenta que esta imagen no
-es modificada por el kernel, los cambios a la misma se pierden cuando se
-apaga bochs. Para editar la imagen, montarla con:
+The 'fsimage' file in a MinisFs v2 image, and it is used by the kernel to boot.
+To edit its contents in linux, issue:
 
-mount -o loop -t minix fsimage CARPETA
+mount -o loop -t minix fsimage FOLDER
 
-Para crear una nueva, utilizar:
+To create a new one:
 
-dd if=/dev/zero of=NOMBRE bs=1k count=CANTIDAD_BLOQUES
-mkfs.minix -v NOMBRE CANTIDAD_BLOQUES
+dd if=/dev/zero of=NAME bs=1k count=BLOCK_NR
+mkfs.minix -v NAME BLOCK_NR
 
-Es importante que sea MinixFS v2, las versiones 1 y 3 no estan soportadas (esto
-se logra con la flag -v)
+Currently only MinixFS v2 is supported (that is what the -v flags creates)
 
-Aplicaciones
+Applications
 ============
 
-En la carpeta apps se encuentran las aplicaciones. Estas ya estan compiladas y
-introducidas en la carpeta bin/ de la imagen fsimage. En caso de que se desee
-cambiar alguna, los pasos son:
+Every app is in the apps/ folder. These are already compiled and placed in a
+bin/ folder inside the 'fsimage'. In case you want to change or add any:
 
-- Modificar lo que se desee en apps/, y realizar make.
-- Agregar los archivos .pso a la carpeta bin/ en la imagen
+- Modify apps/ and call make.
+- Add the .pso (these are the excecutables of minios) to the bin/ folder in
+  'fsimage'
