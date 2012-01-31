@@ -16,9 +16,16 @@ Folders
 Compilation - Use
 =================
 
+Dependencies:
+    - gcc
+    - nasm
+    - mkfs.vfat (for the floppy image, 'dosfstools' in debian)
+    - mcopy (to copy files to the floppy fat image, 'mtools' in debian)
+    - bochs
+
 Everything is done in the bin folder:
 
-make            - create kernel.bin y and diskette image to boot bochs
+make            - create kernel.bin and floppy image to boot bochs
 make kernel.bin - create kernel.bin
 make clean      - clean all
 make test       - clean, build everything and start bochs with the new image
