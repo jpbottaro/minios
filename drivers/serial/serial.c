@@ -14,13 +14,11 @@
 #define PORT_MCTRL  4 /* R/W - MODEM Control */
 #define PORT_LSTAT  5 /* R/W - Line Status */
 #define PORT_MSTAT  6 /* R/W - MODEM Status */
-#define PORT_SCRAT  7 /* R/W - Scratch ¿eh? */
+#define PORT_SCRAT  7 /* R/W - Scratch */
 #define PORT_DL_LSB 0 /* Divisor latch - LSB (need DLAB=1) */
 #define PORT_DL_MSB 1 /* Divisor latch - MSB (need DLAB=1)  */
 
-/*** REMEMBER: Don't use drugs while designing a chip:
- * 
- * 8.10 SCRATCHPAD REGISTER
+/* 8.10 SCRATCHPAD REGISTER
  * This 8-bit Read Write Register does not control the UART
  * in anyway It is intended as a scratchpad register to be used
  * by the programmer to hold data temporarily
