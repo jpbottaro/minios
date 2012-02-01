@@ -229,7 +229,7 @@ size_t hdd_read(struct file_s *flip, char *buf, size_t n)
 
     /* read the unaligned first sector */
     temp_off = flip->f_pos % ATA_SECTOR_SIZE;
-    remaining = ATA_SECTOR_SIZE - temp_off
+    remaining = ATA_SECTOR_SIZE - temp_off;
     sz = MIN(n, remaining);
     if (hdd_pio_read(&drive, current_sector, 1, temp))
         return -1;
@@ -278,7 +278,7 @@ ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
     buf_off = 0;
     temp_off = flip->f_pos % ATA_SECTOR_SIZE;
     if (temp_off != 0) {
-        remaining = ATA_SECTOR_SIZE - temp_off
+        remaining = ATA_SECTOR_SIZE - temp_off;
         u32_t sz = MIN(n, remaining);
         if (hdd_pio_read(&drive, current_sector, 1, temp))
             debug_panic("hdd_write: read first");
