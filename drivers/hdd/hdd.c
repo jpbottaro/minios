@@ -209,7 +209,7 @@ size_t hdd_read(struct file_s *flip, char *buf, size_t n)
 {
     u32_t current_sector = ATA_TO_SECTOR(flip->f_pos);
     u32_t last_sector = ATA_TO_SECTOR(flip->f_pos + n + ATA_SECTOR_SIZE - 1);
-    u32_t seccount, orig_size, temp_off, buf_off, sz;
+    u32_t remaining, seccount, orig_size, temp_off, buf_off, sz;
 
     /* check limits */
     if (last_sector > drive.size_in_sectors) {
@@ -229,7 +229,8 @@ size_t hdd_read(struct file_s *flip, char *buf, size_t n)
 
     /* read the unaligned first sector */
     temp_off = flip->f_pos % ATA_SECTOR_SIZE;
-    sz = MIN(n, ATA_SECTOR_SIZE - temp_off);
+    remaining = ATA_SECTOR_SIZE - temp_off
+    sz = MIN(n, remaining);
     if (hdd_pio_read(&drive, current_sector, 1, temp))
         return -1;
     mymemcpy((char *) buf, (char *) (temp + temp_off), sz);
@@ -257,11 +258,13 @@ size_t hdd_read(struct file_s *flip, char *buf, size_t n)
     return orig_size;
 }
 
+/* the debug_panic() calls are temporary for debugging porposes, they will be
+ * replaced */
 ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
 {
     u32_t current_sector = ATA_TO_SECTOR(flip->f_pos);
     u32_t last_sector = ATA_TO_SECTOR((flip->f_pos + n + ATA_SECTOR_SIZE - 1));
-    u32_t seccount, orig_size, buf_off, temp_off;
+    u32_t remaining, seccount, orig_size, buf_off, temp_off;
 
     /* check limits */
     if (last_sector > drive.size_in_sectors) {
@@ -275,7 +278,8 @@ ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
     buf_off = 0;
     temp_off = flip->f_pos % ATA_SECTOR_SIZE;
     if (temp_off != 0) {
-        u32_t sz = MIN(n, ATA_SECTOR_SIZE - temp_off);
+        remaining = ATA_SECTOR_SIZE - temp_off
+        u32_t sz = MIN(n, remaining);
         if (hdd_pio_read(&drive, current_sector, 1, temp))
             debug_panic("hdd_write: read first");
         mymemcpy((char *) (temp + temp_off), buf, sz);
