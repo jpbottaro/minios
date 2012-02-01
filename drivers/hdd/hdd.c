@@ -207,11 +207,9 @@ static int hdd_pio_write(struct ide_device *ide, u32_t lba, u32_t seccount, cons
 
 size_t hdd_read(struct file_s *flip, char *buf, size_t n)
 {
-    u32_t first_sector = ATA_TO_SECTOR(flip->f_pos);
-    u32_t last_sector = ATA_TO_SECTOR((flip->f_pos + n + ATA_SECTOR_SIZE - 1));
-    u32_t seccount;
-    u32_t orig_size;
-    u32_t temp_off, buf_off, sz;
+    u32_t current_sector = ATA_TO_SECTOR(flip->f_pos);
+    u32_t last_sector = ATA_TO_SECTOR(flip->f_pos + n + ATA_SECTOR_SIZE - 1);
+    u32_t seccount, orig_size, temp_off, buf_off, sz;
 
     /* check limits */
     if (last_sector > drive.size_in_sectors) {
@@ -219,12 +217,12 @@ size_t hdd_read(struct file_s *flip, char *buf, size_t n)
         last_sector = drive.size_in_sectors;
         n = drive.size_in_sectors * ATA_SECTOR_SIZE - flip->f_pos;
     }
-    seccount = last_sector - first_sector;
+    seccount = last_sector - current_sector;
     orig_size = n;
 
     /* check if it is easy */
-    if (flip->f_pos == (first_sector << 9) && n % ATA_SECTOR_SIZE == 0) {
-        if (hdd_pio_read(&drive, first_sector, seccount, buf))
+    if (flip->f_pos == (current_sector << 9) && n % ATA_SECTOR_SIZE == 0) {
+        if (hdd_pio_read(&drive, current_sector, seccount, buf))
             return -1;
         return n;
     }
@@ -232,25 +230,25 @@ size_t hdd_read(struct file_s *flip, char *buf, size_t n)
     /* read the unaligned first sector */
     temp_off = flip->f_pos % ATA_SECTOR_SIZE;
     sz = MIN(n, ATA_SECTOR_SIZE - temp_off);
-    if (hdd_pio_read(&drive, first_sector, 1, temp))
+    if (hdd_pio_read(&drive, current_sector, 1, temp))
         return -1;
     mymemcpy((char *) buf, (char *) (temp + temp_off), sz);
 
     /* read the middle part */
-    first_sector++;
+    current_sector++;
     n -= sz;
     buf_off = sz;
     while (n >= ATA_SECTOR_SIZE) {
-        if (hdd_pio_read(&drive, first_sector, 1, buf + buf_off))
+        if (hdd_pio_read(&drive, current_sector, 1, buf + buf_off))
             return -1;
         n -= ATA_SECTOR_SIZE;
         buf_off += ATA_SECTOR_SIZE;
-        first_sector++;
+        current_sector++;
     }
 
     /* read the (possibly) unaligned last sector */
     if (n > 0) {
-        if (hdd_pio_read(&drive, first_sector, 1, temp))
+        if (hdd_pio_read(&drive, current_sector, 1, temp))
             return -1;   
         mymemcpy((char *) (buf + buf_off), (char *) temp, n);
     }
