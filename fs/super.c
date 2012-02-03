@@ -113,7 +113,7 @@ void free_bit(int map, unsigned int num)
     wptr += words;
     /* if (!(*wptr & mask)) panic(); ver si poner panic */
     *wptr &= ~mask;
-    
+
     if (map == IMAP && imap_origin > wptr)
         imap_origin = wptr;
     else if (map == ZMAP && zmap_origin > wptr)

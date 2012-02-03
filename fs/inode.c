@@ -54,11 +54,11 @@ struct inode_s *find_inode(struct inode_s *dir, const char *user_path, int flag)
     struct dir_entry_s dentry;
     char *begin, *end, path[MAX_PATH];
     ino_t tmp;
- 
+
     /* copy path and check if it is too long */
     if (mystrncpy(path, user_path, MAX_PATH) < 0)
         debug_panic("find_inode: could not copy path, too long");
-   
+
     /* start at root if path starts with slash */
     if (dir == NULL || *path == '/') {
         r = root;
@@ -70,7 +70,7 @@ struct inode_s *find_inode(struct inode_s *dir, const char *user_path, int flag)
     }
 
     begin = path;
-	while (*begin == '/') begin++;
+    while (*begin == '/') begin++;
 
     /* remove the case that the result is root */
     if (*begin == '\0')
@@ -157,7 +157,7 @@ static char *parse_path(char *path)
     if (*path == '/') {
         *path = '\0';
         path++;
-	    while (*path == '/') path++;
+        while (*path == '/') path++;
     }
 
     return path;
@@ -230,7 +230,7 @@ int next_entry(struct inode_s *dir, unsigned int *p, struct dir_entry_s *dent)
 /* remove entry at a given position */
 int remove_entry(struct inode_s *dir, unsigned int *p)
 {
-    unsigned int pos = *p - DIRENTRY_SIZE; 
+    unsigned int pos = *p - DIRENTRY_SIZE;
     struct dir_entry_s *dentry;
     struct buf_s *block;
     block_t blocknr;
@@ -251,7 +251,8 @@ int remove_entry(struct inode_s *dir, unsigned int *p)
  *
  * if name is null, find the first non-empty entry which is not '.' or '..'
  */
-int search_inode(struct inode_s *dir, const char *name, struct dir_entry_s *dentry,                                                                         int flag)
+int search_inode(struct inode_s *dir, const char *name,
+                 struct dir_entry_s *dentry, int flag)
 {
     unsigned int pos, i, entries;
 

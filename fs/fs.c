@@ -184,11 +184,11 @@ static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag
 
     if (ino == NULL)
         return -1;
- 
+
     /* if its a directory, error */
     if (IS_DIR(ino->i_mode))
         return -1;
-       
+
     /* check limit of file in read operation */
     if (flag == FS_READ)
         n = MIN(n, ino->i_size - pos);
@@ -199,7 +199,7 @@ static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag
 
     /* check how much did we read/write */
     n = pos - flip->f_pos;
-    
+
     /* update inode size */
     if (pos > ino->i_size && flag == FS_WRITE)
         ino->i_size = pos;
@@ -498,9 +498,9 @@ int fs_getdents(int fd, char *buf, size_t n)
             break;
         ino = get_inode(dentry.num);
         dent = (struct dirent *) (buf + i);
-        dent->d_ino = dentry.num; 
+        dent->d_ino = dentry.num;
         dent->d_off = pos - sizeof(struct dir_entry_s);
-        dent->d_reclen = mystrncpy(dent->d_name, dentry.name, MAX_NAME) + 
+        dent->d_reclen = mystrncpy(dent->d_name, dentry.name, MAX_NAME) +
                          1 +                      /* add the \0 */
                          sizeof(ino_t) +          /* add the d_ino */
                          sizeof(off_t) +          /* add the d_off */
