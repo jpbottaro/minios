@@ -253,7 +253,7 @@ size_t hdd_read(struct file_s *flip, char *buf, size_t n)
     /* read the (possibly) unaligned last sector */
     if (n > 0) {
         if (hdd_pio_read(&drive, current_sector, 1, temp))
-            return -1;   
+            return -1;
         mymemcpy((char *) (buf + buf_off), (char *) temp, n);
     }
 
