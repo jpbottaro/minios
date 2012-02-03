@@ -441,11 +441,8 @@ void release_block(struct buf_s *buf)
     if (buf == NULL)
         return;
     if (--buf->b_refcount <= 0) {
-        /* save changes */
         fs_dev->f_op->lseek(fs_dev, buf->b_pos, SEEK_SET);
         fs_dev->f_op->write(fs_dev, buf->b_buffer, BLOCK_SIZE);
-
-        /* free buf */
         buf->b_dirty = 0;
         buf->b_free = 1;
         buf->b_num = 0;
