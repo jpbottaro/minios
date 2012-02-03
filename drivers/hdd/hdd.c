@@ -154,10 +154,11 @@ static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
         outb(ata->port + ATA_REG_LBA_LOW, (u8_t) (lba >> 24));
         outb(ata->port + ATA_REG_LBA_MED, 0); /* LBA32 */
         outb(ata->port + ATA_REG_LBA_HIGH, 0); /* LBA32 */
-        cmd = flag == ATA_READ ? ATA_CMD_READ_PIO_EXT : ATA_CMD_WRITE_PIO_EXT;
+        cmd = (flag == ATA_READ) ? ATA_CMD_READ_PIO_EXT : ATA_CMD_WRITE_PIO_EXT;
         flush = ATA_CMD_CACHE_FLUSH_EXT;
     } else {
-        outb(ata->port + ATA_REG_HDDEVSEL, 0xE0 | (ide->drive << 4) | ((lba >> 24) & 0x0F));
+        outb(ata->port + ATA_REG_HDDEVSEL, 0xE0 | (ide->drive << 4) |
+                                                  ((lba >> 24) & 0x0F));
     }
 
     outb(ata->port + ATA_REG_SECCOUNT, (u8_t) seccount);
@@ -196,11 +197,13 @@ err:
     return -1;
 }
 
-static int hdd_pio_read(struct ide_device *ide, u32_t lba, u32_t seccount, void *buffer)
+static int hdd_pio_read(struct ide_device *ide, u32_t lba, u32_t seccount,
+                        void *buffer)
 {
     return hdd_pio_transfer(ide, lba, seccount, buffer, ATA_READ);
 }
-static int hdd_pio_write(struct ide_device *ide, u32_t lba, u32_t seccount, const void *buffer)
+static int hdd_pio_write(struct ide_device *ide, u32_t lba, u32_t seccount,
+                         const void *buffer)
 {
     return hdd_pio_transfer(ide, lba, seccount, (void *) buffer, ATA_WRITE);
 }
