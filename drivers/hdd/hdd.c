@@ -178,8 +178,9 @@ static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
             buf += ATA_SECTOR_SIZE;
         }
     } else {
-        if (hdd_wait_status(ata))
-            goto err;
+        // 400ms wait
+        if (inb(ata->port + ATA_REG_CONTROL) != 1)
+            debug_panic("couldn't get status");
         while (seccount--) {
             limit = buf + ATA_SECTOR_SIZE;
             for (; buf < limit; ++buf)
