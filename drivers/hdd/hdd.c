@@ -318,8 +318,17 @@ ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
 
 int hdd_flush(struct file_s *flip)
 {
-    hdd_pio_write(&drive, 0, 0, 0);
-    return 0;
+    u8_t flush = ATA_CMD_CACHE_FLUSH;
+    int ret;
+
+    ATA_USE_TRANSFER(drive.controller);
+    if (drive.lba48)
+        flush = ATA_CMD_CACHE_FLUSH_EXT;
+    outb(drive.controller->port + ATA_REG_COMMAND, flush);
+    ret = hdd_wait_status(drive.controller);
+    ATA_FREE_TRANSFER(drive.controller);
+
+    return ret;
 }
 
 static struct file_operations_s ops = {
