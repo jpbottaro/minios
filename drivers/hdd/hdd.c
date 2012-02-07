@@ -147,6 +147,9 @@ static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
     u8_t flush = ATA_CMD_CACHE_FLUSH;
     u8_t *limit, *buf = (u8_t *) buffer;
 
+    if (ide == NULL || seccount == 0 || buffer == NULL)
+        return 0;
+
     ATA_USE_TRANSFER(ata);
     if (ide->lba48) {
         outb(ata->port + ATA_REG_HDDEVSEL, 0x40 | (ide->drive << 4));
