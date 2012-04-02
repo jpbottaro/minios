@@ -1,21 +1,16 @@
 # Minios 0.01
 
-## Folders
+Simple and minimal x86 OS.
 
-* apps: some applications to use with the system
-* bin: build system (makefile et al)
-* doc: docs (mainly in spanish)
-* fs: file system source
-* include: system-wide include files (eg. the list interface)
-* kernel: basic kernel, including mm, interrupt handles, scheduler...
-* lib: various generic functions (eg mystrncpy, mystrncmp)
+## Requirements
+
+TODO
 
 ## Compilation - Use
 
 Everything is done in the bin folder:
 
 * make - create kernel.bin y and diskette image to boot bochs
-* make kernel.bin - create kernel.bin
 * make clean - clean all
 * make test - clean, build everything and start bochs with the new image
 
@@ -30,6 +25,16 @@ To create a new one:
     mkfs.minix -v NAME BLOCK_NR
 
 Currently only MinixFS v2 is supported (that is what the -v flags creates)
+
+## Folders
+
+* apps: some applications to use with the system
+* bin: build system (makefile et al)
+* doc: docs (mainly in spanish)
+* fs: file system source
+* include: system-wide include files (eg. the list interface)
+* kernel: basic kernel, including mm, interrupt handles, scheduler...
+* lib: various generic functions (eg mystrncpy, mystrncmp)
 
 ## Applications
 
