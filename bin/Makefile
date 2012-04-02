@@ -8,7 +8,7 @@ MCOPY=mcopy
 MKFS=/sbin/mkfs.vfat
 
 # program flags
-NASMFLAGS=-felf32
+NASMFLAGS=-felf
 LDFLAGS=-static -m elf_i386 --oformat binary -b elf32-i386 -e start \
 		-Ttext 0x1200
 CFLAGS=-m32 -g -ggdb -Wall -Werror -O0 -I ../include\

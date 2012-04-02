@@ -6,7 +6,7 @@ CC=gcc
 CFLAGS=-m32 -g -ggdb -Wall -Werror -O0 -I ../include\
   -fno-zero-initialized-in-bss -fno-stack-protector -ffreestanding
 NASM=nasm
-NASMFLAGS=-felf32
+NASMFLAGS=-felf
 
 .PHONY=all clean
 

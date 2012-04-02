@@ -4,7 +4,8 @@ Simple and minimal x86 OS.
 
 ## Requirements
 
-TODO
+* nasm
+* binutils
 
 ## Compilation - Use
 

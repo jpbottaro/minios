@@ -5,7 +5,7 @@ OBJ=lineecho.pso echo.pso argc.pso ls.pso cat.pso cp.pso rm.pso cash.pso \
 CC=gcc
 CFLAGS=-m32 -Wall -Werror -O0 -I ../include -fno-zero-initialized-in-bss -fno-stack-protector -ffreestanding
 NASM=nasm
-NASMFLAGS=-felf32
+NASMFLAGS=-felf
 LD=ld
 LDFLAGS=-static -m elf_i386 --oformat binary -b elf32-i386 -e main -Ttext 0x400000
 
