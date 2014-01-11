@@ -4,8 +4,15 @@ Simple and minimal x86 OS.
 
 ## Requirements
 
+### Build
+
 * nasm
 * binutils
+* mtools
+
+### Test
+
+* bochs-sdl
 
 ## Compilation - Use
 
