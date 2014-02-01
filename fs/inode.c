@@ -251,7 +251,7 @@ int remove_entry(struct inode_s *dir, unsigned int *p)
  *
  * if name is null, find the first non-empty entry which is not '.' or '..'
  */
-int search_inode(struct inode_s *dir, const char *name, struct dir_entry_s *dentry,                                                                         int flag)
+int search_inode(struct inode_s *dir, const char *name, struct dir_entry_s *dentry, int flag)
 {
     unsigned int pos, i, entries;
 
