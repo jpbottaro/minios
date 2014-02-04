@@ -248,8 +248,8 @@ error:
 /* only works for 1 aligned sector */
 ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
 {
-    //if (hdd_pio_write(&drive, flip->f_pos, n / 512, buf))
-    //    return -1;
+    if (hdd_pio_write(&drive, flip->f_pos, n / 512, buf))
+        return -1;
     return n;
 }
 
