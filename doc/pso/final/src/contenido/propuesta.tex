@@ -1,0 +1,27 @@
+\section{Propuesta}
+
+La propuesta para el trabajo final es el agregado de \textbf{memoria virtual} al sistema.
+La idea es mejorar y complementar el modulo de manejo de memoria con el driver
+de disco (o cualquier block device que sirva como almacenamiento secundario con
+una velocidad razonable), y así presentar a la capa de aplicación la ilusión de
+tener memoria inagotable, utilizando el almacenamiento secundario como extensión
+de la memoria principal.
+
+Lograr este objetivo requiere una serie de pasos:
+
+\begin{itemize}
+  \item Terminar el driver de disco para que soporte escrituras. Actualmente el
+      driver solo lee del disco y todas las escrituras son descartadas (aunque
+      permanecen visibles al usuario hasta que el SO se apaga gracias a caches
+      internas).
+  \item Introducir la idea de memoria virtual en el manejo de procesos
+      y controlador de memoria.
+  \item Agregar toda la lógica necesaria para decidir cuando bajar páginas
+      al sector de swap, cuando irlas a buscar, o cuando deshacerse de ellas.
+      Esto involucra cambios grandes en el manejo de memoria y de las
+      interrupciones de fallo de página. 
+\end{itemize}
+
+Se necesitará agregar funcionalidad como 'Pinned Pages', uso de heurísticas para
+la elección de páginas a swappear (LRU o similar), y estrategias para prevención
+contra problemas comunes como Trashing.

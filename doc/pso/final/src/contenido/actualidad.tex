@@ -1,3 +1,46 @@
 \section{Actualidad}
 
-Aca contamos en donde estamos actualmente
+Haremos una breve introducción para ver el estado actual del sistema.
+
+La idea original fue conformar lo más posible con el estándar POSIX, por lo que se
+siguió bien de cerca su especificación. La interfaz que expone el kernel
+corresponde con la tradicional en sistemas *nix, con system calls al estilo
+Linux (es decir, parámetros en los registros).
+
+Una vez que se consiguió \textbf{bootear una PC} y pudimos correr código en modo
+protegido, comenzó la separación del núcleo en el anillo 0 con el resto de los
+procesos en el anillo 3. Se formuló la \textbf{idea de proceso} con su correspondiente
+estructura de control, llevando posesión de descriptores de archivos, páginas de
+memoria y pila entre otros. Estos procesos fueron organizados en una estructura
+jerárquica como padres/hijos, con un \textbf{preemptive scheduler} como el encargado de
+darles tiempo en el procesador de manera equitativa.
+
+Inicialmente se eligió el \textbf{manejo de memoria} más simple, mapeando páginas
+virtuales identicamente a sus direcciones físicas. Al crear la idea de procesos,
+fue necesario agregar páginas virtuales para el manejo de memoria, y mantener
+quién es dueño de qué página. Con la inserción de el modelo fork para creación
+de procesos, se agregó la idea de copy-on-write, dejando que varios procesos
+compartan memoria.
+
+El próximo paso fue crear una \textbf{interfaz de drivers}, que fue utilizada para agregar
+\textit{controladores de la consola}, de \textit{puerto serie} y finalmente de
+\textit{disco rígido}. Una vez logrado el manejo de estos
+dispositivos fue imperativo agregar un \textbf{sistema de archivos} para abstraer toda
+esta complejidad de la capa de aplicaciones. Se eligió el formato Minix2, un
+sistema de archivos de inodos tradicional *nix similar a ext2.
+
+Varios otros agregados como el uso de \textbf{mutex/semaforos} y \textbf{pipes
+para IPC} son parte del SO. Finalmente se expuso toda esta interfaz a través
+de system calls como open/read/write/fork/etc., siendo cuidadosos de mantener
+compatibilidad con POSIX. Se logró luego programar una serie de
+\textbf{aplicaciones en C} compiladas con gcc que funcionan sin modificaciones
+tanto en un sistema Linux como en nuestro SO. Entre otras tenemos:
+
+\begin{itemize}
+  \item cash: la consola que corre al iniciar el SO
+  \item cat/cp/echo/ls/mv: todas aplicaciones estándar
+  \item krypto/memkrypto: uso de pipes y memoria virtual para IPC
+\end{itemize}
+
+Todo esto esta empaquetado en una imagen de disco Minix2 que es la que usa como
+root el SO al iniciar.
