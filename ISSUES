@@ -7,5 +7,3 @@
 
 - The header of the apps have a wrong size, they report much more that they
   really have.
-
-- calling 'ls' and the 'cat readme' throws #GP
