@@ -1,8 +1,4 @@
-#include <minios/sched.h>
-#include <minios/vga.h>
 #include <minios/dev.h>
-#include <errno.h>
-#include "kbd.h"
 
 struct dev_s devices[MAX_DEVICES];
 
