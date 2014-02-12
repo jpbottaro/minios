@@ -131,6 +131,10 @@ void mm_init()
 
     /* register page fault handler */
     idt_register(14, _pf_handler, DEFAULT_PL);
+
+    /* enable paging (kernel is identity mapped from 0x0 to 0x400000) */
+    lcr3((unsigned int) mm_dir_new());
+    lcr0(rcr0() | 0x80000000);
 }
 
 /* alloc page */

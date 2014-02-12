@@ -20,11 +20,11 @@
 /* here is where the magic starts */
 void kernel_init()
 {
-    /* this has to come first, as it clears all system calls */
-    scall_init();
-
     /* clear the screen */
     vga_clear();
+
+    /* this has to come first, as it clears all system calls */
+    scall_init();
 
     /* initialize interrupt table */
     idt_init();
@@ -32,12 +32,8 @@ void kernel_init()
     /* initialize debug info (and indirectly most exception handlers) */
     debug_init();
 
-    /* initialize memory managment unit */
+    /* initialize memory managment unit (this enables paging) */
     mm_init();
-
-    /* enable paging (kernel is identity mapped from 0x0 to 0x400000) */
-    lcr3((unsigned int) mm_dir_new());
-    lcr0(rcr0() | 0x80000000);
 
     /* set hw clock to 50hz */
     clock_init(50);
@@ -48,7 +44,7 @@ void kernel_init()
     /* initialize our file system */
     fs_init(DEV_RAMDISK);
 
-    /* add ramdisk driver */
+    /* add hdd driver */
     hdd_init();
 
     /* init the pipe module */
