@@ -35,8 +35,8 @@ static struct file_operations_s ops = {
 
 void ramdisk_init(u32_t offset)
 {
+    pos = ram_offset = (char *) offset;
+
     /* register device */
     dev_register(DEV_RAMDISK, &ops);
-
-    pos = ram_offset = (char *) offset;
 }

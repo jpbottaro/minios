@@ -151,9 +151,6 @@ extern void serial_intr();
 
 void serial_init()
 {
-    /* make char device in /dev */
-    fs_make_dev("serial", I_CHAR, DEV_SERIAL, 0);
-
     /* register interruption handler */
     idt_register(36, serial_intr, DEFAULT_PL);
 

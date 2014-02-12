@@ -164,6 +164,7 @@ int vga_printf(u16_t r, u16_t c, const char* format, ...)
                     }
                     break;
                 case 'i':
+                case 'd':
                     j = va_arg(ap, int);
                     myitoa(j, buf, 10);
                     if (pad > 0)

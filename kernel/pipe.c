@@ -2,7 +2,6 @@
 #include <minios/pipe.h>
 #include <minios/misc.h>
 #include <minios/sem.h>
-#include <minios/fs.h>
 
 struct pipe_s {
     int i;

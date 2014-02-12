@@ -1,6 +1,5 @@
 #include <minios/sem.h>
 #include <minios/idt.h>
-#include <minios/fs.h>
 #include "con.h"
 
 extern void kbd_intr();
@@ -19,7 +18,6 @@ static struct file_operations_s ops = {
 void con_switch(int con_num)
 {
     con_num %= MAX_CONSOLES;
-    fs_make_dev("tty", I_CHAR, DEV_TTY, con_num);
     current_con = &console[con_num];
     kbd_currentkbd(&current_con->kbd);
 
@@ -31,15 +29,9 @@ void con_switch(int con_num)
 void con_init()
 {
     int i, j, k;
-    char tty[] = "tty0";
-
-    /* manage keyboard interruptions */
-    idt_register(33, kbd_intr, DEFAULT_PL);
 
     /* initialize virtual consoles (MAX_CONSOLES < 10) */
     for (i = 0; i < MAX_CONSOLES; i++) {
-        tty[3] = i + '0';
-        fs_make_dev(tty, I_CHAR, DEV_TTY, i);
         console[i].i = i;
         console[i].x = 0;
         console[i].y = 0;
@@ -56,6 +48,10 @@ void con_init()
     /* make current virtual terminal dev */
     con_switch(0);
 
+    /* manage keyboard interruptions */
+    idt_register(33, kbd_intr, DEFAULT_PL);
+
+    /* register device */
     dev_register(DEV_TTY, &ops);
 }
 

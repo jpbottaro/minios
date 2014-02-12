@@ -279,9 +279,6 @@ void hdd_init()
     hdd_reset(&controller);
     hdd_identify(&drive);
 
-    /* make char device in /dev */
-    fs_make_dev("hdd", I_BLOCK, DEV_HDD, 0);
-
     /* register device */
     dev_register(DEV_HDD, &ops);
 }

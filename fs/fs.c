@@ -21,7 +21,6 @@ static struct file_operations_s ops = {
     .lseek = fs_lseek
 };
 
-/* initialize fs, needs to be ALL mapped in memory, fs_start being first byte */
 int fs_init(dev_t dev)
 {
     fs_dev = &fs_dev_str;
