@@ -6,7 +6,7 @@
 #include "../drivers/hdd/hdd.h"
 #include "../drivers/serial/serial.h"
 
-#define FS_INITIAL_POS 0x20000
+#define FS_INITIAL_POS 0x30000
 
 struct dev_s devices[MAX_DEVICES];
 

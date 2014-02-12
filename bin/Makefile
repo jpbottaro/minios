@@ -24,7 +24,7 @@ BIN_BOOT=../boot/floppyboot.bin
 BIN_KERN=kernel.bin
 FSIMAGE=fsimage
 # 0x20000 - 0x1200
-KERNELMEM=126464
+KERNELMEM=192000
 
 .PHONY=clean all image
 
