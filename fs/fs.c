@@ -543,8 +543,8 @@ int fs_make_dev(const char *name, int type, dev_t major, dev_t minor)
 
     ino = dev = NULL;
 
-    if ( (dev = find_inode(NULL, "/dev", FS_SEARCH_GET)) == NULL)
-        debug_panic("fs_make_dev: no /dev folder!!");
+    if ( (dev = find_inode(NULL, "/dev", FS_CREAT)) == NULL)
+        debug_panic("fs_make_dev: error searching/creating /dev");
 
     if ( (ino = find_inode(dev, name, FS_SEARCH_CREAT)) == NULL)
         goto err;
@@ -560,6 +560,7 @@ int fs_make_dev(const char *name, int type, dev_t major, dev_t minor)
 err:
     release_inode(dev);
     release_inode(ino);
+
     return ERROR;
 }
 
