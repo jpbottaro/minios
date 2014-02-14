@@ -377,9 +377,7 @@ void release_inode(struct inode_s *ino)
 {
     struct real_inode_s real;
 
-    if (ino == NULL)
-        return;
-    if (--ino->i_refcount == 0) {
+    if (ino != NULL && --ino->i_refcount == 0) {
         copy_i2r(ino, &real);
         fs_dev->f_op->lseek(fs_dev, ino->i_pos, SEEK_SET);
         fs_dev->f_op->write(fs_dev, (char *) &real, sizeof(struct real_inode_s));
