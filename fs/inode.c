@@ -154,6 +154,7 @@ static char *parse_path(char *path)
 {
     while (*path != '\0' && *path != '/')
         path++;
+
     if (*path == '/') {
         *path = '\0';
         path++;
@@ -420,25 +421,21 @@ struct buf_s *get_block(zone_t num)
 
     if (!buf->b_free) {
         buf->b_refcount++;
-        return buf;
+    } else {
+        fs_dev->f_op->lseek(fs_dev, num * BLOCK_SIZE, SEEK_SET);
+        fs_dev->f_op->read(fs_dev, buf->b_buffer, BLOCK_SIZE);
+        buf->b_pos = num * BLOCK_SIZE;
+        buf->b_free = 0;
+        buf->b_dirty = 0;
+        buf->b_refcount = 1;
     }
-
-    /* read from device */
-    fs_dev->f_op->lseek(fs_dev, num * BLOCK_SIZE, SEEK_SET);
-    fs_dev->f_op->read(fs_dev, buf->b_buffer, BLOCK_SIZE);
-    buf->b_pos = num * BLOCK_SIZE;
-    buf->b_free = 0;
-    buf->b_refcount = 1;
-    buf->b_dirty = 0;
 
     return buf;
 }
 
 void release_block(struct buf_s *buf)
 {
-    if (buf == NULL)
-        return;
-    if (--buf->b_refcount <= 0) {
+    if (buf != NULL && --buf->b_refcount <= 0) {
         /* save changes */
         fs_dev->f_op->lseek(fs_dev, buf->b_pos, SEEK_SET);
         fs_dev->f_op->write(fs_dev, buf->b_buffer, BLOCK_SIZE);
