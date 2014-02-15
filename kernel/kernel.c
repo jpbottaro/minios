@@ -36,7 +36,7 @@ void kernel_init()
     dev_init();
 
     /* file system */
-    fs_init(DEV_RAMDISK);
+    fs_init(DEV_HDD);
 
     /* create device nodes (in /dev) */
     devfs_init();

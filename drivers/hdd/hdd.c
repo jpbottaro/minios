@@ -44,23 +44,30 @@ void hdd_wait_idle(struct ata_controller *ata)
     } while (status != 0xff && (status & (ATA_SR_BSY | ATA_SR_DRQ)) && limit);
 }
 
-int hdd_wait_status(struct ata_controller *ata)
+int hdd_wait_status(struct ata_controller *ata, int advanced_check)
 {
-    u8_t status;
     int i;
 
-    for (i = 0; i < 1000; i++) {
-        status = inb(ata->port + ATA_REG_STATUS);
-        if ((status & (ATA_SR_BSY | ATA_SR_DRQ)) == ATA_SR_DRQ)
-            return 0;
-        else if (!status || (status & (ATA_SR_ERR | ATA_SR_DF)))
-            return -1;
+    /* waste 400ms */
+    for (i = 0; i < 4; i++)
+        inb(ata->port + ATA_REG_ALTSTATUS);
 
-        udelay(10);
+    /* wait for bsy to be cleared */
+    while (inb(ata->port + ATA_REG_STATUS) & ATA_SR_BSY)
+        ;
+
+    if (advanced_check) {
+        unsigned char state = inb(ata->port + ATA_REG_STATUS);
+
+        if (state & ATA_SR_ERR)
+            return -1;
+        if (state & ATA_SR_DF)
+            return -1;
+        if ((state & ATA_SR_DRQ) == 0)
+            return -1;
     }
 
-    debug_panic("hdd_wait_status: timeout");
-    return -1;
+    return 0;
 }
 
 int hdd_select(struct ide_device *ide)
@@ -112,7 +119,7 @@ void hdd_identify(struct ide_device *ide)
     ATA_DELAY();
     hdd_wait_idle(ata);
 
-    if (hdd_wait_status(ata)) {
+    if (hdd_wait_status(ata, 1)) {
         ide->present = 0;
         return;
     }
@@ -142,10 +149,10 @@ size_t hdd_lseek(struct file_s *flip, off_t offset, int whence)
 static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
                             u32_t seccount, void *buffer, int flag)
 {
+    int i;
     struct ata_controller *ata = ide->controller;
     u8_t cmd = flag == ATA_READ ? ATA_CMD_READ_PIO : ATA_CMD_WRITE_PIO;
     u8_t flush = ATA_CMD_CACHE_FLUSH;
-    u8_t *limit, *buf = (u8_t *) buffer;
 
     if (ide == NULL || seccount == 0 || buffer == NULL)
         return 0;
@@ -172,26 +179,20 @@ static int hdd_pio_transfer(struct ide_device *ide, u32_t lba,
 
     if (flag == ATA_READ) {
         while (seccount--) {
-            if (hdd_wait_status(ata))
+            if (hdd_wait_status(ata, 1))
                 goto err;
-            insw(ata->port + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 2);
-            buf += ATA_SECTOR_SIZE;
+            insw(ata->port + ATA_REG_DATA, buffer, ATA_SECTOR_SIZE / 2);
+            buffer += ATA_SECTOR_SIZE;
         }
     } else {
-        // 400ms wait
-        if (inb(ata->port + ATA_REG_CONTROL) != 1)
-            debug_panic("couldn't get status");
         while (seccount--) {
-            limit = buf + ATA_SECTOR_SIZE;
-            for (; buf < limit; ++buf)
-                outb(ata->port + ATA_REG_DATA, *buf);
-            //outsw_delay(ata->port + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 2);
-            if (hdd_wait_status(ata))
-                goto err;
+            hdd_wait_status(ata, 0);
+            for (i = 0; i < ATA_SECTOR_SIZE; ++i)
+                outb(ata->port + ATA_REG_DATA, *((char *) buffer + i));
+            buffer += ATA_SECTOR_SIZE;
         }
         outb(ata->port + ATA_REG_COMMAND, flush);
-        if (hdd_wait_status(ata))
-            goto err;
+        hdd_wait_status(ata, 0);
     }
     ATA_FREE_TRANSFER(ata);
     return 0;
@@ -231,6 +232,8 @@ size_t hdd_read(struct file_s *flip, char *buf, size_t n)
     if (flip->f_pos == (current_sector << 9) && n % ATA_SECTOR_SIZE == 0) {
         if (hdd_pio_read(&drive, current_sector, seccount, buf))
             return -1;
+        flip->f_pos += n;
+
         return n;
     }
 
@@ -262,11 +265,10 @@ size_t hdd_read(struct file_s *flip, char *buf, size_t n)
     }
 
     flip->f_pos += orig_size;
+
     return orig_size;
 }
 
-/* the debug_panic() calls are temporary for debugging porposes, they will be
- * replaced */
 ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
 {
     u32_t current_sector = ATA_TO_SECTOR(flip->f_pos);
@@ -281,18 +283,27 @@ ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
     }
     orig_size = n;
 
-    /* do it the hard way - first sector */
+    /* check if it is easy */
+    if (flip->f_pos == (current_sector << 9) && n % ATA_SECTOR_SIZE == 0) {
+        if (hdd_pio_write(&drive, current_sector, last_sector - current_sector, buf))
+            return -1;
+        flip->f_pos += n;
+
+        return n;
+    }
+
+    /* first sector */
     buf_off = 0;
     temp_off = flip->f_pos % ATA_SECTOR_SIZE;
     if (temp_off != 0) {
         remaining = ATA_SECTOR_SIZE - temp_off;
         u32_t sz = MIN(n, remaining);
         if (hdd_pio_read(&drive, current_sector, 1, temp))
-            debug_panic("hdd_write: read first");
+            return -1;
         mymemcpy((char *) (temp + temp_off), buf, sz);
         buf_off = sz;
         if (hdd_pio_write(&drive, current_sector, 1, temp))
-            debug_panic("hdd_write: write first");
+            return -1;
         current_sector++;
         n -= sz;
     }
@@ -301,7 +312,7 @@ ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
     if (n >= ATA_SECTOR_SIZE) {
         seccount = n / ATA_SECTOR_SIZE;
         if (hdd_pio_write(&drive, current_sector, seccount, buf + buf_off))
-            debug_panic("hdd_write: write middle");
+            return -1;
         n %= ATA_SECTOR_SIZE;
         buf_off += seccount * ATA_SECTOR_SIZE;
         current_sector += seccount;
@@ -310,10 +321,10 @@ ssize_t hdd_write(struct file_s *flip, char *buf, size_t n)
     /* write the (possibly) unaligned last sector */
     if (n > 0) {
         if (hdd_pio_read(&drive, current_sector, 1, temp))
-            debug_panic("hdd_write: read last");
+            return -1;
         mymemcpy((char *) temp, buf + buf_off, n);
         if (hdd_pio_write(&drive, current_sector, 1, temp))
-            debug_panic("hdd_write: write last");
+            return -1;
     }
 
     flip->f_pos += orig_size;
@@ -329,7 +340,7 @@ int hdd_flush(struct file_s *flip)
     if (drive.lba48)
         flush = ATA_CMD_CACHE_FLUSH_EXT;
     outb(drive.controller->port + ATA_REG_COMMAND, flush);
-    ret = hdd_wait_status(drive.controller);
+    ret = hdd_wait_status(drive.controller, 1);
     ATA_FREE_TRANSFER(drive.controller);
 
     return ret;
