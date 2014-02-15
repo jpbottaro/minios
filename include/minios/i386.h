@@ -104,6 +104,13 @@ LS_INLINE void insw(unsigned short port, void *addr, unsigned int cnt)
             : "memory");
 }
 
+LS_INLINE void outsw_delay(unsigned short port, const void *addr, unsigned int cnt)
+{
+    __asm volatile("loop: outsw; dec %%ecx; jnz loop"
+            : "+S" (addr), "+c" (cnt)
+            : "d" (port));
+}
+
 LS_INLINE void outsw(unsigned short port, const void *addr, unsigned int cnt)
 {
     __asm volatile("rep; outsw"

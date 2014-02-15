@@ -26,6 +26,8 @@ int decrease_refcount_page(void *page)
     if (page < (void *) KERNEL_PAGES || page > (void *) CODE_OFFSET)
         return -1;
     struct page_s *p = &pages[hash_page(page)];
+    if (p->refcount <= 0)
+        return -1;
     return --p->refcount;
 }
 

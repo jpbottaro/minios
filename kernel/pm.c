@@ -252,6 +252,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     struct process_state_s *process;
 
     /* open target file */
+    fd = 0;
     if ( (fd = fs_open(filename, O_RDONLY, 0)) < 0)
         return -1;
 
@@ -259,6 +260,19 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     process = LIST_FIRST(&unused_list);
     if (process == NULL)
         debug_panic("newprocess: No space for new process in ps array!");
+
+    /* how much did read */
+    len = 0;
+
+    /* get header */
+    if ( (ret = sys_read(fd, (char *) &pso_header, PSO_SIZE)) != PSO_SIZE)
+        goto err;
+        //debug_panic("newprocess: error in sys_read, cant get header");
+    len += ret;
+
+    if (mystrncmp((char *) pso_header.signature, "PSO", 3) != 0)
+        goto err;
+        //debug_panic("newprocess: see what to do with tasks with wrong magic");
 
     /* fill child entry */
     LIST_REMOVE(process, unused);
@@ -278,19 +292,10 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     /* build directory table for new process (with kernel already mapped) */
     dirbase = mm_dir_new();
     process->pages_dir = dirbase;
+
     /* ident map the directory table (this way its 'user' and not 'system') */
     mm_map_page(dirbase, dirbase, dirbase);
 
-    /* how much did read */
-    len = 0;
-
-    /* get header */
-    if ( (ret = sys_read(fd, (char *) &pso_header, PSO_SIZE)) != PSO_SIZE)
-        debug_panic("newprocess: error in sys_read, cant get header");
-    len += ret;
-
-    if (mystrncmp((char *) pso_header.signature, "PSO", 3) != 0)
-        debug_panic("newprocess: see what to do with tasks with wrong magic");
     mem_offset = pso_header.mem_start;
     process->eip = pso_header._main;
 
@@ -396,6 +401,11 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     sched_enqueue(process);
 
     return process->pid;
+
+err:
+    if (fd)
+        sys_close(fd);
+    return -1;
 }
 
 /* get current process' pid */
