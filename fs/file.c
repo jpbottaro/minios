@@ -145,7 +145,7 @@ struct inode_s *current_dir()
     struct inode_s *dir;
 
     if (current_process == NULL)
-        dir = root;
+        dir = get_root();
     else
         dir = current_process->curr_dir;
     dir->i_refcount++;

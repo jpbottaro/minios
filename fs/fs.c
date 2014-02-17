@@ -10,7 +10,6 @@
 
 struct file_s *fs_dev;
 struct file_s fs_dev_str;
-struct inode_s *root;
 
 static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag);
 static void fill_inode(struct inode_s *ino, int mode);
@@ -27,7 +26,6 @@ int fs_init(dev_t dev)
     dev_file_calls(fs_dev, dev);
     read_super();
     cache_init();
-    root = get_inode(1);
 
     /* register sys calls */
     SCALL_REGISTER(3, sys_read);
@@ -566,8 +564,12 @@ err:
     return ERROR;
 }
 
+struct inode_s *get_root()
+{
+    return get_inode(1);
+}
+
 int fs_end()
 {
-    release_inode(root);
     return 0;
 }

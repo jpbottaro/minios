@@ -61,7 +61,7 @@ struct inode_s *find_inode(struct inode_s *dir, const char *user_path, int flag)
    
     /* start at root if path starts with slash */
     if (dir == NULL || *path == '/') {
-        r = root;
+        r = get_root();
     } else {
         /* check if dir was removed or is not a directory */
         if (!IS_DIR(dir->i_mode) || dir->i_nlinks == NO_LINK)
@@ -74,7 +74,7 @@ struct inode_s *find_inode(struct inode_s *dir, const char *user_path, int flag)
 
     /* remove the case that the result is root */
     if (*begin == '\0')
-        return root;
+        return r;
 
     /* up the refcount of the current inode */
     get_inode(r->i_num);

@@ -27,6 +27,7 @@ struct real_inode_s {
 };
 
 extern struct file_s *fs_dev;
-extern struct inode_s *root;
+
+struct inode_s *get_root();
 
 #endif /* __FS_H__ */
