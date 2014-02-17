@@ -37,7 +37,7 @@ int fs_init(dev_t dev)
     SCALL_REGISTER(10, fs_unlink);
     SCALL_REGISTER(12, fs_chdir);
     SCALL_REGISTER(19, sys_lseek);
-    //SCALL_REGISTER(38, fs_rename);
+    SCALL_REGISTER(38, fs_rename);
     SCALL_REGISTER(39, fs_mkdir);
     SCALL_REGISTER(40, fs_rmdir);
     SCALL_REGISTER(141, fs_getdents);
@@ -352,45 +352,48 @@ void last_component(const char *path, char *last)
 }
 
 /* rename oldpath to newpath */
-#if 0
 int fs_rename(const char *oldpath, const char *newpath)
 {
-    struct inode_s *dir, *last_dir, *ino;
-    struct dir_entry_s *dentry;
+    struct inode_s *dir, *old_last_dir, *last_dir, *ino;
     char name[MAX_NAME];
 
     dir = current_dir();
-    /* get last directory of path */
+    /* get last directory of target path */
     if ( (last_dir = find_inode(dir, newpath, FS_SEARCH_LASTDIR)) == NULL)
-        return ERROR;
+        goto err;
+
+    /* remove entry from the old directory */
+    if ( (ino = find_inode(dir, oldpath, FS_SEARCH_REMOVE)) == NULL)
+        goto err;
 
     /* get last component of path */
     last_component(newpath, name);
 
     /* new entry in the last directory of path (or old one if file exists) */
-    if ( (dentry = search_inode(last_dir, name)) == NULL)
-        if ( (dentry = empty_entry(last_dir)) == NULL)
-            return ERROR;
-
-    /* remove entry from the old directory */
-    if ( (ino = find_inode(dir, oldpath, FS_SEARCH_REMOVE)) == NULL)
-        return ERROR;
-
-    /* fill entry in new directory */
-    dentry->num = ino->i_num;
-    mystrncpy(dentry->name, name, MAX_NAME);
-    last_dir->i_size += DIRENTRY_SIZE;
+    add_entry(last_dir, ino->i_num, name);
 
     /* check if oldpath was a dir, and update '..' in that case */
     if (IS_DIR(ino->i_mode)) {
-        dentry = search_inode(ino, "..");
-        dentry->num = last_dir->i_num;
+        if ( (old_last_dir = find_inode(dir, oldpath, FS_SEARCH_LASTDIR)) != NULL) {
+            old_last_dir->i_nlinks--;
+            release_inode(old_last_dir);
+        }
+        add_entry(ino, last_dir->i_num, "..");
         last_dir->i_nlinks++;
     }
 
+    release_inode(last_dir);
+    release_inode(dir);
+    release_inode(ino);
+
     return OK;
+
+err:
+    release_inode(last_dir);
+    release_inode(dir);
+    release_inode(ino);
+    return ERROR;
 }
-#endif
 
 /* create new directory */
 int fs_mkdir(const char *pathname, mode_t mode)
@@ -439,7 +442,6 @@ err:
 /* remove directory (only if it is empty) */
 int fs_rmdir(const char *pathname)
 {
-    struct dir_entry_s dentry;
     struct inode_s *ino, *dir, *tmpdir;
     char name[MAX_NAME];
 
@@ -454,8 +456,8 @@ int fs_rmdir(const char *pathname)
     if ( (ino = find_inode(dir, name, FS_SEARCH_ADD)) == NULL)
         goto err;
 
-    /* check if its a dir and it is empty - fscking ugly hacks.. */
-    if (!IS_DIR(ino->i_mode) || search_inode(ino, NULL, &dentry, 0) == ERROR)
+    /* check if its a dir and it is empty */
+    if (!IS_DIR(ino->i_mode) || ino->i_size != DIRENTRY_SIZE * 2)
         goto err;
 
     /* this cant give an error */

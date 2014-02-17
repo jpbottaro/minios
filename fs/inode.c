@@ -53,7 +53,7 @@ struct inode_s *find_inode(struct inode_s *dir, const char *user_path, int flag)
     struct inode_s *r;
     struct dir_entry_s dentry;
     char *begin, *end, path[MAX_PATH];
-    ino_t tmp;
+    ino_t ino_num;
  
     /* copy path and check if it is too long */
     if (mystrncpy(path, user_path, MAX_PATH) < 0)
@@ -88,7 +88,7 @@ struct inode_s *find_inode(struct inode_s *dir, const char *user_path, int flag)
             goto err_release;
 
         /* advance to the next component of the path */
-        if (search_inode(r, begin, &dentry, FS_SEARCH_GET) < 0)
+        if (search_inode(r, begin, 0, &dentry, FS_SEARCH_GET) < 0)
             goto err_release;
         release_inode(r);
         if ( (r = get_inode(dentry.num)) == NULL)
@@ -108,41 +108,21 @@ struct inode_s *find_inode(struct inode_s *dir, const char *user_path, int flag)
             return get_inode(dentry.num);
     }
 
-    ret = search_inode(r, begin, &dentry, flag);
-
-    switch (flag) {
-        case FS_SEARCH_GET:
-            release_inode(r);
-            if (ret == ERROR)
-                return NULL;
-            else
-                return get_inode(dentry.num);
-
-        case FS_SEARCH_CREAT:
-            if (ret == OK)
-                return get_inode(dentry.num);
-
-            /* CREAT keeps going... */
-        case FS_SEARCH_ADD:
-            if (ret == OK)
-                goto err_release;
-
-            if ( (tmp = empty_inode()) == NO_INODE)
-                goto err_release;
-
-            empty_entry(r, tmp, begin);
-            release_inode(r);
-            return get_inode(tmp);
-
-        case FS_SEARCH_REMOVE:
-            if (ret == ERROR)
-                goto err_release;
-
-            release_inode(r);
-            return get_inode(dentry.num);
+    if (flag == FS_SEARCH_ADD || flag == FS_SEARCH_CREAT) {
+        if ( (ino_num = empty_inode()) == NO_INODE)
+            goto err_release;
+    } else {
+        ino_num = NO_INODE;
     }
 
-    return NULL;
+    ret = search_inode(r, begin, ino_num, &dentry, flag);
+
+    release_inode(r);
+
+    if (ret == ERROR)
+        return NULL;
+    else
+        return get_inode(dentry.num);
 
 err_release:
     release_inode(r);
@@ -164,35 +144,17 @@ static char *parse_path(char *path)
     return path;
 }
 
+/* get an empty directory entry and save the new inode; */
+/* if entry exists, just update it */
+int add_entry(struct inode_s *dir, ino_t ino_num, char *name)
+{
+    return search_inode(dir, name, ino_num, NULL, FS_SEARCH_ADD);
+}
+
 /* get an empty directory entry and save the new inode */
 int empty_entry(struct inode_s *dir, ino_t ino_num, char *name)
 {
-    unsigned int pos;
-    struct dir_entry_s *dentry, *begin, *end;
-    struct buf_s *block;
-    block_t blocknr;
-
-    pos = 0;
-    while ( (blocknr = read_map(dir, pos, FS_WRITE)) != NO_BLOCK) {
-        block = get_block(blocknr);
-        begin = (struct dir_entry_s *) block->b_buffer;
-        end = begin + BLOCK_SIZE / DIRENTRY_SIZE;
-
-        for (dentry = begin; dentry < end; dentry++) {
-            if (dentry->num == 0) {
-                dentry->num = ino_num;
-                mystrncpy(dentry->name, name, MAX_NAME);
-                dir->i_size += DIRENTRY_SIZE;
-                release_block(block);
-                return OK;
-            }
-        }
-
-        pos += BLOCK_SIZE;
-        release_block(block);
-    }
-
-    return ERROR;
+    return search_inode(dir, name, ino_num, NULL, FS_SEARCH_CREAT);
 }
 
 /* get next directory entry of a directory. *p is a pointer to the starting
@@ -228,57 +190,67 @@ int next_entry(struct inode_s *dir, unsigned int *p, struct dir_entry_s *dent)
     return ERROR;
 }
 
-/* remove entry at a given position */
-int remove_entry(struct inode_s *dir, unsigned int *p)
-{
-    unsigned int pos = *p - DIRENTRY_SIZE; 
-    struct dir_entry_s *dentry;
-    struct buf_s *block;
-    block_t blocknr;
-
-    if ( (blocknr = read_map(dir, pos, FS_READ)) == NO_BLOCK)
-        return ERROR;
-    block = get_block(blocknr);
-    dentry = (struct dir_entry_s *) (block->b_buffer + pos % BLOCK_SIZE);
-    dentry->num = NO_INODE;
-    dir->i_size -= DIRENTRY_SIZE;
-    release_block(block);
-
-    return OK;
-}
-
 /* search an inode in a directory based on its name, return a pointer to it
  * if it is found, or an empty entry otherwise
- *
- * if name is null, find the first non-empty entry which is not '.' or '..'
  */
-int search_inode(struct inode_s *dir, const char *name, struct dir_entry_s *dentry, int flag)
+int search_inode(struct inode_s *dir, const char *name, const ino_t ino_num,
+                 struct dir_entry_s *dent, int flag)
 {
-    unsigned int pos, i, entries;
+    int i, pos, entries, empty_idx;
+    struct dir_entry_s *dentry;
+    struct buf_s *block;
+    block_t blocknr, empty_block;
 
-    if (name != NULL && *name == '\0')
-        debug_panic("search_inode: no name to search");
+    if (dir == NULL || name == NULL || *name == '\0')
+        return ERROR;
 
-    if (dir == NULL)
-        debug_panic("search_inode: NULL directory");
-
-    pos = 0;
+    empty_block = empty_idx = pos = 0;
     entries = dir->i_size / DIRENTRY_SIZE;
-    for (i = 0; i < entries; ++i) {
-        if (next_entry(dir, &pos, dentry) == ERROR)
-            break;
+    while (entries > 0 && (blocknr = read_map(dir, pos, FS_READ)) != NO_BLOCK) {
+        block = get_block(blocknr);
+        dentry = (struct dir_entry_s *) block->b_buffer;
 
-        if (dentry->num != 0) {
-            if (name == NULL) {
-                if (mystrncmp(".",  dentry->name, 2) != 0 &&
-                    mystrncmp("..", dentry->name, 3) != 0)
+        for (i = 0; i < NR_DIR_ENTRIES; i++) {
+            if (dentry->num != 0) {
+                entries--;
+                if (mystrncmp(name, dentry->name, MAX_NAME) == 0) {
+                    if (dent != NULL)
+                        *dent = *dentry;
+                    if (flag == FS_SEARCH_REMOVE) {
+                        dentry->num = NO_INODE;
+                        dir->i_size -= DIRENTRY_SIZE;
+                    } else if (flag == FS_SEARCH_ADD) {
+                        release_block(block);
+                        return ERROR;
+                    }
+                    release_block(block);
                     return OK;
-            } else if (mystrncmp(name, dentry->name, MAX_NAME) == 0) {
-                if (flag == FS_SEARCH_REMOVE)
-                    remove_entry(dir, &pos);
-                return OK;
+                }
+            } else {
+                empty_block = blocknr;
+                empty_idx = i;
             }
+            dentry++;
         }
+
+        pos += BLOCK_SIZE;
+        release_block(block);
+    }
+
+    if (flag == FS_SEARCH_CREAT || flag == FS_SEARCH_ADD) {
+        if (empty_block == 0)
+            empty_block = read_map(dir, pos, FS_WRITE);
+
+        block = get_block(empty_block);
+        dentry = (struct dir_entry_s *) block->b_buffer + empty_idx;
+        dentry->num = ino_num;
+        mystrncpy(dentry->name, name, MAX_NAME);
+        dir->i_size += DIRENTRY_SIZE;
+
+        if (dent != NULL)
+            *dent = *dentry;
+        release_block(block);
+        return OK;
     }
 
     return ERROR;

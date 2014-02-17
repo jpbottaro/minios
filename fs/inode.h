@@ -22,8 +22,9 @@ struct dir_entry_s {
 void cache_init();
 block_t read_map(struct inode_s *ino, unsigned int pos, int flag);
 int empty_entry(struct inode_s *dir, ino_t ino_num, char *name);
+int add_entry(struct inode_s *dir, ino_t ino_num, char *name);
 int next_entry(struct inode_s *dir, unsigned int *p, struct dir_entry_s *dent);
-int search_inode(struct inode_s *dir, const char *name, struct dir_entry_s *dentry,
-                                                                         int flag);
+int search_inode(struct inode_s *dir, const char *name, const ino_t ino_num,
+                 struct dir_entry_s *dentry, int flag);
 
 #endif /* __INODE_H__ */
