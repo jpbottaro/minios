@@ -1,3 +1,89 @@
-\section{Disco Rigido}
+\section{Disco Rígido}
 
-Aca contamos las mejoras al driver de disco rigido
+El driver de disco rígido existente fue diseñado originalmente
+de manera simple para solo soportar lectura. Si bien se hizo un intento de
+soportar escritura, nunca fue terminado. El primer paso consistió en
+agregar \textbf{escritura para el hdd}.
+
+El SO soporta el uso de device nodes (archivos que representan dispositivos en
+el fs, ubicados en /dev), pero la manera en que estaba hecho era desordenada y
+prensentaba problemas para habilitar el sistema booteando del hdd. El segundo
+paso fue creado el módulo \textbf{devfs}.
+
+Se aplicó una política más eficiente para el uso del hdd (o cualquiera sea el
+dispositivo base) desde el sistema de archivos. Éste tercer paso involucró
+mejorar el uso de \textbf{refcounts} y agregar la idea de \textbf{dirty} al FS.
+
+Por último se arreglaron varios problemas generales, bugs lógicos en el código y
+se reestructuraron funciones importantes.
+
+\subsection{Escritura para el HDD}
+
+Se mantuvo la decisión original de usar PIO para la lectura/escritura, lo que
+significa que todas las transmisiones se realizaron a través de los puertos, sin
+DMA.
+
+Para lograr la escritura se adaptó parte del código responsable de leer del
+dispositivo. La mayor parte del código es simple, se ponen los valores
+requeridos en los puertos especificados y se lee/escribe lo necesario.
+
+La parte más tumultosa de la implementación tiene que ver con la espera del
+dispositivo. En varias ocasiones es necesario aplicar esperas forzosas de 400ms
+para que el darle tiempo al disco de procesar los comandos. Ésto es
+particularmente importante a la hora de escribir, y trajo muchos problemas hasta
+que se descubrió que usar el comando de asm "rep" no era posible, ya que el
+disco no lograba leer lo suficientemente rápido los datos ingresados. Agregando
+un pequeño delay entre cada palabra, y esperando la bajada de la bandera BUSY
+luego de cada sector, se logró soportar la escritura por puertos.
+
+\subsection{DevFS}
+
+Originalmente cada driver era el encargado de crear su propio device node en el
+FS. Esto tenía dos problemas críticos: creaba una dependencia innecesaria de todos
+los drivers con el FS, y resultaba en problemas a la hora de querer usar algún
+dispositivo como base para el FS, creando una dependencia circular.
+
+Por esta razón se creó una interfaz independiente encargada de crear device
+nodes. De esta manera los drivers son inicializados, luego es el turno del
+filesystem (tomando algún device previo como base), y por último devfs se
+encarga de crear los device nodes correspondientes.
+
+Esta estrategia es la utilizada originalmente por sistemas como Linux, tomando
+responsabilidad de la creación de estos archivos virtuales. En la actualidad se
+opta por una estrategia más modularizada, exponiendo información de dispositivos
+y dejando que applicaciones de user-space manejen los device nodes (como es el
+caso de udev). Se deja como trabajo a futuro crear directorios como /sys y
+empujar código fuera del kernel hacia aplicaciones comunes.
+
+\subsection{Refcounts y Dirty en el FS}
+
+La técnica original del sistema de archivos para grabar en el dispositivo donde
+reside era la más simple, hacerlo siempre. Cada estructura del FS (esto incluye
+a los inodos y los bloques) lleva su correspondiente refcount o contador de
+referencias, y una vez que éste llega a 0 la estructura es liberada y grabada en
+el dispositivo que soporta al FS.
+
+La primer mejora consistió en revisar el mantenimiento de este refcount,
+asegurandose de no perder referencias y dejar inodos/bloques sin liberar.
+
+El cambio más importante fue el uso del flag "dirty". Siendo cuidadoso de marcar como
+sucia toda estructura que reciba cambios en su ciclo de vida, es posible reducir
+en un enorme grado la cantidad de escrituras al almacenamiento secundario.
+
+Anteriormente leer un archivo en /a/b/c/hola.txt requería en promedio
+una escritura por cada lectura de inodo/bloque. El uso de dirty eliminó todas
+estas ineficiencias, haciendo que esta operación no escriba nunca en disco.
+
+\subsection{Misc}
+
+El bug más importante encontrado estaba relacionado con el uso de los inodos en
+la cache. La consecuencia era que al apagar el SO y volverlo a encender, algunos
+cambios realizados (como copiar un archivo) parecían desaparecer. Tras
+investigar se encontró que la causa era que el inodo correspondiente a la raiz
+del fs no estaba siendo guardado. La razón era que, por motivos de eficiencia,
+este nodo era referenciado inicialmente y nunca liberado, por lo que su refcount
+nunca llegaba a 0 y no liberado de la memoria.
+
+Algunas funciones fueron reescritas, buscando mejor claridad en el código y/o
+arreglando inconsistencias. Un ejemplo claro es la llamada al sistema "rename"
+en fs.c, que tenía problemas y había sido descartada temporalmente.
