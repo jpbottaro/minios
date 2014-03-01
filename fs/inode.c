@@ -99,15 +99,6 @@ struct inode_s *find_inode(struct inode_s *dir, const char *user_path, int flag)
         end = parse_path(begin);
     }
 
-    if (flag == FS_SEARCH_LASTDIR) {
-        /* release the last inode we used for the search */
-        release_inode(r);
-        if (dentry.num == 0)
-            return current_dir();
-        else
-            return get_inode(dentry.num);
-    }
-
     if (flag == FS_SEARCH_ADD || flag == FS_SEARCH_CREAT) {
         if ( (ino_num = empty_inode()) == NO_INODE)
             goto err_release;

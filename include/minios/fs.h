@@ -95,7 +95,6 @@ void set_current_dir(struct inode_s *ino);
 #define FS_SEARCH_ADD     0x0002
 #define FS_SEARCH_CREAT   0x0003
 #define FS_SEARCH_REMOVE  0x0004
-#define FS_SEARCH_LASTDIR 0x0005
 
 struct inode_s *find_inode(struct inode_s *dir, const char *user_path, int flag);
 

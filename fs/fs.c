@@ -343,43 +343,49 @@ err:
     return ERROR;
 }
 
-void last_component(const char *path, char *last)
+void process_path(const char *pathname, char *path, char *name)
 {
-    int i;
-    const char *a;
+    int i, last;
 
-    a = path;
-    while (*path != '\0') {
-        if (*path == '/' && *(path+1) != '/')
-            a = path + 1;
-        path++;
+    i = last = 0;
+    while (pathname[i] != '\0') {
+        if (pathname[i] == '/' && pathname[i+1] != '/')
+            last = i + 1;
+        path[i] = pathname[i];
+        i++;
     }
+    path[last] = '\0';
 
-    for (i = 0; a[i] != '\0' && a[i] != '/' && i < MAX_NAME; i++)
-        last[i] = a[i];
-    last[i] = '\0';
+    for (i = 0; pathname[last] != '\0' && pathname[last] != '/' && i < MAX_NAME - 1; i++, last++)
+        name[i] = pathname[last];
+    name[i] = '\0';
 }
 
 /* rename oldpath to newpath */
 int fs_rename(const char *oldpath, const char *newpath)
 {
     struct inode_s *dir, *last_dir, *ino;
-    char name[MAX_NAME];
+    char path[MAX_PATH], name[MAX_NAME];
+
+    /* get last component of path */
+    process_path(newpath, path, name);
+    if (name[0] == '\0') {
+        char tmp[MAX_PATH];
+        process_path(oldpath, tmp, name);
+    }
 
     dir = current_dir();
     /* get last directory of target path */
-    if ( (last_dir = find_inode(dir, newpath, FS_SEARCH_LASTDIR)) == NULL)
+    if ( (last_dir = find_inode(dir, path, FS_SEARCH_GET)) == NULL)
         goto err;
 
     /* remove entry from the old directory */
     if ( (ino = find_inode(dir, oldpath, FS_SEARCH_REMOVE)) == NULL)
         goto err;
 
-    /* get last component of path */
-    last_component(newpath, name);
-
     /* new entry in the last directory of path (or old one if file exists) */
-    add_entry(last_dir, ino->i_num, name);
+    if (add_entry(last_dir, ino->i_num, name) == ERROR)
+        goto err;
 
     /* check if oldpath was a dir, and update '..' in that case */
     if (IS_DIR(ino->i_mode)) {
@@ -405,14 +411,14 @@ err:
 int fs_mkdir(const char *pathname, mode_t mode)
 {
     struct inode_s *ino, *dir, *tmpdir;
-    char name[MAX_NAME];
+    char path[MAX_PATH], name[MAX_NAME];
 
     ino = dir = tmpdir = NULL;
 
-    last_component(pathname, name);
+    process_path(pathname, path, name);
     tmpdir = current_dir();
     /* get inode numbers from parent and new dir */
-    if ( (dir = find_inode(tmpdir, pathname, FS_SEARCH_LASTDIR)) == NULL)
+    if ( (dir = find_inode(tmpdir, path, FS_SEARCH_GET)) == NULL)
         goto err;
     release_inode(tmpdir);
     if ( (ino = find_inode(dir, name, FS_SEARCH_ADD)) == NULL)
@@ -451,14 +457,14 @@ err:
 int fs_rmdir(const char *pathname)
 {
     struct inode_s *ino, *dir, *tmpdir;
-    char name[MAX_NAME];
+    char path[MAX_PATH], name[MAX_NAME];
 
     ino = dir = tmpdir = NULL;
 
-    last_component(pathname, name);
+    process_path(pathname, path, name);
     tmpdir = current_dir();
     /* get inode numbers from parent and new dir */
-    if ( (dir = find_inode(tmpdir, pathname, FS_SEARCH_LASTDIR)) == NULL)
+    if ( (dir = find_inode(tmpdir, path, FS_SEARCH_GET)) == NULL)
         goto err;
     release_inode(tmpdir);
     if ( (ino = find_inode(dir, name, FS_SEARCH_ADD)) == NULL)
