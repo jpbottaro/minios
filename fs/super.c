@@ -130,6 +130,7 @@ void rm_inode(ino_t ino_num)
     for (i = 0; i < NR_ZONES; i++)
         if (ino->i_zone[i] != NO_BLOCK)
             rm_block(ino->i_zone[i]);
+    ino->i_dirty = 1;
     release_inode(ino);
     free_bit(IMAP, ino_num);
 }

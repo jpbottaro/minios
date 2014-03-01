@@ -217,8 +217,14 @@ int search_inode(struct inode_s *dir, const char *name, const ino_t ino_num,
                     if (dent != NULL)
                         *dent = *dentry;
                     if (flag == FS_SEARCH_REMOVE) {
-                        dentry->num = NO_INODE;
+                        struct inode_s *ino = get_inode(dentry->num);
+                        if (IS_DIR(ino->i_mode))
+                            dir->i_nlinks--;
                         dir->i_size -= DIRENTRY_SIZE;
+                        dir->i_dirty = 1;
+                        block->b_dirty = 1;
+                        dentry->num = NO_INODE;
+                        release_inode(ino);
                     } else if (flag == FS_SEARCH_ADD) {
                         release_block(block);
                         return ERROR;
@@ -242,10 +248,12 @@ int search_inode(struct inode_s *dir, const char *name, const ino_t ino_num,
             empty_block = read_map(dir, pos, FS_WRITE);
 
         block = get_block(empty_block);
+        block->b_dirty = 1;
         dentry = (struct dir_entry_s *) block->b_buffer + empty_idx;
         dentry->num = ino_num;
         mystrncpy(dentry->name, name, MAX_NAME);
         dir->i_size += DIRENTRY_SIZE;
+        dir->i_dirty = 1;
 
         if (dent != NULL)
             *dent = *dentry;
@@ -338,22 +346,24 @@ struct inode_s *get_inode(ino_t num)
     /* copy it to our cache */
     copy_r2i(&real_ino, ino);
     ino->i_pos = p;
-    ino->i_free = 0;
     ino->i_num = num;
     ino->i_refcount = 1;
     ino->i_dirty = 0;
+    ino->i_free = 0;
 
     return ino;
 }
 
 void release_inode(struct inode_s *ino)
 {
-    struct real_inode_s real;
-
     if (ino != NULL && --ino->i_refcount == 0) {
-        copy_i2r(ino, &real);
-        fs_dev->f_op->lseek(fs_dev, ino->i_pos, SEEK_SET);
-        fs_dev->f_op->write(fs_dev, (char *) &real, sizeof(struct real_inode_s));
+        if (ino->i_dirty) {
+            struct real_inode_s real;
+
+            copy_i2r(ino, &real);
+            fs_dev->f_op->lseek(fs_dev, ino->i_pos, SEEK_SET);
+            fs_dev->f_op->write(fs_dev, (char *) &real, sizeof(struct real_inode_s));
+        }
         ino->i_dirty = 0;
         ino->i_free = 1;
         ino->i_num = 0;
@@ -408,11 +418,10 @@ struct buf_s *get_block(zone_t num)
 void release_block(struct buf_s *buf)
 {
     if (buf != NULL && --buf->b_refcount <= 0) {
-        /* save changes */
-        fs_dev->f_op->lseek(fs_dev, buf->b_pos, SEEK_SET);
-        fs_dev->f_op->write(fs_dev, buf->b_buffer, BLOCK_SIZE);
-
-        /* free buf */
+        if (buf->b_dirty) {
+            fs_dev->f_op->lseek(fs_dev, buf->b_pos, SEEK_SET);
+            fs_dev->f_op->write(fs_dev, buf->b_buffer, BLOCK_SIZE);
+        }
         buf->b_dirty = 0;
         buf->b_free = 1;
         buf->b_num = 0;

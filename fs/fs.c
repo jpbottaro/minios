@@ -59,6 +59,7 @@ static void fill_inode(struct inode_s *ino, int mode)
     ino->i_atime  = 0;
     ino->i_mtime  = 0;
     ino->i_ctime  = 0;
+    ino->i_dirty = 1;
     for(i = 0; i < NR_ZONES; i++) ino->i_zone[i] = 0;
 }
 
@@ -82,8 +83,10 @@ int fs_open(const char *filename, int flags, int mode)
     if (ino->i_zone[0] == 0 && (flags & O_CREAT))
         fill_inode(ino, mode);
 
-    if (flags & O_TRUNC)
+    if (flags & O_TRUNC) {
         ino->i_size = 0;
+        ino->i_dirty = 1;
+    }
 
     fd = get_fd(ino, (flags & O_APPEND) ? ino->i_size : 0);
 
@@ -99,6 +102,7 @@ int fs_open(const char *filename, int flags, int mode)
 err:
     release_inode(dir);
     release_inode(ino);
+
     return ERROR;
 }
 
@@ -154,6 +158,7 @@ size_t fs_lseek(struct file_s *flip, off_t offset, int whence)
     }
     pos = pos > ino->i_size ? ino->i_size : pos < 0 ? 0 : pos;
     flip->f_pos = pos;
+
     return OK;
 }
 
@@ -198,8 +203,10 @@ static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag
     n = pos - flip->f_pos;
     
     /* update inode size */
-    if (pos > ino->i_size && flag == FS_WRITE)
+    if (pos > ino->i_size && flag == FS_WRITE) {
         ino->i_size = pos;
+        ino->i_dirty = 1;
+    }
 
     /* set new filepos */
     flip->f_pos = pos;
@@ -227,8 +234,12 @@ int copy_file(char *buf, unsigned int n, unsigned int pos, struct inode_s *ino,
         off = pos % BLOCK_SIZE;
         size = MIN(n, BLOCK_SIZE - off);
 
-        if (flag == FS_WRITE) mymemcpy(block->b_buffer + off, buf, size);
-        else                  mymemcpy(buf, block->b_buffer + off, size);
+        if (flag == FS_WRITE) {
+            mymemcpy(block->b_buffer + off, buf, size);
+            block->b_dirty = 1;
+        } else {
+            mymemcpy(buf, block->b_buffer + off, size);
+        }
 
         n -= size;
         pos += size;
@@ -352,7 +363,7 @@ void last_component(const char *path, char *last)
 /* rename oldpath to newpath */
 int fs_rename(const char *oldpath, const char *newpath)
 {
-    struct inode_s *dir, *old_last_dir, *last_dir, *ino;
+    struct inode_s *dir, *last_dir, *ino;
     char name[MAX_NAME];
 
     dir = current_dir();
@@ -372,10 +383,6 @@ int fs_rename(const char *oldpath, const char *newpath)
 
     /* check if oldpath was a dir, and update '..' in that case */
     if (IS_DIR(ino->i_mode)) {
-        if ( (old_last_dir = find_inode(dir, oldpath, FS_SEARCH_LASTDIR)) != NULL) {
-            old_last_dir->i_nlinks--;
-            release_inode(old_last_dir);
-        }
         add_entry(ino, last_dir->i_num, "..");
         last_dir->i_nlinks++;
     }
@@ -390,6 +397,7 @@ err:
     release_inode(last_dir);
     release_inode(dir);
     release_inode(ino);
+
     return ERROR;
 }
 
@@ -421,6 +429,7 @@ int fs_mkdir(const char *pathname, mode_t mode)
     /* and '..' */
     empty_entry(ino, dir->i_num, "..");
     dir->i_nlinks++;
+    dir->i_dirty = 1;
 
     /* update dir size */
     ino->i_size = DIRENTRY_SIZE * 2;
@@ -434,6 +443,7 @@ err:
     release_inode(tmpdir);
     release_inode(dir);
     release_inode(ino);
+
     return ERROR;
 }
 
@@ -473,6 +483,7 @@ err:
     release_inode(tmpdir);
     release_inode(dir);
     release_inode(ino);
+
     return ERROR;
 }
 
@@ -551,6 +562,7 @@ int fs_make_dev(const char *name, int type, dev_t major, dev_t minor)
 
     ino->i_zone[0] = major;
     ino->i_zone[1] = minor;
+    ino->i_dirty = 1;
 
     release_inode(dev);
     release_inode(ino);

@@ -28,7 +28,8 @@ void init_fds(unsigned int id)
         for (i = 0; i < 3; ++i) {
             file->f_ino = ino;
             file->f_used = 1;
-            file->f_pos = 0; file->f_fd = i;
+            file->f_pos = 0;
+            file->f_fd = i;
             dev_file_calls(file, imayor(file->f_ino));
             ino->i_refcount++;
             file++;
