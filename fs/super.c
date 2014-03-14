@@ -4,16 +4,15 @@
 #include "fs.h"
 
 struct superblock_s superblock;
-struct superblock_s *sb;
+struct superblock_s *sb = &superblock;
 u8_t imap[BLOCK_SIZE];
-bitchunk_t *imap_origin;
 u8_t zmap[BLOCK_SIZE];
-bitchunk_t *zmap_origin;
+bitchunk_t *imap_origin = (bitchunk_t *) &imap;
+bitchunk_t *zmap_origin = (bitchunk_t *) &zmap;
 
 /* load up the super block; most 'constants' depend on this */
 int read_super()
 {
-    sb = &superblock;
     fs_dev->f_op->lseek(fs_dev, SUPER_OFFSET, SEEK_SET);
     fs_dev->f_op->read(fs_dev, (char *) sb, sizeof(struct superblock_s));
 
@@ -22,9 +21,6 @@ int read_super()
 
     fs_dev->f_op->lseek(fs_dev, ZMAP_OFFSET, SEEK_SET);
     fs_dev->f_op->read(fs_dev, (char *) &zmap, sizeof(zmap));
-
-    imap_origin = (bitchunk_t *) &imap;
-    zmap_origin = (bitchunk_t *) &zmap;
 
     return 0;
 }
