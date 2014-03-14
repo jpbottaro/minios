@@ -7,8 +7,8 @@
 #include <sys/types.h>
 
 struct superblock_s {
-  u16_t s_ninodes;		    /* # usable inodes on the minor device */
-  u16_t s_nzones;		    /* total device size, including bit maps etc */
+  u16_t s_ninodes;		    /* # usable inodes */
+  u16_t s_nzones;		    /* # usable zones */
   u16_t s_imap_blocks;		/* # of blocks used by inode bit map */
   u16_t s_zmap_blocks;		/* # of blocks used by zone bit map */
   u16_t s_firstdatazone;	/* number of first data zone (small) */
@@ -40,14 +40,15 @@ void rm_block(block_t block_num);
 
 #define INODE_SIZE     (sizeof(struct real_inode_s))
 #define INODE_MAX      (sb->s_ninodes)
-#define BLOCK_MAX      (sb->s_zones)
+#define BLOCK_MAX      (sb->s_nzones)
+
+#define TOTAL_SIZE     (BLOCK_MAX * BLOCK_SIZE)
 
 #define DIRECT_ZONES   7
 
 #define DIRENTRY_SIZE  (sizeof(struct dir_entry_s))
 #define NR_DIR_ENTRIES (BLOCK_SIZE / DIRENTRY_SIZE)
 #define DIRSIZE_MAX    (BLOCK_SIZE * DIRECT_ZONES)
-
 
 #define IMAP 0
 #define ZMAP 1
