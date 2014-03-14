@@ -18,16 +18,14 @@ void dev_init(void)
     serial_init();
 }
 
-/* assign file operations of device */
-int dev_file_calls(struct file_s *flip, dev_t dev)
+struct file_operations_s *dev_operations(dev_t major)
 {
-    if (dev >= MAX_DEVICES)
-        return -1;
-    flip->f_op = &devices[dev].d_op;
-    return 0;
+    if (major >= MAX_DEVICES)
+        return NULL;
+    return &devices[major].d_op;
 }
 
-int dev_register(unsigned int major, struct file_operations_s *fops)
+int dev_register(dev_t major, struct file_operations_s *fops)
 {
     if (major >= MAX_DEVICES)
         return -1;

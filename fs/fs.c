@@ -8,8 +8,8 @@
 #include <minios/dev.h>
 #include "fs.h"
 
-struct file_s *fs_dev;
 struct file_s fs_dev_str;
+struct file_s *fs_dev = &fs_dev_str;
 
 static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag);
 static void fill_inode(struct inode_s *ino, int mode);
@@ -22,8 +22,7 @@ static struct file_operations_s ops = {
 
 int fs_init(dev_t dev)
 {
-    fs_dev = &fs_dev_str;
-    dev_file_calls(fs_dev, dev);
+    fs_dev->f_op = dev_operations(dev);
     read_super();
     cache_init();
 
@@ -88,14 +87,8 @@ int fs_open(const char *filename, int flags, int mode)
         ino->i_dirty = 1;
     }
 
-    fd = get_fd(ino, (flags & O_APPEND) ? ino->i_size : 0);
-
-    /* this is kinda _very_ ugly.. check later how linux does it */
-    if (IS_DEV(ino->i_mode)) {
-        dev_file_calls(get_file(fd), ino->i_zone[0]);
-    } else {
-        dev_file_calls(get_file(fd), DEV_FS);
-    }
+    if ( (fd = get_fd(ino, (flags & O_APPEND) ? ino->i_size : 0)) == ERROR)
+        goto err;
 
     return fd;
 

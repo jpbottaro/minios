@@ -30,7 +30,7 @@ void init_fds(unsigned int id)
             file->f_used = 1;
             file->f_pos = 0;
             file->f_fd = i;
-            dev_file_calls(file, imayor(file->f_ino));
+            file->f_op = dev_operations(imayor(file->f_ino));
             ino->i_refcount++;
             file++;
         }
@@ -83,6 +83,7 @@ int get_fd(struct inode_s *ino, unsigned int pos)
         file->f_used  = 1;
         file->f_ino = ino;
         file->f_pos = pos;
+        file->f_op = dev_operations(IS_DEV(ino->i_mode) ? ino->i_zone[0] : DEV_FS);
         return file->f_fd;
     }
 

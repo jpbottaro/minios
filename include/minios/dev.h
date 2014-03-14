@@ -14,8 +14,8 @@
 
 /* Devices */
 void dev_init(void);
-int dev_register(unsigned int major, struct file_operations_s *fops);
-int dev_file_calls(struct file_s *flip, dev_t dev);
+int dev_register(dev_t major, struct file_operations_s *fops);
+struct file_operations_s *dev_operations(dev_t major);
 
 struct dev_s {
     struct file_operations_s d_op;
