@@ -8,3 +8,10 @@
 
 - The header of the apps have a wrong size, they report much more that they
   really have.
+
+- Weird behaviour when:
+    cp hola.txt a
+    rm a
+    cp readme a
+    cat a
+    (now a is missing some text)
