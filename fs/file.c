@@ -18,7 +18,7 @@ void init_fds(unsigned int id)
     LIST_INIT(unused_fd);
 
     /* separate instance in where there is a parent to copy fds from, and where
-     * there is not one */
+     * there isn't */
     if (current_process == NULL) {
         if ( (ino = find_inode(NULL, "/dev/tty", FS_SEARCH_GET)) == NULL)
             debug_panic("init_fds: no /dev/tty");
@@ -101,7 +101,7 @@ int release_fd(int fd)
         release_inode(file->f_ino);
         file->f_ino = NULL;
         file->f_pos = 0;
-        file->f_used  = 0;
+        file->f_used = 0;
         LIST_INSERT_HEAD(&current_process->unused_fd, file, unused);
         return OK;
     } else {
