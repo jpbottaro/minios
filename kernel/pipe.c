@@ -79,6 +79,11 @@ ssize_t pipe_write(struct file_s *flip, char *buf, size_t n)
 
 int pipe_flush(struct file_s *flip)
 {
+    return 0;
+}
+
+int pipe_close(struct file_s *flip)
+{
     int i = iminor(flip->f_ino);
 
     /* release anybody that might be waiting */
@@ -92,7 +97,8 @@ int pipe_flush(struct file_s *flip)
 static struct file_operations_s ops = {
     .read = pipe_read,
     .write = pipe_write,
-    .flush = pipe_flush
+    .flush = pipe_flush,
+    .close = pipe_close
 };
 
 int sys_pipe(int filedes[2])
@@ -103,14 +109,13 @@ int sys_pipe(int filedes[2])
     if (pipe != NULL) {
         LIST_REMOVE(pipe, unused);
 
+        pipe->done = 0;
         pipe->init = 0;
         pipe->end = 0;
-        pipe->done = 0;
 
         /* Fake inode to keep abstraction */
-        pipe->ino.i_dirty = 0;
+        pipe->ino.i_mode = 0;
         pipe->ino.i_refcount = -1;
-        pipe->ino.i_mode |= I_BLOCK;
         pipe->ino.i_zone[0] = DEV_PIPE;
         pipe->ino.i_zone[1] = pipe - pipes;
 
