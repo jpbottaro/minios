@@ -178,11 +178,11 @@ static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag
     unsigned int pos = flip->f_pos;
 
     if (ino == NULL)
-        return -1;
+        return ERROR;
  
     /* if its a directory, error */
     if (IS_DIR(ino->i_mode))
-        return -1;
+        return ERROR;
        
     /* check limit of file in read operation */
     if (flag == FS_READ)
@@ -215,10 +215,6 @@ int copy_file(char *buf, unsigned int n, unsigned int pos, struct inode_s *ino,
     block_t blocknr;
     struct buf_s *block;
 
-    /* if performance is the objective, the first block could be separated so
-     * that we dont have to do '%' every cicle and therefore remove 'off'
-     * altogether; I prefer small n clean code in this project
-     */
     while (n > 0) {
         if ( (blocknr = read_map(ino, pos, flag)) == NO_BLOCK)
             return ERROR;

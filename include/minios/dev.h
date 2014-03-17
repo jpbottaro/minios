@@ -8,6 +8,7 @@
 #define DEV_SERIAL  2
 #define DEV_HDD     3
 #define DEV_RAMDISK 4
+#define DEV_PIPE    5
 
 #include <minios/fs.h>
 #include <sys/types.h>

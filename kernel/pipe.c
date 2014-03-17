@@ -2,6 +2,7 @@
 #include <minios/pipe.h>
 #include <minios/misc.h>
 #include <minios/sem.h>
+#include <minios/dev.h>
 
 struct pipe_s {
     int i;
@@ -10,6 +11,8 @@ struct pipe_s {
     int end;
     int done;
     sem_t mutex, empty, full;
+
+    struct inode_s ino;
 
     LIST_ENTRY(pipe_s) unused;
 } pipes[MAX_PIPES];
@@ -21,7 +24,7 @@ size_t pipe_read(struct file_s *flip, char *buf, size_t n)
     int i, j;
 
     j = 0;
-    i = flip->f_pipenr;
+    i = iminor(flip->f_ino);
 
     if (pipes[i].done) {
         while (j < n && pipes[i].init < pipes[i].end) {
@@ -55,7 +58,7 @@ ssize_t pipe_write(struct file_s *flip, char *buf, size_t n)
     int i, j;
 
     j = 0;
-    i = flip->f_pipenr;
+    i = iminor(flip->f_ino);
 
     if (pipes[i].done)
         return n;
@@ -76,36 +79,18 @@ ssize_t pipe_write(struct file_s *flip, char *buf, size_t n)
 
 int pipe_flush(struct file_s *flip)
 {
-    int i = flip->f_pipenr;
+    int i = iminor(flip->f_ino);
 
     /* release anybody that might be waiting */
     pipes[i].done = 1;
     sem_signal(&pipes[i].full);
     sem_signal(&pipes[i].empty);
 
-    /* release fd */
-    release_fd_pipe(flip->f_fd);
     return 0;
 }
 
-size_t pipe_readnot(struct file_s *flip, char *buf, size_t n)
-{
-    return -1;
-}
-
-ssize_t pipe_writenot(struct file_s *flip, char *buf, size_t n)
-{
-    return -1;
-}
-
-static struct file_operations_s ops_read = {
+static struct file_operations_s ops = {
     .read = pipe_read,
-    .write = pipe_writenot,
-    .flush = pipe_flush
-};
-
-static struct file_operations_s ops_write = {
-    .read = pipe_readnot,
     .write = pipe_write,
     .flush = pipe_flush
 };
@@ -121,14 +106,24 @@ int sys_pipe(int filedes[2])
         pipe->init = 0;
         pipe->end = 0;
         pipe->done = 0;
+
+        /* Fake inode to keep abstraction */
+        pipe->ino.i_dirty = 0;
+        pipe->ino.i_refcount = -1;
+        pipe->ino.i_mode |= I_BLOCK;
+        pipe->ino.i_zone[0] = DEV_PIPE;
+        pipe->ino.i_zone[1] = pipe - pipes;
+
         sem_init(&pipe->empty, MAX_SIZE);
         sem_init(&pipe->full, 0);
         sem_init(&pipe->mutex, 1);
 
-        filedes[0] = get_fd_pipe(&ops_read, pipe->i);
-        filedes[1] = get_fd_pipe(&ops_write, pipe->i);
+        filedes[0] = get_fd(&pipe->ino, 0);
+        filedes[1] = get_fd(&pipe->ino, 0);
+
         return 0;
     }
+
     return -1;
 }
 
@@ -141,6 +136,8 @@ void pipe_init()
         pipes[i].i = i;
         LIST_INSERT_HEAD(&unused_pipes, &pipes[i], unused);
     }
+
+    dev_register(DEV_PIPE, &ops);
 
     SCALL_REGISTER(42, sys_pipe);
 }

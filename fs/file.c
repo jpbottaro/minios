@@ -4,7 +4,7 @@
 #include <sys/queue.h>
 #include "fs.h"
 
-struct file_s tmpfile = {.f_fd = 0};
+struct file_s tmpfile;
 
 /* init fds for a process */
 void init_fds(unsigned int id)
@@ -29,7 +29,6 @@ void init_fds(unsigned int id)
             file->f_ino = ino;
             file->f_used = 1;
             file->f_pos = 0;
-            file->f_fd = i;
             file->f_op = dev_operations(imayor(file->f_ino));
             ino->i_refcount++;
             file++;
@@ -37,7 +36,6 @@ void init_fds(unsigned int id)
         release_inode(ino);
 
         for (; i < MAX_FILES; ++i) {
-            file->f_fd = i;
             file->f_ino = NULL;
             file->f_used = 0;
             file->f_pos = 0;
@@ -49,10 +47,8 @@ void init_fds(unsigned int id)
             file = &ps[id].files[i];
             parent_file = &current_process->files[i];
 
-            file->f_fd = i;
             file->f_ino = parent_file->f_ino;
             file->f_pos = parent_file->f_pos;
-            file->f_pipenr = parent_file->f_pipenr;
             file->f_op = parent_file->f_op;
             file->f_used = parent_file->f_used;
             if (!parent_file->f_used) {
@@ -67,15 +63,18 @@ void init_fds(unsigned int id)
 /* get a new fd */
 int get_fd(struct inode_s *ino, unsigned int pos)
 {
-    struct unused_fd_t *unused_fd;
+    int fd;
     struct file_s *file;
 
+    file = NULL;
     if (current_process != NULL) {
-        unused_fd = &current_process->unused_fd;
-        file = LIST_FIRST(unused_fd);
-        if (file != NULL)
+        file = LIST_FIRST(&current_process->unused_fd);
+        if (file != NULL) {
+            fd = file - current_process->files;
             LIST_REMOVE(file, unused);
+        }
     } else {
+        fd = 0;
         file = &tmpfile;
     }
 
@@ -84,7 +83,7 @@ int get_fd(struct inode_s *ino, unsigned int pos)
         file->f_ino = ino;
         file->f_pos = pos;
         file->f_op = dev_operations(IS_DEV(ino->i_mode) ? ino->i_zone[0] : DEV_FS);
-        return file->f_fd;
+        return fd;
     }
 
     return ERROR;
@@ -96,7 +95,6 @@ int release_fd(int fd)
     if (current_process == NULL)
         return OK;
 
-    struct unused_fd_t *unused_fd = &current_process->unused_fd;
     struct file_s *file = &current_process->files[fd];
 
     if (file->f_ino != NULL) {
@@ -104,42 +102,11 @@ int release_fd(int fd)
         file->f_ino = NULL;
         file->f_pos = 0;
         file->f_used  = 0;
-        LIST_INSERT_HEAD(unused_fd, file, unused);
+        LIST_INSERT_HEAD(&current_process->unused_fd, file, unused);
         return OK;
     } else {
         return ERROR;
     }
-}
-
-int get_fd_pipe(struct file_operations_s *ops, int nr)
-{
-    struct unused_fd_t *unused_fd;
-    struct file_s *file;
-
-    unused_fd = &current_process->unused_fd;
-    file = LIST_FIRST(unused_fd);
-    if (file != NULL) {
-        LIST_REMOVE(file, unused);
-        file->f_used = 1;
-        file->f_op = ops;
-        file->f_pipenr = nr;
-        return file->f_fd;
-    }
-
-    return ERROR;
-}
-
-int release_fd_pipe(int fd)
-{
-    struct unused_fd_t *unused_fd = &current_process->unused_fd;
-    struct file_s *file = &current_process->files[fd];
-
-    file->f_used  = 0;
-    file->f_ino = NULL;
-    file->f_pos = 0;
-    LIST_INSERT_HEAD(unused_fd, file, unused);
-
-    return OK;
 }
 
 struct inode_s *current_dir()

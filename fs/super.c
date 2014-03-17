@@ -84,9 +84,11 @@ block_t empty_block()
 {
     block_t block = alloc_bit(ZMAP);
 
-    mymemset(zero, 0, BLOCK_SIZE);
-    fs_dev->f_op->lseek(fs_dev, block * BLOCK_SIZE, SEEK_SET);
-    fs_dev->f_op->write(fs_dev, zero, BLOCK_SIZE);
+    if (block != NO_BLOCK) {
+        mymemset(zero, 0, BLOCK_SIZE);
+        fs_dev->f_op->lseek(fs_dev, block * BLOCK_SIZE, SEEK_SET);
+        fs_dev->f_op->write(fs_dev, zero, BLOCK_SIZE);
+    }
 
     return block;
 }

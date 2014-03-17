@@ -424,7 +424,7 @@ void release_block(struct buf_s *buf)
 /* given file inode and position, find in what block that position lies and
  * return it; we assume 1 block zones
  */
-/* XXX I could improve this to support indirect blocks if its necessary */
+/* XXX This could be improved to support indirect blocks if necessary */
 block_t read_map(struct inode_s *ino, unsigned int pos, int flag)
 {
     unsigned int block;
