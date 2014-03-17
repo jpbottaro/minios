@@ -40,7 +40,7 @@ void rm_block(block_t block_num);
 
 #define INODE_SIZE     (sizeof(struct real_inode_s))
 #define INODE_MAX      (sb->s_ninodes)
-#define BLOCK_MAX      (sb->s_nzones)
+#define BLOCK_MAX      (sb->s_zones)
 
 #define TOTAL_SIZE     (BLOCK_MAX * BLOCK_SIZE)
 
