@@ -19,12 +19,11 @@ int updatepwd(const char *path);
 int main()
 {
     char buf[MAX_BUF];
-    int len;
 
     while (1) {
         writePS1();
 
-        len = read(STDIN_FILENO, buf, MAX_BUF);
+        read(STDIN_FILENO, buf, MAX_BUF);
 
         execute(buf);
     }

@@ -30,8 +30,6 @@ int reader(int fd, int file)
         _exit(-1);
     }
 
-    close(file);
-    flush(fd);
     return 0;
 }
 
@@ -68,8 +66,6 @@ int encrypt(int fd_from, int fd_to)
         _exit(-1);
     }
 
-    flush(fd_from);
-    flush(fd_to);
     return 0;
 }
 
@@ -91,8 +87,6 @@ int writer(int file, int fd)
         _exit(-1);
     }
 
-    close(file);
-    flush(fd);
     return 0;
 }
 
