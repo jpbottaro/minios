@@ -133,8 +133,13 @@ void set_current_dir(struct inode_s *ino)
 
 struct file_s *get_file(int fd)
 {
-    if (current_process != NULL)
-        return &current_process->files[fd];
-    else
+    if (current_process != NULL) {
+        struct file_s *file = &current_process->files[fd];
+        if (file->f_used)
+            return file;
+        else
+            return NULL;
+    } else {
         return &tmpfile;
+    }
 }
