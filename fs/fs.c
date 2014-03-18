@@ -58,7 +58,7 @@ static void fill_inode(struct inode_s *ino, int mode)
     ino->i_atime  = 0;
     ino->i_mtime  = 0;
     ino->i_ctime  = 0;
-    ino->i_dirty = 1;
+    ino->i_dirty  = 1;
     for(i = 0; i < NR_ZONES; i++) ino->i_zone[i] = 0;
 }
 
@@ -109,7 +109,7 @@ int sys_close(int fd)
         return ERROR;
 
     if (flip->f_op == NULL)
-        debug_panic("sys_close: f_op is NULL");
+        return ERROR;
 
     if (flip->f_op->close != NULL)
         r = flip->f_op->close(flip);
@@ -119,12 +119,12 @@ int sys_close(int fd)
     return r;
 }
 
-int fs_closeall(struct file_s files[])
+int fs_closeall()
 {
     int i;
 
     for (i = 0; i < MAX_FILES; i++)
-        release_inode(files[i].f_ino);
+        sys_close(i);
 
     return OK;
 }

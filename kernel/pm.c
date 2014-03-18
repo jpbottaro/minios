@@ -120,7 +120,7 @@ void sys_exit(int status)
     mm_mem_free(current_process->kstack);
 
     /* release inodes */
-    fs_closeall(current_process->files);
+    fs_closeall();
     release_inode(current_process->curr_dir);
 
     /* delete process */

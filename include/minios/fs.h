@@ -64,7 +64,7 @@ LIST_HEAD(unused_fd_t, file_s);
 int fs_init(dev_t dev);
 int fs_open(const char *filename, int flags, int mode);
 int sys_close(int fd);
-int fs_closeall(struct file_s files[]);
+int fs_closeall();
 size_t sys_lseek(int fd, off_t offset, int whence);
 size_t fs_lseek(struct file_s *flip, off_t offset, int whence);
 size_t sys_read(int fd, char *buf, size_t n);
