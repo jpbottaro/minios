@@ -267,12 +267,10 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     /* get header */
     if ( (ret = sys_read(fd, (char *) &pso_header, PSO_SIZE)) != PSO_SIZE)
         goto err;
-        //debug_panic("newprocess: error in sys_read, cant get header");
     len += ret;
 
     if (mystrncmp((char *) pso_header.signature, "PSO", 3) != 0)
         goto err;
-        //debug_panic("newprocess: see what to do with tasks with wrong magic");
 
     /* fill child entry */
     LIST_REMOVE(process, unused);
@@ -394,7 +392,6 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     mm_map_page((mm_page *) rcr3(), tmpmem, stack);
     *((unsigned int *) (tmpmem + 0xFFC)) = ARG_PAGE + j;
     *((unsigned int *) (tmpmem + 0xFF8)) = i;
-    //*((unsigned int *) (tmpmem + 0xFF4)) = 0;
     mm_umap_page((mm_page *) rcr3(), tmpmem);
 
     /* add to scheduler */
