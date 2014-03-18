@@ -1,8 +1,8 @@
 #include <minios/scall.h>
-#include <minios/pipe.h>
 #include <minios/misc.h>
 #include <minios/sem.h>
 #include <minios/dev.h>
+#include "pipe.h"
 
 struct pipe_s {
     char buffer[MAX_SIZE];

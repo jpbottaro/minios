@@ -1,10 +1,11 @@
 #include <minios/dev.h>
 
 /* temporary, will see what is the better way to load drivers */
-#include "../drivers/tty/con.h"
 #include "../drivers/ramdisk/ramdisk.h"
-#include "../drivers/hdd/hdd.h"
 #include "../drivers/serial/serial.h"
+#include "../drivers/pipe/pipe.h"
+#include "../drivers/tty/con.h"
+#include "../drivers/hdd/hdd.h"
 
 #define FS_INITIAL_POS 0x30000
 
@@ -16,6 +17,7 @@ void dev_init(void)
     hdd_init();
     con_init();
     serial_init();
+    pipe_init();
 }
 
 struct file_operations_s *dev_operations(dev_t major)

@@ -4,7 +4,6 @@
 #include <minios/idt.h>
 #include <minios/vga.h>
 #include <minios/i386.h>
-#include <minios/pipe.h>
 #include <minios/sched.h>
 #include <minios/debug.h>
 #include "devfs.h"
@@ -28,9 +27,6 @@ void kernel_init()
 
     /* memory managment unit (this enables paging) */
     mm_init();
-
-    /* pipe module */
-    pipe_init();
 
     /* supported device drivers */
     dev_init();
