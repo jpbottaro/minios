@@ -14,7 +14,6 @@ struct inode_s {
     u32_t i_num;
     u32_t i_dirty;
     u32_t i_refcount;
-    u32_t i_pos;
 
     u16_t i_mode;           /* file type, protection, etc. */
     u16_t i_nlinks;         /* how many links to this file */
@@ -105,6 +104,7 @@ int copy_file(char *buf, unsigned int n, unsigned int pos, struct inode_s *ino,
 #define NO_BLOCK ((block_t) 0)
 #define NO_INODE ((ino_t)   0)
 
+struct inode_s *get_free_inode();
 struct inode_s *get_inode(ino_t num);
 struct buf_s *get_block(zone_t num);
 

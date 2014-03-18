@@ -36,13 +36,13 @@ void rm_block(block_t block_num);
 #define SUPER_OFFSET   (1024)
 #define IMAP_OFFSET    (2048)
 #define ZMAP_OFFSET    (IMAP_OFFSET + IMAP_BLOCKS * BLOCK_SIZE)
-#define INODE_OFFSET   (ZMAP_OFFSET + ZMAP_BLOCKS * BLOCK_SIZE)
 
+#define INODE_OFFSET   (ZMAP_OFFSET + ZMAP_BLOCKS * BLOCK_SIZE)
 #define INODE_SIZE     (sizeof(struct real_inode_s))
+#define INODE_POSITION(n) (INODE_OFFSET + (n - 1) * INODE_SIZE)
+
 #define INODE_MAX      (sb->s_ninodes)
 #define BLOCK_MAX      (sb->s_zones)
-
-#define TOTAL_SIZE     (BLOCK_MAX * BLOCK_SIZE)
 
 #define DIRECT_ZONES   7
 

@@ -255,21 +255,19 @@ int search_inode(struct inode_s *dir, const char *name, const ino_t ino_num,
     return ERROR;
 }
 
-struct inode_s *_get_inode(ino_t num)
+struct inode_s *get_free_inode()
 {
     struct inode_s *ino;
 
-    LIST_FOREACH(ino, &used_inodes, ptr) {
-        if (ino->i_num == num) {
-            return ino;
-        }
-    }
-
     ino = LIST_FIRST(&unused_inodes);
     if (ino == NULL)
-        debug_panic("_get_inode: no more free inodes");
+        debug_panic("get_free_inode: no more free inodes");
     LIST_REMOVE(ino, ptr);
     LIST_INSERT_HEAD(&used_inodes, ino, ptr);
+
+    ino->i_refcount = 1;
+    ino->i_dirty = 0;
+    ino->i_free = 0;
 
     return ino;
 }
@@ -311,36 +309,28 @@ struct inode_s *get_inode(ino_t num)
 {
     struct real_inode_s real_ino;
     struct inode_s *ino;
-    int p = 0;
 
     /* check limits */
     if (num > INODE_MAX || num == NO_INODE)
         debug_panic("get_inode: got bad number");
 
-    ino = _get_inode(num);
-
-    if (!ino->i_free) {
-        ino->i_refcount++;
-        return ino;
+    LIST_FOREACH(ino, &used_inodes, ptr) {
+        if (ino->i_num == num) {
+            ino->i_refcount++;
+            return ino;
+        }
     }
 
-    /* go to the inode part */
-    p += INODE_OFFSET;
-
-    /* get the desired inode */
-    p += (num - 1) * INODE_SIZE;
+    /* get new inode */
+    ino = get_free_inode();
+    ino->i_num = num;
 
     /* ask the inode from the device we are in */
-    fs_dev->f_op->lseek(fs_dev, p, SEEK_SET);
+    fs_dev->f_op->lseek(fs_dev, INODE_POSITION(num), SEEK_SET);
     fs_dev->f_op->read(fs_dev, (char *) &real_ino, sizeof(struct real_inode_s));
 
     /* copy it to our cache */
     copy_r2i(&real_ino, ino);
-    ino->i_pos = p;
-    ino->i_num = num;
-    ino->i_refcount = 1;
-    ino->i_dirty = 0;
-    ino->i_free = 0;
 
     return ino;
 }
@@ -352,7 +342,7 @@ void release_inode(struct inode_s *ino)
             struct real_inode_s real;
 
             copy_i2r(ino, &real);
-            fs_dev->f_op->lseek(fs_dev, ino->i_pos, SEEK_SET);
+            fs_dev->f_op->lseek(fs_dev, INODE_POSITION(ino->i_num), SEEK_SET);
             fs_dev->f_op->write(fs_dev, (char *) &real, sizeof(struct real_inode_s));
         }
         ino->i_dirty = 0;
