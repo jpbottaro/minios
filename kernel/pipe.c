@@ -5,14 +5,14 @@
 #include <minios/dev.h>
 
 struct pipe_s {
-    int i;
     char buffer[MAX_SIZE];
     int init;
     int end;
     int done;
     sem_t mutex, empty, full;
 
-    struct inode_s ino;
+    struct inode_s *ino_read;
+    struct inode_s *ino_write;
 
     LIST_ENTRY(pipe_s) unused;
 } pipes[MAX_PIPES];
@@ -26,14 +26,6 @@ size_t pipe_read(struct file_s *flip, char *buf, size_t n)
     j = 0;
     i = iminor(flip->f_ino);
 
-    if (pipes[i].done) {
-        while (j < n && pipes[i].init < pipes[i].end) {
-            buf[j++] = pipes[i].buffer[pipes[i].init++];
-            if (pipes[i].init == MAX_SIZE) pipes[i].init = 0;
-        }
-        return j;
-    }
-
     for (; n > 0; n--) {
         sem_wait(&pipes[i].full);
         if (pipes[i].done) {
@@ -41,6 +33,7 @@ size_t pipe_read(struct file_s *flip, char *buf, size_t n)
                 buf[j++] = pipes[i].buffer[pipes[i].init++];
                 if (pipes[i].init == MAX_SIZE) pipes[i].init = 0;
             }
+            sem_signal(&pipes[i].full);
             return j;
         }
         sem_wait(&pipes[i].mutex);
@@ -60,13 +53,12 @@ ssize_t pipe_write(struct file_s *flip, char *buf, size_t n)
     j = 0;
     i = iminor(flip->f_ino);
 
-    if (pipes[i].done)
-        return n;
-
     while (n--) {
         sem_wait(&pipes[i].empty);
-        if (pipes[i].done)
+        if (pipes[i].done) {
+            sem_signal(&pipes[i].empty);
             return j;
+        }
         sem_wait(&pipes[i].mutex);
         pipes[i].buffer[pipes[i].end++] = buf[j++];
         if (pipes[i].end == MAX_SIZE) pipes[i].end = 0;
@@ -77,20 +69,25 @@ ssize_t pipe_write(struct file_s *flip, char *buf, size_t n)
     return j;
 }
 
-int pipe_flush(struct file_s *flip)
+int pipe_close(struct file_s *flip)
 {
+    struct pipe_s *pipe = pipes + iminor(flip->f_ino);
+
+    /* if there's no one left, free pipe */
+    if (pipe->ino_read->i_refcount + pipe->ino_write->i_refcount == 1) {
+        LIST_INSERT_HEAD(&unused_pipes, pipe, unused);
+    /* if readers are closed, release writers (and viceversa) */
+    } else if (flip->f_ino->i_refcount == 1) {
+        pipe->done = 1;
+        sem_signal(&pipe->empty);
+        sem_signal(&pipe->full);
+    }
+
     return 0;
 }
 
-int pipe_close(struct file_s *flip)
+int pipe_flush(struct file_s *flip)
 {
-    int i = iminor(flip->f_ino);
-
-    /* release anybody that might be waiting */
-    pipes[i].done = 1;
-    sem_signal(&pipes[i].full);
-    sem_signal(&pipes[i].empty);
-
     return 0;
 }
 
@@ -113,18 +110,23 @@ int sys_pipe(int filedes[2])
         pipe->init = 0;
         pipe->end = 0;
 
-        /* Fake inode to keep abstraction */
-        pipe->ino.i_mode = 0;
-        pipe->ino.i_refcount = -1;
-        pipe->ino.i_zone[0] = DEV_PIPE;
-        pipe->ino.i_zone[1] = pipe - pipes;
-
         sem_init(&pipe->empty, MAX_SIZE);
         sem_init(&pipe->full, 0);
         sem_init(&pipe->mutex, 1);
 
-        filedes[0] = get_fd(&pipe->ino, 0);
-        filedes[1] = get_fd(&pipe->ino, 0);
+        /* Fake inode for read to keep abstraction */
+        pipe->ino_read = get_free_inode();
+        pipe->ino_read->i_mode = 0;
+        pipe->ino_read->i_zone[0] = DEV_PIPE;
+        pipe->ino_read->i_zone[1] = pipe - pipes;
+        filedes[0] = get_fd(pipe->ino_read, 0);
+
+        /* Fake inode for write to keep abstraction */
+        pipe->ino_write = get_free_inode();
+        pipe->ino_write->i_mode = 0;
+        pipe->ino_write->i_zone[0] = DEV_PIPE;
+        pipe->ino_write->i_zone[1] = pipe - pipes;
+        filedes[1] = get_fd(pipe->ino_write, 0);
 
         return 0;
     }
@@ -137,10 +139,8 @@ void pipe_init()
     int i;
 
     LIST_INIT(&unused_pipes);
-    for (i = 0; i < MAX_PIPES; i++) {
-        pipes[i].i = i;
+    for (i = 0; i < MAX_PIPES; i++)
         LIST_INSERT_HEAD(&unused_pipes, &pipes[i], unused);
-    }
 
     dev_register(DEV_PIPE, &ops);
 
