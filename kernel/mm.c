@@ -101,7 +101,7 @@ void pf_handler()
             res = mm_newpage(current_process, page);
     } else if (!(page->attr & MM_ATTR_RW)) {
         if (!(page->attr & MM_SHARED))
-            mm_copypage(current_process, page); /* copy on write */
+            res = mm_copypage(current_process, page); /* copy on write */
     }
 
     if (res == NULL)
