@@ -10,7 +10,7 @@
 #define MM_ATTR_US    0x004 // User/Supervisor
 #define MM_ATTR_US_U  0x004 //
 #define MM_ATTR_US_S  0x000 //
-#define MM_ATTR_WT    0x008 // Wrtie-Through
+#define MM_ATTR_WT    0x008 // Write-Through
 #define MM_ATTR_CD    0x010 // Cache Disabled
 #define MM_ATTR_A     0x020 // Accessed
 #define MM_ATTR_D     0x040 // Dirty (for Pages)
@@ -27,6 +27,7 @@
 
 #define MM_VALID   0x100
 #define MM_SHARED  0x200
+#define MM_VM      0x400
 
 /* Control Register flags */
 #define CR0_PE		0x00000001	// Protection Enable
@@ -51,6 +52,7 @@
 
 #define PAGE_SIZE    0x1000
 #define KERNEL_PAGES 0x300000
+#define MEM_LIMIT    0x400000
 
 typedef struct str_mm_page {
 	u32_t attr:12;
@@ -64,7 +66,7 @@ typedef struct str_mm_page {
 #include <sys/queue.h>
 #include <minios/const.h>
 
-#define PAGES_LEN ((CODE_OFFSET - KERNEL_PAGES) / PAGE_SIZE)
+#define PAGES_LEN ((MEM_LIMIT - KERNEL_PAGES) / PAGE_SIZE)
 #define hash_page(base) ((((u32_t) (base)) - KERNEL_PAGES) / PAGE_SIZE)
 
 struct page_s {

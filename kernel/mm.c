@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include "debug.h"
 #include "pm.h"
+#include "vmm.h"
 
 extern void _pf_handler();
 
@@ -13,22 +14,26 @@ struct page_s pages[PAGES_LEN];
 
 LIST_HEAD(free_pages_t, page_s) free_pages;
 
-int increase_refcount_page(void *page)
+void increase_refcount_page(void *page)
 {
-    if (page < (void *) KERNEL_PAGES || page > (void *) CODE_OFFSET)
-        return -1;
-    struct page_s *p = &pages[hash_page(page)];
-    return ++p->refcount;
+    if (page < (void *) KERNEL_PAGES)
+        return;
+    if (page > (void *) MEM_LIMIT)
+        debug_panic("increase_refcount_page: page over mem limit");
+    ++pages[hash_page(page)].refcount;
 }
 
-int decrease_refcount_page(void *page)
+void decrease_refcount_page(void *page)
 {
-    if (page < (void *) KERNEL_PAGES || page > (void *) CODE_OFFSET)
-        return -1;
+    if (page < (void *) KERNEL_PAGES)
+        return;
+    if (page > (void *) MEM_LIMIT)
+        debug_panic("decrease_refcount_page: page over mem limit");
     struct page_s *p = &pages[hash_page(page)];
     if (p->refcount <= 0)
-        return -1;
-    return --p->refcount;
+        debug_panic("decrease_refcount_page: page refcount <= 0");
+    if (--p->refcount == 0)
+        LIST_INSERT_HEAD(&free_pages, p, status);
 }
 
 mm_page *search_page(mm_page *dir, void *vir, int flag)
@@ -91,35 +96,27 @@ void pf_handler()
     mm_page *page, *res;
     int superuser;
 
-    superuser = 1;
     if (current_process == NULL)
-        goto bad_pf;
-    res = NULL;
+        isr14();
+
     superuser = (current_process->uid == 1);
     page = search_page(current_process->pages_dir, (void *) rcr2(), MM_NOCREAT);
-    if (page == NULL)
-        goto bad_pf;
 
-    if (!(page->attr & MM_ATTR_US) && !superuser) {
-        goto bad_pf;
-    } else if (!(page->attr & MM_ATTR_P)) {
-        if (page->attr & MM_VALID)
-            res = mm_newpage(current_process, page);
-    } else if (!(page->attr & MM_ATTR_RW)) {
-        if (!(page->attr & MM_SHARED))
-            res = mm_copy_on_write(current_process, (void *) rcr2(), page);
+    if (page != NULL && (page->attr & MM_ATTR_US || superuser)) {
+        if (!(page->attr & MM_ATTR_P)) {
+            if (page->attr & MM_VALID)
+                res = mm_newpage(current_process, page);
+            else if (page->attr & MM_VM)
+                res = vmm_retrieve(current_process, (void *) rcr2(), page);
+
+        } else if (!(page->attr & MM_ATTR_RW)) {
+            if (!(page->attr & MM_SHARED))
+                res = mm_copy_on_write(current_process, (void *) rcr2(), page);
+        }
     }
 
     if (res == NULL)
-        goto bad_pf;
-
-    return;
-
-bad_pf:
-    if (superuser)
-        isr14();
-    else
-        sys_exit(-1);
+        superuser ? isr14() : sys_exit(-1);
 }
 
 /* init memory manager */
@@ -152,8 +149,11 @@ void *mm_mem_alloc()
     struct page_s *page;
 
     page = LIST_FIRST(&free_pages);
-    if (page == NULL)
-        debug_panic("mm_mem_alloc: no more free pages");
+    if (page == NULL) {
+        page = vmm_free_page();
+        if (page == NULL)
+            debug_panic("mm_mem_alloc: no more free pages");
+    }
     LIST_REMOVE(page, status);
 
     start = (u32_t *) page->base;
@@ -169,10 +169,7 @@ void *mm_mem_alloc()
 /* free page */
 void mm_mem_free(void *page)
 {
-    if (page < (void *) KERNEL_PAGES || page > (void *) CODE_OFFSET)
-        debug_panic("mm_mem_free: page off limits");
-    if (decrease_refcount_page((void *) page) == 0)
-        LIST_INSERT_HEAD(&free_pages, &pages[hash_page(page)], status);
+    decrease_refcount_page((void *) page);
 }
 
 /* map a page in the PDT */
@@ -235,6 +232,7 @@ void copy_table_fork(mm_page *to, mm_page *from)
             from->attr &= ~MM_ATTR_RW;
         *to = *from;
         if (from->attr & MM_ATTR_P)
+            /* TODO manage virtual pages */
             increase_refcount_page((void *) (from->base << 12));
         to++;
         from++;
@@ -254,7 +252,6 @@ mm_page *mm_dir_cpy(mm_page *dir)
         if (d->attr & MM_ATTR_P) {
             tablebase = (mm_page *) mm_mem_alloc();
             mm_map_page(dirbase, tablebase, tablebase);
-            /* map pages in cr3 - TODO */
             copy_table_fork(tablebase, (mm_page *) (d->base << 12));
             *dirbase = make_mm_entry_addr(tablebase, d->attr);
         } else {
