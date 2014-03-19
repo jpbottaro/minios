@@ -11,9 +11,6 @@
 #include "gdt.h"
 #include "pm.h"
 
-/* this page resides in the ident. mapped kernel, used to copy things */
-char tmpmem[PAGE_SIZE] __attribute__((aligned(PAGE_SIZE)));
-
 LIST_HEAD(unused_list_t, process_state_s) unused_list;
 struct process_state_s ps[MAX_PROCESSES];
 unsigned int pid = 2;
@@ -184,7 +181,6 @@ extern unsigned int reip();
 pid_t sys_fork()
 {
     mm_page *dirbase;
-    void *page, *stack;
     struct process_state_s *process;
 
     /* get process entry for child */
@@ -211,17 +207,11 @@ pid_t sys_fork()
     dirbase = mm_dir_cpy(current_process->pages_dir);
     process->pages_dir = dirbase;
 
-    /* build user stack */
-    stack = mm_mem_alloc();
-    process->stack = stack;
-    mm_map_page_attr(dirbase, (void *) STACK_PAGE, stack, 7 | MM_SHARED);
-    mymemcpy(stack, (char *) STACK_PAGE, PAGE_SIZE);
-
-    /* build kernel stack */
-    page = mm_mem_alloc();
-    process->kstack = page;
-    mm_map_page_attr(dirbase, (void *) KSTACK_PAGE, page, 7 | MM_SHARED);
-    mymemcpy(page, (char *) KSTACK_PAGE, PAGE_SIZE);
+    /* build user/kernel stack */
+    process->stack =
+        mm_build_page(dirbase, (char *) STACK_PAGE, (char *) STACK_PAGE);
+    process->kstack =
+        mm_build_page(dirbase, (char *) KSTACK_PAGE, (char *) KSTACK_PAGE);
 
     /* add to scheduler */
     sched_enqueue(process);
@@ -247,7 +237,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     u32_t mem_offset;
     pso_file pso_header;
     mm_page *dirbase;
-    void *page, *stack;
+    void *page;
     char *tmpargv[MAX_ARG];
     struct process_state_s *process;
 
@@ -303,25 +293,25 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     /* yak.. first page outside the loop, to add the pso_header too */
     page = mm_mem_alloc();
     add_process_page(process, page);
-    mm_map_page((mm_page *) rcr3(), tmpmem, page);
-    mymemcpy(tmpmem, (char *) &pso_header, PSO_SIZE);
-    if ( (ret = sys_read(fd, tmpmem + PSO_SIZE, PAGE_SIZE - PSO_SIZE)) < 0)
+    mm_map_page((mm_page *) rcr3(), 0, page);
+    mymemcpy(0, (char *) &pso_header, PSO_SIZE);
+    if ( (ret = sys_read(fd, (char *) PSO_SIZE, PAGE_SIZE - PSO_SIZE)) < 0)
         debug_panic("newprocess: error in sys_read, cant get program");
     len += ret;
     
     mm_map_page(dirbase, (void *) mem_offset, page);
-    mm_umap_page((mm_page *) rcr3(), tmpmem);
+    mm_umap_page((mm_page *) rcr3(), 0);
 
     for (i = PAGE_SIZE; i < max; i += PAGE_SIZE) {
         /* get new page for code */
         page = mm_mem_alloc();
         add_process_page(process, page);
 
-        /* temporary map page to tmpmem to be able to copy the code */
-        mm_map_page((mm_page *) rcr3(), tmpmem, page);
+        /* temporary map page to 0 to be able to copy the code */
+        mm_map_page((mm_page *) rcr3(), 0, page);
 
         /* copy file from filesystem to the new page */
-        if ( (ret = sys_read(fd, tmpmem, PAGE_SIZE)) < 0)
+        if ( (ret = sys_read(fd, 0, PAGE_SIZE)) < 0)
             debug_panic("newprocess: error in sys_read, cant get program");
         len += ret;
 
@@ -329,7 +319,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         mm_map_page(dirbase, (void *) (i + mem_offset), page);
 
         /* remove temporary ident mapping */
-        mm_umap_page((mm_page *) rcr3(), tmpmem);
+        mm_umap_page((mm_page *) rcr3(), 0);
 
         if (ret == 0)
             break;
@@ -358,15 +348,9 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         mm_map_page(dirbase, (void *) (i + mem_offset), page);
     }
 
-    /* build user stack */
-    stack = mm_mem_alloc();
-    process->stack = stack;
-    mm_map_page_attr(dirbase, (void *) STACK_PAGE, stack, 7 | MM_SHARED);
-
-    /* build kernel stack */
-    page = mm_mem_alloc();
-    process->kstack = page;
-    mm_map_page_attr(dirbase, (void *) KSTACK_PAGE, page, 7 | MM_SHARED);
+    /* build user/kernel stack */
+    process->stack = mm_build_page(dirbase, (char *) STACK_PAGE, NULL);
+    process->kstack = mm_build_page(dirbase, (char *) KSTACK_PAGE, NULL);
 
     i = j = 0;
     if (argv != NULL) {
@@ -374,25 +358,25 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         page = mm_mem_alloc();
         add_process_page(process, page);
         mm_map_page(dirbase, (void *) ARG_PAGE, page);
-        mm_map_page((mm_page *) rcr3(), tmpmem, page);
+        mm_map_page((mm_page *) rcr3(), 0, page);
 
         /* put the arguments in the new page */
         for (i = j = 0; i < MAX_ARG - 1 && argv[i] != NULL; ++i) {
             tmpargv[i] = (char *) (ARG_PAGE + j);
             size = mystrlen(argv[i]);
-            mymemcpy(tmpmem + j, argv[i], size + 1);
+            mymemcpy((char *) j, argv[i], size + 1);
             j += size + 1;
         }
         /* copy the tmpargv array of pointers to the arguments */
         tmpargv[i] = NULL;
-        mymemcpy(tmpmem + j, (char *) tmpargv, (i + 1) * 4);
-        mm_umap_page((mm_page *) rcr3(), tmpmem);
+        mymemcpy((char *) j, (char *) tmpargv, (i + 1) * 4);
+        mm_umap_page((mm_page *) rcr3(), 0);
     }
     /* add the values to the stack so that main() can get them */
-    mm_map_page((mm_page *) rcr3(), tmpmem, stack);
-    *((unsigned int *) (tmpmem + 0xFFC)) = ARG_PAGE + j;
-    *((unsigned int *) (tmpmem + 0xFF8)) = i;
-    mm_umap_page((mm_page *) rcr3(), tmpmem);
+    mm_map_page((mm_page *) rcr3(), 0, process->stack);
+    *((unsigned int *) (0xFFC)) = ARG_PAGE + j;
+    *((unsigned int *) (0xFF8)) = i;
+    mm_umap_page((mm_page *) rcr3(), 0);
 
     /* add to scheduler */
     sched_enqueue(process);

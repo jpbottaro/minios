@@ -81,16 +81,18 @@ struct page_s {
 extern struct page_s pages[PAGES_LEN];
 
 void mm_init();
-void* mm_mem_alloc();
-void* mm_mem_kalloc();
+void *mm_mem_alloc();
+void *mm_mem_kalloc();
+void *mm_build_page(mm_page *dir, void *vir, void *boot_page);
 void mm_mem_free(void *page);
 
 mm_page *mm_dir_new();
 mm_page *mm_dir_cpy(mm_page *dir);
+void mm_dir_free(mm_page *d);
+
 void mm_map_page(mm_page *dir, void *vir, void *phy);
 void mm_map_page_attr(mm_page *dir, void *vir, void *phy, int attr);
 void mm_umap_page(mm_page *dir, void *vir);
-void mm_dir_free(mm_page *d);
 
 void *sys_palloc();
 int sys_share_page(void *page);

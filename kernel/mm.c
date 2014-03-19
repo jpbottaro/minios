@@ -42,7 +42,8 @@ mm_page *search_page(mm_page *dir, void *vir, int flag)
         if (flag == MM_NOCREAT)
             return NULL;
         void *table_page = mm_mem_alloc();
-        *dir_entry = make_mm_entry_addr(table_page, 7);
+        *dir_entry = make_mm_entry_addr(table_page,
+                MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
         mm_map_page(dir, table_page, table_page);
     }
 
@@ -56,27 +57,32 @@ void *mm_newpage(struct process_state_s *p, mm_page *page)
     if (new_page == NULL)
         return NULL;
     add_process_page(p, new_page);
-    *page = make_mm_entry_addr(new_page,  7);
+    *page = make_mm_entry_addr(new_page, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
     tlbflush();
     return new_page;
 }
 
-void *mm_copypage(struct process_state_s *p, mm_page *page)
+void *mm_copy_on_write(struct process_state_s *p, void *vir, mm_page *entry)
 {
-    char *old_page, *new_page;
+    char *old_page = (char *) (entry->base << 12);
 
-    old_page = (char *) (page->base << 12);
-    new_page = (char *) mm_newpage(p, page);
+    if (pages[hash_page(old_page)].refcount > 1) {
+        /* create new page to replace old_page */
+        if (mm_newpage(p, entry) == NULL)
+            return NULL;
 
-    /* copy the page */
-    mm_map_page(p->pages_dir, 0, old_page);
-    mymemcpy(new_page, 0, PAGE_SIZE);
-    mm_umap_page(p->pages_dir, 0);
+        /* copy the contents of old_page to the new page */
+        mm_map_page((void *) rcr3(), 0, old_page);
+        mymemcpy(vir, 0, PAGE_SIZE);
+        mm_umap_page((void *) rcr3(), 0);
 
-    /* decrease refcount of oldpage */
-    decrease_refcount_page((void *) old_page);
+        /* decrease refcount of old_page */
+        decrease_refcount_page(old_page);
+    } else {
+        entry->attr |= MM_ATTR_RW;
+    }
 
-    return new_page;
+    return vir;
 }
 
 /* new handler for page fault to force exit of ring3 tasks who force it */
@@ -101,7 +107,7 @@ void pf_handler()
             res = mm_newpage(current_process, page);
     } else if (!(page->attr & MM_ATTR_RW)) {
         if (!(page->attr & MM_SHARED))
-            res = mm_copypage(current_process, page); /* copy on write */
+            res = mm_copy_on_write(current_process, (void *) rcr2(), page);
     }
 
     if (res == NULL)
@@ -182,7 +188,7 @@ void mm_map_page_attr(mm_page *dir, void *vir, void *phy, int attr)
 /* map a page in the PDT marked user, r/w, present */
 void mm_map_page(mm_page *dir, void *vir, void *phy)
 {
-    mm_map_page_attr(dir, vir, phy, 7);
+    mm_map_page_attr(dir, vir, phy, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
 }
 
 /* umap a page in the PDT */
@@ -204,7 +210,7 @@ mm_page* mm_dir_new()
     mm_page *tablebase = (mm_page *) mm_mem_alloc();
 
     /* 0111 means present, r/w and user */
-    *dirbase = make_mm_entry_addr(tablebase, 7);
+    *dirbase = make_mm_entry_addr(tablebase, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
 
     /* mark first page as not present, to catch NULL pointers */
     /* XXX see why it does not work */
@@ -256,6 +262,13 @@ mm_page *mm_dir_cpy(mm_page *dir)
         }
     }
 
+    /* the stacks are special cases of non-shared pages that we want as RW, and
+     * we replicate them manually later */
+    d = search_page(dir, (char *) STACK_PAGE, MM_NOCREAT);
+    d->attr |= MM_ATTR_RW;
+    d = search_page(dir, (char *) KSTACK_PAGE, MM_NOCREAT);
+    d->attr |= MM_ATTR_RW;
+
     return ret;
 }
 
@@ -269,6 +282,21 @@ void mm_dir_free(mm_page* d)
             mm_mem_free((void *) ((u32_t) d->base << 12));
 }
 
+/* build page and add it to the dirtable; optionally bootstrap */
+void *mm_build_page(mm_page *dir, void *vir, void *boot_page)
+{
+    void *page = mm_mem_alloc();
+
+    mm_map_page(dir, vir, page);
+    if (boot_page != NULL) {
+        mm_map_page((void *) rcr3(), 0, page);
+        mymemcpy(0, boot_page, PAGE_SIZE);
+        mm_umap_page((void *) rcr3(), 0);
+    }
+
+    return page;
+}
+
 /* return a 4kb page to a process (fix this, the last_mem thing sucks) */
 void *sys_palloc()
 {
@@ -277,7 +305,8 @@ void *sys_palloc()
     virt = current_process->last_mem;
     current_process->last_mem += PAGE_SIZE;
     /* set bit to remember that this page is valid */
-    mm_map_page_attr(current_process->pages_dir, virt, 0, 6 | MM_VALID);
+    mm_map_page_attr(current_process->pages_dir, virt, 0,
+            MM_ATTR_RW | MM_ATTR_US | MM_VALID);
 
     return virt;
 }
