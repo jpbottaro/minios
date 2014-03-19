@@ -337,17 +337,6 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     /* close file */
     sys_close(fd);
 
-    /* reserve uninitialized space */
-    max = pso_header.mem_end - pso_header.mem_start;
-    for (; i < max; i += PAGE_SIZE) {
-        /* get new page for code */
-        page = mm_mem_alloc();
-        add_process_page(process, page);
-
-        /* add the new code page to the page directory table */
-        mm_map_page(dirbase, (void *) (i + mem_offset), page);
-    }
-
     /* build user/kernel stack */
     process->stack = mm_build_page(dirbase, (char *) STACK_PAGE, NULL);
     process->kstack = mm_build_page(dirbase, (char *) KSTACK_PAGE, NULL);
