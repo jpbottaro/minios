@@ -3,6 +3,8 @@
 
 #include <minios/mm.h>
 
+/* TODO set right swap offset */
+#define SWAP_OFFSET 0x0
 #define VPAGES_LEN 0x10
 
 void vmm_init();

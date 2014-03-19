@@ -1,8 +1,11 @@
 #include <minios/mm.h>
 #include <minios/pm.h>
+#include <minios/dev.h>
 #include "debug.h"
 #include "vmm.h"
 
+struct file_s vmm_dev_str;
+struct file_s *vmm_dev = &vmm_dev_str;
 struct page_s vpages[VPAGES_LEN];
 
 LIST_HEAD(free_vpages_t, page_s) free_vpages;
@@ -31,9 +34,11 @@ struct page_s *vmm_free_page()
 }
 
 /* init virtual memory manager */
-void vmm_init(void *swap_offset)
+void vmm_init(dev_t dev, void *swap_offset)
 {
     int i;
+
+    vmm_dev->f_op = dev_operations(dev);
 
     LIST_INIT(&free_vpages);
     for (i = VPAGES_LEN - 1; i >= 0; --i) {

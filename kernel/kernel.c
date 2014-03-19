@@ -9,6 +9,7 @@
 #include "devfs.h"
 #include "scall.h"
 #include "clock.h"
+#include "vmm.h"
 
 /* here is where the magic starts */
 void kernel_init()
@@ -33,6 +34,9 @@ void kernel_init()
 
     /* file system */
     fs_init(DEV_HDD);
+
+    /* virtual memory */
+    vmm_init(DEV_HDD, SWAP_OFFSET);
 
     /* create device nodes (in /dev) */
     devfs_init();
