@@ -15,3 +15,6 @@
     cp readme a
     cat a
     (now a is missing some text)
+
+- Using fork multiple times results in pages running out (eg. executing 'pipes'
+  repetedly). Somewhere we are leaking memory
