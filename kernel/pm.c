@@ -33,7 +33,6 @@ void add_idle()
     process->gid = 1;
     process->pages_dir = (mm_page *) rcr3();
     process->parent = NULL;
-    LIST_INIT(&process->pages_list);
 
     process->eip = (u32_t) &idle_startpoint;
     process->esp = (u32_t) (&KSTACK + KSTACKSIZE - 0x10);
@@ -78,20 +77,6 @@ void pm_switchto(u32_t process_num)
     __pm_switchto(&ps[process_num]);
 }
 
-/* add a page to the processes' list of used pages */
-void add_process_page(struct process_state_s *process, void *page)
-{
-    LIST_INSERT_HEAD(&process->pages_list, &pages[hash_page(page)], status);
-}
-
-/* free all pages assigned to a process */
-void free_all_pages(u32_t process_num)
-{
-    struct page_s *p, *n;
-    LIST_FOREACH_SAFE(p, &ps[process_num].pages_list, status, n)
-        mm_mem_free(p->base);
-}
-
 /* end a process, wake parent if needed, free its pages and reschedule */
 void sys_exit(int status)
 {
@@ -111,10 +96,7 @@ void sys_exit(int status)
     }
 
     /* free process pages */
-    free_all_pages(current_process->i);
     mm_dir_free(current_process->pages_dir);
-    mm_mem_free(current_process->stack);
-    mm_mem_free(current_process->kstack);
 
     /* release inodes */
     fs_closeall();
@@ -198,7 +180,6 @@ pid_t sys_fork()
     process->parent = current_process;
     process->curr_dir = current_dir();
     process->last_mem = current_process->last_mem;
-    LIST_INIT(&process->pages_list);
 
     /* copy fds */
     init_fds(process->i);
@@ -274,15 +255,11 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     process->last_mem = (char *) REQUESTED_MEMORY_START;
     process->esp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);
     process->ebp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);
-    LIST_INIT(&process->pages_list);
     init_fds(process->i);
 
     /* build directory table for new process (with kernel already mapped) */
     dirbase = mm_dir_new();
     process->pages_dir = dirbase;
-
-    /* ident map the directory table (this way its 'user' and not 'system') */
-    mm_map_page(dirbase, dirbase, dirbase);
 
     mem_offset = pso_header.mem_start;
     process->eip = pso_header._main;
@@ -292,7 +269,6 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
 
     /* yak.. first page outside the loop, to add the pso_header too */
     page = mm_mem_alloc();
-    add_process_page(process, page);
     mm_map_page((mm_page *) rcr3(), 0, page);
     mymemcpy(0, (char *) &pso_header, PSO_SIZE);
     if ( (ret = sys_read(fd, (char *) PSO_SIZE, PAGE_SIZE - PSO_SIZE)) < 0)
@@ -305,7 +281,6 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     for (i = PAGE_SIZE; i < max; i += PAGE_SIZE) {
         /* get new page for code */
         page = mm_mem_alloc();
-        add_process_page(process, page);
 
         /* temporary map page to 0 to be able to copy the code */
         mm_map_page((mm_page *) rcr3(), 0, page);
@@ -345,7 +320,6 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     if (argv != NULL) {
         /* add argc and argv to the new process (lets hope it only takes 1 page) */
         page = mm_mem_alloc();
-        add_process_page(process, page);
         mm_map_page(dirbase, (void *) ARG_PAGE, page);
         mm_map_page((mm_page *) rcr3(), 0, page);
 

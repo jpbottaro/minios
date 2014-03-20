@@ -8,7 +8,11 @@
 #define VPAGES_LEN 0x10
 
 void vmm_init();
-void *vmm_retrieve(struct process_state_s *p, void *vir, mm_page *entry);
+
+void vmm_mem_add_reference(int i);
+void vmm_mem_free_reference(int i);
+
+void *vmm_retrieve(int i);
 struct page_s *vmm_free_page();
 
 #endif /* __VMM_H__ */

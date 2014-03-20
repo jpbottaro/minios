@@ -5,8 +5,8 @@
 #include <minios/mm.h>
 #include <sys/types.h>
 #include "debug.h"
-#include "pm.h"
 #include "vmm.h"
+#include "pm.h"
 
 extern void _pf_handler();
 
@@ -14,26 +14,29 @@ struct page_s pages[PAGES_LEN];
 
 LIST_HEAD(free_pages_t, page_s) free_pages;
 
-void increase_refcount_page(void *page)
+void mm_mem_add_reference(void *page)
 {
     if (page < (void *) KERNEL_PAGES)
         return;
     if (page > (void *) MEM_LIMIT)
-        debug_panic("increase_refcount_page: page over mem limit");
+        debug_panic("mm_mem_add_reference: page over mem limit");
     ++pages[hash_page(page)].refcount;
 }
 
-void decrease_refcount_page(void *page)
+void mm_mem_free_reference(void *page)
 {
     if (page < (void *) KERNEL_PAGES)
         return;
     if (page > (void *) MEM_LIMIT)
-        debug_panic("decrease_refcount_page: page over mem limit");
+        debug_panic("mm_mem_free_reference: page over mem limit");
     struct page_s *p = &pages[hash_page(page)];
-    if (p->refcount <= 0)
-        debug_panic("decrease_refcount_page: page refcount <= 0");
-    if (--p->refcount == 0)
-        LIST_INSERT_HEAD(&free_pages, p, status);
+    /* TODO see why refcount reaches below 0
+     * if (p->refcount <= 0)
+     *   debug_panic("mm_mem_free_reference: page refcount <= 0");
+     */
+    if (p->refcount > 0)
+        if (--p->refcount == 0)
+            LIST_INSERT_HEAD(&free_pages, p, status);
 }
 
 mm_page *search_page(mm_page *dir, void *vir, int flag)
@@ -56,24 +59,24 @@ mm_page *search_page(mm_page *dir, void *vir, int flag)
                        (((u32_t) vir >> 12) & 0x3FF);
 }
 
-void *mm_newpage(struct process_state_s *p, mm_page *page)
+void *mm_newpage(mm_page *page)
 {
     mm_page *new_page = mm_mem_alloc();
-    if (new_page == NULL)
-        return NULL;
-    add_process_page(p, new_page);
-    *page = make_mm_entry_addr(new_page, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
-    tlbflush();
+    if (new_page != NULL) {
+        *page = make_mm_entry_addr(new_page,
+                MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
+        tlbflush();
+    }
     return new_page;
 }
 
-void *mm_copy_on_write(struct process_state_s *p, void *vir, mm_page *entry)
+void *mm_copy_on_write(void *vir, mm_page *entry)
 {
     char *old_page = (char *) (entry->base << 12);
 
     if (pages[hash_page(old_page)].refcount > 1) {
         /* create new page to replace old_page */
-        if (mm_newpage(p, entry) == NULL)
+        if (mm_newpage(entry) == NULL)
             return NULL;
 
         /* copy the contents of old_page to the new page */
@@ -82,7 +85,7 @@ void *mm_copy_on_write(struct process_state_s *p, void *vir, mm_page *entry)
         mm_umap_page((void *) rcr3(), 0);
 
         /* decrease refcount of old_page */
-        decrease_refcount_page(old_page);
+        mm_mem_free_reference(old_page);
     } else {
         entry->attr |= MM_ATTR_RW;
     }
@@ -100,18 +103,19 @@ void pf_handler()
         isr14();
 
     superuser = (current_process->uid == 1);
-    page = search_page(current_process->pages_dir, (void *) rcr2(), MM_NOCREAT);
+
+    page = search_page((void *) rcr3(), (void *) rcr2(), MM_NOCREAT);
 
     if (page != NULL && (page->attr & MM_ATTR_US || superuser)) {
         if (!(page->attr & MM_ATTR_P)) {
             if (page->attr & MM_VALID)
-                res = mm_newpage(current_process, page);
+                res = mm_newpage(page);
             else if (page->attr & MM_VM)
-                res = vmm_retrieve(current_process, (void *) rcr2(), page);
+                res = vmm_retrieve(page->base);
 
         } else if (!(page->attr & MM_ATTR_RW)) {
             if (!(page->attr & MM_SHARED))
-                res = mm_copy_on_write(current_process, (void *) rcr2(), page);
+                res = mm_copy_on_write((void *) rcr2(), page);
         }
     }
 
@@ -166,12 +170,6 @@ void *mm_mem_alloc()
     return page->base;
 }
 
-/* free page */
-void mm_mem_free(void *page)
-{
-    decrease_refcount_page((void *) page);
-}
-
 /* map a page in the PDT */
 void mm_map_page_attr(mm_page *dir, void *vir, void *phy, int attr)
 {
@@ -206,19 +204,19 @@ mm_page* mm_dir_new()
     mm_page *dirbase   = (mm_page *) mm_mem_alloc();
     mm_page *tablebase = (mm_page *) mm_mem_alloc();
 
+    /* ident map the directory table (this way its 'user' and not 'system') */
+    mm_map_page(dirbase, dirbase, dirbase);
+
     /* 0111 means present, r/w and user */
     *dirbase = make_mm_entry_addr(tablebase, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
 
     /* mark first page as not present, to catch NULL pointers */
     /* XXX see why it does not work */
-    *tablebase = make_mm_entry_addr(0, 2);
+    *tablebase = make_mm_entry_addr(0, 0);
     tablebase++;
 
-    for (base = PAGE_SIZE; base < 0x400000; base += PAGE_SIZE) {
-        /* 011 means present, r/w and supervisor */
-        *tablebase = make_mm_entry_addr(base, 3);
-        tablebase++;
-    }
+    for (base = PAGE_SIZE; base < 0x400000; tablebase++, base += PAGE_SIZE)
+        *tablebase = make_mm_entry_addr(base, MM_ATTR_P | MM_ATTR_RW);
 
     return dirbase;
 }
@@ -232,8 +230,9 @@ void copy_table_fork(mm_page *to, mm_page *from)
             from->attr &= ~MM_ATTR_RW;
         *to = *from;
         if (from->attr & MM_ATTR_P)
-            /* TODO manage virtual pages */
-            increase_refcount_page((void *) (from->base << 12));
+            mm_mem_add_reference((void *) (from->base << 12));
+        else if (from->attr & MM_VM)
+            vmm_mem_add_reference(from->base);
         to++;
         from++;
     }
@@ -269,14 +268,29 @@ mm_page *mm_dir_cpy(mm_page *dir)
     return ret;
 }
 
-/* free directory page and all its present tables */
-void mm_dir_free(mm_page* d)
+/* free directory page and all its present tables (recursive helper function) */
+void mm_dir_table_free(mm_page *d, int recursive)
 {
-    mm_page *end = d + PAGE_SIZE / sizeof(mm_page);
-    mm_mem_free(d);
-    for (; d < end; ++d)
-        if (d->attr & MM_ATTR_P)
-            mm_mem_free((void *) ((u32_t) d->base << 12));
+    mm_page *entry, *end;
+
+    end = d + PAGE_SIZE / sizeof(mm_page);
+    for (; d < end; ++d) {
+        if (d->attr & MM_ATTR_P) {
+            entry = (void *) (d->base << 12);
+            if (recursive)
+                mm_dir_table_free(entry, 0);
+            else
+                mm_mem_free_reference(entry);
+        } else if (d->attr & MM_VM) {
+            vmm_mem_free_reference(entry->base);
+        }
+    }
+}
+
+/* free directory page and all its present tables */
+void mm_dir_free(mm_page *d)
+{
+    mm_dir_table_free(d, 1);
 }
 
 /* build page and add it to the dirtable; optionally bootstrap */
@@ -317,7 +331,7 @@ int sys_share_page(void *page)
         return -1;
     /* if we are going to share it, create it now so everybody knows it later */
     if (entry->attr & MM_VALID && !(entry->attr & MM_ATTR_P))
-        mm_newpage(current_process, entry);
+        mm_newpage(entry);
     entry->attr |= MM_SHARED;
 
     return 0;

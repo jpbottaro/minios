@@ -86,7 +86,7 @@ void mm_init();
 void *mm_mem_alloc();
 void *mm_mem_kalloc();
 void *mm_build_page(mm_page *dir, void *vir, void *boot_page);
-void mm_mem_free(void *page);
+void mm_mem_free_reference(void *page);
 
 mm_page *mm_dir_new();
 mm_page *mm_dir_cpy(mm_page *dir);

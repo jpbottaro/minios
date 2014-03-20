@@ -63,9 +63,6 @@ struct process_state_s {
 
     /* unused list pointers */
     LIST_ENTRY(process_state_s) unused;
-
-    /* list of used pages */
-    LIST_HEAD(pages_list_t, page_s) pages_list;
 } __attribute__((__packed__)) ;
 
 extern struct process_state_s ps[MAX_PROCESSES];
