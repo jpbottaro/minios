@@ -21,8 +21,7 @@ IMG_FLOPPY=floppy.img
 BIN_BOOT=../boot/floppyboot.bin
 
 # misc
-BIN_KERN=kernel.bin
-FSIMAGE=fsimage
+KERNEL=kernel
 # 0x20000 - 0x1200
 KERNELMEM=192000
 
@@ -39,14 +38,14 @@ $(ODIR)/%.o: $(SRC)/%.c
 $(ODIR)/%.o: $(SRC)/%.asm
 	$(NASM) $(NASMFLAGS) -o $@ $^
 
-$(IMG_FLOPPY): $(BIN_BOOT) $(BIN_KERN) $(FSIMAGE)
+$(IMG_FLOPPY): $(BIN_BOOT) $(KERNEL)
 	@dd if=/dev/zero of=$@ bs=512 count=2880 2>/dev/null
 	$(MKFS) -F 12 -f 2 -n $(DISK_LABEL) $@
 	dd if=$< of=$@ bs=1 count=3 conv=notrunc 2>/dev/null
 	dd if=$< of=$@ bs=1 count=450 seek=62 skip=62 conv=notrunc 2>/dev/null
-	mcopy -obi $@ $(BIN_KERN) ::kernel.bin
+	mcopy -obi $@ $(KERNEL) ::kernel.bin
 
-$(BIN_KERN)::
+$(KERNEL)::
 	@echo Building kernel
 	@$(MAKE) -C ../kernel
 	@echo Building file system
@@ -63,5 +62,5 @@ clean:
 	@$(MAKE) --no-print-directory -C ../fs clean
 	@$(MAKE) --no-print-directory -C ../lib clean
 	@$(MAKE) -C ../drivers clean
-	rm -f $(BIN_KERN)
+	rm -f $(KERNEL)
 	rm -f $(IMG_FLOPPY)

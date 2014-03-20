@@ -1,4 +1,3 @@
-kernel.bin
+kernel
 floppy.img
-imagefiles
 serial.out
