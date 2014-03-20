@@ -35,11 +35,8 @@ void mm_mem_free_reference(void *page)
 
     if (p->refcount <= 0)
       debug_panic("mm_mem_free_reference: page refcount <= 0");
-    if (--p->refcount == 0) {
-        vga_printf(10, 10, "page %x", page);
-        breakpoint();
+    if (--p->refcount == 0)
         LIST_INSERT_HEAD(&free_pages, p, status);
-    }
 }
 
 mm_page *search_page(mm_page *dir, void *vir, int flag)
