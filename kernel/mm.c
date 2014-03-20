@@ -17,26 +17,29 @@ LIST_HEAD(free_pages_t, page_s) free_pages;
 void mm_mem_add_reference(void *page)
 {
     if (page < (void *) KERNEL_PAGES)
-        return;
+        debug_panic("mm_mem_add_reference: page under mem limit");
     if (page > (void *) MEM_LIMIT)
         debug_panic("mm_mem_add_reference: page over mem limit");
+
     ++pages[hash_page(page)].refcount;
 }
 
 void mm_mem_free_reference(void *page)
 {
     if (page < (void *) KERNEL_PAGES)
-        return;
+        debug_panic("mm_mem_free_reference: page under mem limit");
     if (page > (void *) MEM_LIMIT)
         debug_panic("mm_mem_free_reference: page over mem limit");
+
     struct page_s *p = &pages[hash_page(page)];
-    /* TODO see why refcount reaches below 0
-     * if (p->refcount <= 0)
-     *   debug_panic("mm_mem_free_reference: page refcount <= 0");
-     */
-    if (p->refcount > 0)
-        if (--p->refcount == 0)
-            LIST_INSERT_HEAD(&free_pages, p, status);
+
+    if (p->refcount <= 0)
+      debug_panic("mm_mem_free_reference: page refcount <= 0");
+    if (--p->refcount == 0) {
+        vga_printf(10, 10, "page %x", page);
+        breakpoint();
+        LIST_INSERT_HEAD(&free_pages, p, status);
+    }
 }
 
 mm_page *search_page(mm_page *dir, void *vir, int flag)
@@ -97,15 +100,13 @@ void *mm_copy_on_write(void *vir, mm_page *entry)
 void pf_handler()
 {
     mm_page *page, *res;
-    int superuser;
 
     if (current_process == NULL)
         isr14();
 
-    superuser = (current_process->uid == 1);
-    page = search_page((void *) rcr3(), (void *) rcr2(), MM_NOCREAT);
     res = NULL;
-    if (page != NULL && (page->attr & MM_ATTR_US || superuser)) {
+    page = search_page((void *) rcr3(), (void *) rcr2(), MM_NOCREAT);
+    if (page != NULL && page->attr & MM_ATTR_US) {
         if (!(page->attr & MM_ATTR_P)) {
             if (page->attr & MM_VALID)
                 res = mm_newpage(page);
@@ -119,7 +120,7 @@ void pf_handler()
     }
 
     if (res == NULL)
-        superuser ? isr14() : sys_exit(-1);
+        debug_panic("pf_handler: segmentation fault");
 }
 
 /* init memory manager */
@@ -140,7 +141,7 @@ void mm_init()
     /* register page fault handler */
     idt_register(14, _pf_handler, DEFAULT_PL);
 
-    /* enable paging (kernel is identity mapped from 0x0 to 0x400000) */
+    /* enable paging (kernel is identity mapped from 0x0 to MEM_LIMIT) */
     lcr3((unsigned int) mm_dir_new());
     lcr0(rcr0() | 0x80000000);
 }
@@ -214,7 +215,7 @@ mm_page* mm_dir_new()
     *tablebase = make_mm_entry_addr(0, 0);
     tablebase++;
 
-    for (base = PAGE_SIZE; base < 0x400000; tablebase++, base += PAGE_SIZE)
+    for (base = PAGE_SIZE; base < MEM_LIMIT; tablebase++, base += PAGE_SIZE)
         *tablebase = make_mm_entry_addr(base, MM_ATTR_P | MM_ATTR_RW);
 
     return dirbase;
@@ -228,7 +229,7 @@ void copy_table_fork(mm_page *to, mm_page *from)
         if (!(from->attr & MM_SHARED))
             from->attr &= ~MM_ATTR_RW;
         *to = *from;
-        if (from->attr & MM_ATTR_P)
+        if ((from->attr & (MM_ATTR_P | MM_ATTR_US)) == (MM_ATTR_P | MM_ATTR_US))
             mm_mem_add_reference((void *) (from->base << 12));
         else if (from->attr & MM_VM)
             vmm_mem_add_reference(from->base);
@@ -278,7 +279,7 @@ void mm_dir_table_free(mm_page *d, int recursive)
             entry = (void *) (d->base << 12);
             if (recursive)
                 mm_dir_table_free(entry, 0);
-            else
+            else if (d->attr & MM_ATTR_US)
                 mm_mem_free_reference(entry);
         } else if (d->attr & MM_VM) {
             vmm_mem_free_reference(entry->base);
