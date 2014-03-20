@@ -103,9 +103,8 @@ void pf_handler()
         isr14();
 
     superuser = (current_process->uid == 1);
-
     page = search_page((void *) rcr3(), (void *) rcr2(), MM_NOCREAT);
-
+    res = NULL;
     if (page != NULL && (page->attr & MM_ATTR_US || superuser)) {
         if (!(page->attr & MM_ATTR_P)) {
             if (page->attr & MM_VALID)
