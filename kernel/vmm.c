@@ -3,6 +3,7 @@
 #include <minios/pm.h>
 #include "debug.h"
 #include "vmm.h"
+#include "pm.h"
 
 struct file_s vmm_dev_str;
 struct file_s *vmm_dev = &vmm_dev_str;
@@ -40,39 +41,119 @@ void vmm_mem_free_reference(int i)
         TAILQ_INSERT_HEAD(&free_vpages, &vpages[i], status);
 }
 
+/* change all references from a page to another; depending on the direction
+ * (from/to main memory), update flags of dir tables accordingly
+ */
+void vmm_move_references(struct page_s *from, struct page_s *to, int direction)
+{
+    /* improve this so that we don't have to go to every dir table of every
+     * process; keeping references for each page (eg. process nr/virtual address)
+     * would make this O(n) with n = references
+     */
+    int i, idx;
+    mm_page *dir_entry, *table_entry;
+    mm_page *dir_end, *table_end;
+
+    to->refcount = from->refcount;
+    if (direction == VMM_MAIN)
+        idx = from - vpages;
+    else
+        idx = to - vpages;
+
+    for (i = 0; i < MAX_PROCESSES; i++) {
+        struct process_state_s *p = &ps[i];
+        if (p->pid == 0)
+            continue;
+
+        dir_entry = p->pages_dir;
+        dir_end = dir_entry + PAGE_SIZE / sizeof(mm_page);
+        for (; dir_entry < dir_end; ++dir_entry) {
+            if (!(dir_entry->attr & MM_ATTR_P))
+                continue;
+
+            table_entry = (mm_page *) (dir_entry->base << 12);
+            table_end = table_entry + PAGE_SIZE / sizeof(mm_page);
+            for (; table_entry < table_end; ++table_entry) {
+                if ((direction == VMM_MAIN) &&
+                    (table_entry->attr & MM_VM) &&
+                    (table_entry->base == idx)) {
+
+                    *table_entry = make_mm_entry_addr(to->base,
+                            MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
+
+                } else if ((direction == VMM_SECONDARY) &&
+                    (table_entry->attr & MM_ATTR_P) &&
+                    ((table_entry->base << 12) == (u32_t) from->base)) {
+
+                    *table_entry = make_mm_entry_addr(idx,
+                            MM_ATTR_RW | MM_ATTR_US | MM_VM);
+                }
+            }
+        }
+    }
+}
+
 /* alloc virtual page in secondary storage */
 void *vmm_mem_alloc()
 {
     struct page_s *page;
 
     page = TAILQ_FIRST(&free_vpages);
-    if (page == NULL)
-        debug_panic("vmm_mem_alloc: no more free virtual pages");
-    TAILQ_REMOVE(&free_vpages, page, status);
-    page->refcount = 1;
+    if (page != NULL) {
+        TAILQ_REMOVE(&free_vpages, page, status);
+        page->refcount = 1;
+        return page->base;
+    }
 
-    return page->base;
+    /* TODO remove panic call */
+    debug_panic("vmm_mem_alloc: no more free virtual pages");
+    return NULL;
 }
 
+/* select next victim to be evicted from main memory */
 struct page_s *vmm_select_victim()
 {
     struct page_s *page = TAILQ_FIRST(&victim_pages);
 
-    if (page != NULL) {
-        TAILQ_REMOVE(&victim_pages, page, status);
-        TAILQ_INSERT_TAIL(&victim_pages, page, status);
+    return page;
+}
+
+/* copy the 'src' page to the secondary device, at the 'offset' possition */
+void vmm_copy_to_device(void *src, u32_t offset)
+{
+}
+
+/* copy the page at the 'offset' possition to the src page */
+void vmm_copy_from_device(void *src, u32_t offset)
+{
+}
+
+/* evict page to secondary device */
+struct page_s *vmm_evict(struct page_s *page)
+{
+    struct page_s *vpage = vmm_mem_alloc();
+
+    if (vpage != NULL) {
+        vmm_copy_to_device(page->base, (u32_t) vpage->base);
+        vmm_move_references(page, vpage, VMM_SECONDARY);
     }
 
-    return page;
+    return vpage;
 }
 
 /* free up a page in main memory and return it */
 struct page_s *vmm_free_page()
 {
-    struct page_s *page = NULL;
+    if (!vmm_enabled)
+        return NULL;
 
-    if (vmm_enabled) {
-    }
+    struct page_s *page = vmm_select_victim();
+
+    if (page == NULL || vmm_evict(page) == NULL)
+        return NULL;
+
+    TAILQ_REMOVE(&victim_pages, page, status);
+    TAILQ_INSERT_HEAD(&free_pages, page, status);
 
     return page;
 }
@@ -80,10 +161,21 @@ struct page_s *vmm_free_page()
 /* retrieve the ith virtual page from secondary storage and place it in memory */
 void *vmm_retrieve(mm_page *entry)
 {
-    void *page = NULL;
+    if (!vmm_enabled)
+        return NULL;
 
-    if (vmm_enabled) {
+    int i = entry->base;
+
+    if (i < 0 || i > VPAGES_LEN)
+        debug_panic("vmm_retrieve: index out of range");
+
+    struct page_s *vpage = &vpages[i];
+    struct page_s *page = mm_mem_alloc();
+
+    if (page != NULL) {
+        vmm_copy_from_device(page->base, (u32_t) vpage->base);
+        vmm_move_references(vpage, page, VMM_MAIN);
     }
 
-    return page;
+    return NULL;
 }

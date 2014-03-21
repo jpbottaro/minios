@@ -3,10 +3,14 @@
 
 #include <minios/mm.h>
 
-/* TODO set right swap offset */
-#define SWAP_OFFSET 0x0
-#define VPAGES_LEN 0x10
+/* TODO set right swap offset/size */
+#define SWAP_OFFSET 0x10000
+#define VPAGES_LEN 0x100
 
+#define VMM_MAIN      0
+#define VMM_SECONDARY 1
+
+extern struct pages_queue_s free_pages;
 extern struct pages_queue_s victim_pages;
 
 void vmm_init();
