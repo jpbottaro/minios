@@ -13,8 +13,10 @@ extern void _pf_handler();
 struct page_s pages[PAGES_LEN];
 mm_page *tables_mem[PAGES_PER_PAGE + 1];
 
-LIST_HEAD(free_pages_t, page_s) free_pages;
-LIST_HEAD(victim_pages_t, page_s) victim_pages;
+struct pages_queue_s free_pages;
+struct pages_queue_s victim_pages;
+
+void mm_map_page(mm_page *dir, void *vir, void *phy);
 
 void mm_mem_add_reference(void *page)
 {
@@ -39,12 +41,12 @@ void mm_mem_free_reference(void *page)
       debug_panic("mm_mem_free_reference: page refcount <= 0");
     if (--p->refcount == 0) {
         if (!p->pinned)
-            LIST_REMOVE(p, status);
-        LIST_INSERT_HEAD(&free_pages, p, status);
+            TAILQ_REMOVE(&victim_pages, p, status);
+        TAILQ_INSERT_HEAD(&free_pages, p, status);
     }
 }
 
-mm_page *search_page(mm_page *dir, void *vir, int flag)
+mm_page *mm_search_page(mm_page *dir, void *vir, int flag)
 {
     mm_page *dir_entry;
 
@@ -64,11 +66,38 @@ mm_page *search_page(mm_page *dir, void *vir, int flag)
                        (((u32_t) vir >> 12) & 0x3FF);
 }
 
+/* map a page in the PDT */
+void mm_map_page_attr(mm_page *dir, void *vir, void *phy, int attr)
+{
+    mm_page *table_entry;
+
+    table_entry = mm_search_page(dir, vir, MM_CREAT);
+    *table_entry = make_mm_entry_addr(phy,  attr);
+    tlbflush();
+}
+
+/* map a page in the PDT marked user, r/w, present */
+void mm_map_page(mm_page *dir, void *vir, void *phy)
+{
+    mm_map_page_attr(dir, vir, phy, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
+}
+
+/* umap a page in the PDT */
+void mm_umap_page(mm_page *dir, void *vir)
+{
+    mm_page *table_entry;
+
+    if ( (table_entry = mm_search_page(dir, vir, MM_NOCREAT)) == NULL)
+        debug_panic("mm_umap_page: page not mapped");
+    table_entry->attr = 0;
+    tlbflush();
+}
+
 /* translate virtual to physical address */
 void *mm_translate(mm_page *dir, void *vir)
 {
     void *ret = NULL;
-    mm_page *page = search_page(dir, vir, MM_NOCREAT);
+    mm_page *page = mm_search_page(dir, vir, MM_NOCREAT);
 
     if (page != NULL)
         ret = (void *) (page->base << 12);
@@ -76,10 +105,10 @@ void *mm_translate(mm_page *dir, void *vir)
     return ret;
 }
 
-void *mm_newpage(mm_page *page)
+void *mm_newpage(mm_page *entry)
 {
     mm_page *new_page = mm_mem_alloc();
-    *page = make_mm_entry_addr(new_page, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
+    *entry = make_mm_entry_addr(new_page, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
     tlbflush();
     return new_page;
 }
@@ -113,13 +142,13 @@ void pf_handler()
         isr14();
 
     res = NULL;
-    page = search_page((void *) rcr3(), (void *) rcr2(), MM_NOCREAT);
+    page = mm_search_page((void *) rcr3(), (void *) rcr2(), MM_NOCREAT);
     if (page != NULL && page->attr & MM_ATTR_US) {
         if (!(page->attr & MM_ATTR_P)) {
             if (page->attr & MM_VALID)
                 res = mm_newpage(page);
             else if (page->attr & MM_VM)
-                res = vmm_retrieve(page->base);
+                res = vmm_retrieve(page);
 
         } else if (!(page->attr & MM_ATTR_RW)) {
             if (!(page->attr & MM_SHARED))
@@ -136,11 +165,11 @@ void mm_init()
 {
     int i;
 
-    LIST_INIT(&victim_pages);
-    LIST_INIT(&free_pages);
+    TAILQ_INIT(&free_pages);
+    TAILQ_INIT(&victim_pages);
     for (i = PAGES_LEN - 1; i >= 0; --i) {
         pages[i].base = (void *) KERNEL_PAGES + i * PAGE_SIZE;
-        LIST_INSERT_HEAD(&free_pages, &pages[i], status);
+        TAILQ_INSERT_HEAD(&free_pages, &pages[i], status);
     }
 
     /* register sys calls */
@@ -161,13 +190,13 @@ void *mm_mem_alloc_pinned()
     u32_t *start, *end;
     struct page_s *page;
 
-    page = LIST_FIRST(&free_pages);
+    page = TAILQ_FIRST(&free_pages);
     if (page == NULL) {
         page = vmm_free_page();
         if (page == NULL)
             debug_panic("mm_mem_alloc: no more free pages");
     }
-    LIST_REMOVE(page, status);
+    TAILQ_REMOVE(&free_pages, page, status);
 
     start = (u32_t *) page->base;
     end = start + PAGE_SIZE / 4;
@@ -185,37 +214,10 @@ void *mm_mem_alloc()
 {
     void *page = mm_mem_alloc_pinned();
 
-    LIST_INSERT_HEAD(&victim_pages, &pages[hash_page(page)], status);
+    TAILQ_INSERT_HEAD(&victim_pages, &pages[hash_page(page)], status);
     pages[hash_page(page)].pinned = 0;
 
     return page;
-}
-
-/* map a page in the PDT */
-void mm_map_page_attr(mm_page *dir, void *vir, void *phy, int attr)
-{
-    mm_page *table_entry;
-
-    table_entry = search_page(dir, vir, MM_CREAT);
-    *table_entry = make_mm_entry_addr(phy,  attr);
-    tlbflush();
-}
-
-/* map a page in the PDT marked user, r/w, present */
-void mm_map_page(mm_page *dir, void *vir, void *phy)
-{
-    mm_map_page_attr(dir, vir, phy, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
-}
-
-/* umap a page in the PDT */
-void mm_umap_page(mm_page *dir, void *vir)
-{
-    mm_page *table_entry;
-
-    if ( (table_entry = search_page(dir, vir, MM_NOCREAT)) == NULL)
-        debug_panic("mm_umap_page: page not mapped");
-    table_entry->attr = 0;
-    tlbflush();
 }
 
 /* make page directory table with first 0x0 to MEM_LIMIT ident mapping (kernel) */
@@ -366,7 +368,7 @@ int sys_share_page(void *page)
 {
     mm_page *entry;
 
-    entry = search_page(current_process->pages_dir, page, MM_NOCREAT);
+    entry = mm_search_page(current_process->pages_dir, page, MM_NOCREAT);
     if (entry == NULL)
         return -1;
     /* if we are going to share it, create it now so everybody knows it later */
