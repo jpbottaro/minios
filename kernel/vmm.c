@@ -74,6 +74,9 @@ void vmm_move_references(struct page_s *from, struct page_s *to, int direction)
             table_entry = (mm_page *) (dir_entry->base << 12);
             table_end = table_entry + PAGE_SIZE / sizeof(mm_page);
             for (; table_entry < table_end; ++table_entry) {
+                /* don't touch non-user pages, this is the identity map */
+                if (!(table_entry->attr & MM_ATTR_US))
+                    continue;
                 if ((direction == VMM_MAIN) &&
                     (table_entry->attr & MM_VM) &&
                     (table_entry->base == idx)) {
