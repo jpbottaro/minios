@@ -51,8 +51,8 @@
 #define CR4_VME		0x00000001	// V86 Mode Extensions
 
 #define PAGE_SIZE    0x1000
-#define KERNEL_PAGES 0x300000
-#define MEM_LIMIT    0x350000
+#define KERNEL_PAGES 0x100000
+#define MEM_LIMIT    0x200000
 
 typedef struct str_mm_page {
 	u32_t attr:12;
