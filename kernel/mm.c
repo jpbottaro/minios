@@ -194,26 +194,26 @@ void mm_umap_page(mm_page *dir, void *vir)
     tlbflush();
 }
 
-/* make page directory table with first 0x0 to 0x3fffff ident mapping (kernel) */
+/* make page directory table with first 0x0 to MEM_LIMIT ident mapping (kernel) */
 mm_page* mm_dir_new()
 {
     u32_t base;
     mm_page *dirbase   = (mm_page *) mm_mem_alloc();
     mm_page *tablebase = (mm_page *) mm_mem_alloc();
 
-    /* ident map the directory table (this way its 'user' and not 'system') */
-    mm_map_page(dirbase, dirbase, dirbase);
-
     /* 0111 means present, r/w and user */
     *dirbase = make_mm_entry_addr(tablebase, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
 
     /* mark first page as not present, to catch NULL pointers */
-    /* XXX see why it does not work */
     *tablebase = make_mm_entry_addr(0, 0);
     tablebase++;
 
     for (base = PAGE_SIZE; base < MEM_LIMIT; tablebase++, base += PAGE_SIZE)
         *tablebase = make_mm_entry_addr(base, MM_ATTR_P | MM_ATTR_RW);
+
+    /* ident map the directory tables (this way they're 'user' and not 'system') */
+    mm_map_page(dirbase, dirbase, dirbase);
+    mm_map_page(dirbase, tablebase, tablebase);
 
     return dirbase;
 }
