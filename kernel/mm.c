@@ -214,7 +214,7 @@ void *mm_mem_alloc()
 {
     void *page = mm_mem_alloc_pinned();
 
-    TAILQ_INSERT_HEAD(&victim_pages, &pages[hash_page(page)], status);
+    TAILQ_INSERT_TAIL(&victim_pages, &pages[hash_page(page)], status);
     pages[hash_page(page)].pinned = 0;
 
     return page;
