@@ -1,6 +1,5 @@
 BITS 32
 
-extern reset_intr_pic1
 extern reset_intr_pic2
 extern sched_schedule
 
