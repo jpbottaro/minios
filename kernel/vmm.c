@@ -179,5 +179,5 @@ void *vmm_retrieve(mm_page *entry)
         vmm_move_references(vpage, page, VMM_MAIN);
     }
 
-    return NULL;
+    return page->base;
 }
