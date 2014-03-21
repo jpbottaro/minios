@@ -107,7 +107,7 @@ void *mm_translate(mm_page *dir, void *vir)
 
 void *mm_newpage(mm_page *entry)
 {
-    mm_page *new_page = mm_mem_alloc();
+    void *new_page = mm_mem_alloc();
     *entry = make_mm_entry_addr(new_page, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
     tlbflush();
     return new_page;
