@@ -5,6 +5,7 @@
 #include <minios/i386.h>
 #include <minios/mm.h>
 #include <minios/fs.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include "debug.h"
 #include "tss.h"
@@ -214,11 +215,10 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
 {
     int fd;
     int i, j, size, max, ret, len;
-    u32_t mem_offset;
     pso_file pso_header;
     mm_page *dirbase;
     void *page;
-    char *tmpargv[MAX_ARG];
+    char *code_start, *tmpargv[MAX_ARG];
     struct process_state_s *process;
 
     /* open target file */
@@ -252,6 +252,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     process->parent = current_process;
     process->curr_dir = current_dir();
     process->last_mem = (char *) REQUESTED_MEMORY_START;
+    process->eip = pso_header._main;
     process->esp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);
     process->ebp = STACK_PAGE + (PAGE_SIZE - C_PARAMS_SIZE);
     init_fds(process->i);
@@ -260,42 +261,19 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     dirbase = mm_dir_new();
     process->pages_dir = dirbase;
 
-    mem_offset = pso_header.mem_start;
-    process->eip = pso_header._main;
-
     /* build code */
+    sys_lseek(fd, 0, SEEK_SET);
+    code_start = (char *) pso_header.mem_start;
     max = pso_header.mem_end_disk - pso_header.mem_start;
-
-    /* yak.. first page outside the loop, to add the pso_header too */
-    page = mm_mem_alloc();
-    mm_map_page((mm_page *) rcr3(), 0, page);
-    mymemcpy(0, (char *) &pso_header, PSO_SIZE);
-    if ( (ret = sys_read(fd, (char *) PSO_SIZE, PAGE_SIZE - PSO_SIZE)) < 0)
-        debug_panic("newprocess: error in sys_read, cant get program");
-    len += ret;
-    
-    mm_map_page(dirbase, (void *) mem_offset, page);
-    mm_umap_page((mm_page *) rcr3(), 0);
-
-    for (i = PAGE_SIZE; i < max; i += PAGE_SIZE) {
+    for (i = 0; i < max; i += PAGE_SIZE) {
         /* get new page for code */
-        page = mm_mem_alloc();
-
-        /* temporary map page to 0 to be able to copy the code */
-        mm_map_page((mm_page *) rcr3(), 0, page);
+        page = mm_build_page(dirbase, code_start + i, NULL);
 
         /* copy file from filesystem to the new page */
-        if ( (ret = sys_read(fd, 0, PAGE_SIZE)) < 0)
+        if ( (ret = sys_read(fd, page, PAGE_SIZE)) < 0)
             debug_panic("newprocess: error in sys_read, cant get program");
-        len += ret;
 
-        /* add the new code page to the page directory table */
-        mm_map_page(dirbase, (void *) (i + mem_offset), page);
-
-        /* remove temporary ident mapping */
-        mm_umap_page((mm_page *) rcr3(), 0);
-
-        if (ret == 0)
+        if (ret < PAGE_SIZE)
             break;
     }
 
@@ -305,20 +283,17 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     i = j = 0;
     page = mm_build_page(dirbase, (char *) ARG_PAGE, NULL);
     if (argv != NULL) {
-        /* add argc and argv to the new process (lets hope it only takes 1 page) */
-        mm_map_page((mm_page *) rcr3(), 0, page);
-
         /* put the arguments in the new page */
         for (i = j = 0; i < MAX_ARG - 1 && argv[i] != NULL; ++i) {
             tmpargv[i] = (char *) (ARG_PAGE + j);
             size = mystrlen(argv[i]);
-            mymemcpy((char *) j, argv[i], size + 1);
+            mymemcpy(page + j, argv[i], size + 1);
             j += size + 1;
         }
+
         /* copy the tmpargv array of pointers to the arguments */
         tmpargv[i] = NULL;
-        mymemcpy((char *) j, (char *) tmpargv, (i + 1) * 4);
-        mm_umap_page((mm_page *) rcr3(), 0);
+        mymemcpy(page + j, (char *) tmpargv, (i + 1) * 4);
     }
 
     /* build user/kernel stack */
