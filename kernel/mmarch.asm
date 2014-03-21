@@ -10,4 +10,5 @@ _pf_handler:
     call pf_handler
     call reset_intr_pic2
     popad
+    add esp, 4 ; remove error code
     iret
