@@ -7,6 +7,7 @@
 struct file_s vmm_dev_str;
 struct file_s *vmm_dev = &vmm_dev_str;
 struct page_s vpages[VPAGES_LEN];
+int vmm_enabled = 0;
 
 LIST_HEAD(free_vpages_t, page_s) free_vpages;
 
@@ -26,12 +27,18 @@ void vmm_mem_free_reference(int i)
 /* retrieve the ith virtual page from secondary storage and place it in memory */
 void *vmm_retrieve(int i)
 {
+    if (!vmm_enabled)
+        return NULL;
+
     return NULL;
 }
 
 /* free up a page in main memory and return it */
 struct page_s *vmm_free_page()
 {
+    if (!vmm_enabled)
+        return NULL;
+
     return NULL;
 }
 
@@ -61,4 +68,6 @@ void vmm_init(dev_t dev, void *swap_offset)
         vpages[i].base = swap_offset + i * PAGE_SIZE;
         LIST_INSERT_HEAD(&free_vpages, &vpages[i], status);
     }
+
+    vmm_enabled = 1;
 }
