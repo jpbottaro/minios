@@ -77,6 +77,9 @@ struct page_s {
     /* ref count */
     int refcount;
 
+    /* whether this page is forced to stay in main memory (vmm) */
+    int pinned;
+
     /* free pages list */
     LIST_ENTRY(page_s) status;
 } __attribute__((__packed__));
@@ -85,12 +88,15 @@ extern struct page_s pages[PAGES_LEN];
 
 void mm_init();
 void *mm_mem_alloc();
+void *mm_mem_alloc_pinned();
 void *mm_mem_kalloc();
-void *mm_build_page(mm_page *dir, void *vir, void *boot_page);
+void *mm_build_page(mm_page *dir, void *vir);
+void *mm_build_page_pinned(mm_page *dir, void *vir);
 void mm_mem_free_reference(void *page);
 
 mm_page *mm_dir_new();
 mm_page *mm_dir_cpy(mm_page *dir);
+void *mm_translate(mm_page *dir, void *vir);
 void mm_dir_free(mm_page *d);
 
 void mm_map_page(mm_page *dir, void *vir, void *phy);

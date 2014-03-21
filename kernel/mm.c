@@ -14,6 +14,7 @@ struct page_s pages[PAGES_LEN];
 mm_page *tables_mem[PAGES_PER_PAGE + 1];
 
 LIST_HEAD(free_pages_t, page_s) free_pages;
+LIST_HEAD(victim_pages_t, page_s) victim_pages;
 
 void mm_mem_add_reference(void *page)
 {
@@ -36,8 +37,11 @@ void mm_mem_free_reference(void *page)
 
     if (p->refcount <= 0)
       debug_panic("mm_mem_free_reference: page refcount <= 0");
-    if (--p->refcount == 0)
+    if (--p->refcount == 0) {
+        if (!p->pinned)
+            LIST_REMOVE(p, status);
         LIST_INSERT_HEAD(&free_pages, p, status);
+    }
 }
 
 mm_page *search_page(mm_page *dir, void *vir, int flag)
@@ -50,7 +54,7 @@ mm_page *search_page(mm_page *dir, void *vir, int flag)
     if (!(dir_entry->attr & MM_ATTR_P)) {
         if (flag == MM_NOCREAT)
             return NULL;
-        void *table_page = mm_mem_alloc();
+        void *table_page = mm_mem_alloc_pinned();
         *dir_entry = make_mm_entry_addr(table_page,
                 MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
         mm_map_page(dir, table_page, table_page);
@@ -58,6 +62,18 @@ mm_page *search_page(mm_page *dir, void *vir, int flag)
 
     return (mm_page *) (dir_entry->base << 12) +
                        (((u32_t) vir >> 12) & 0x3FF);
+}
+
+/* translate virtual to physical address */
+void *mm_translate(mm_page *dir, void *vir)
+{
+    void *ret = NULL;
+    mm_page *page = search_page(dir, vir, MM_NOCREAT);
+
+    if (page != NULL)
+        ret = (void *) (page->base << 12);
+
+    return ret;
 }
 
 void *mm_newpage(mm_page *page)
@@ -120,6 +136,7 @@ void mm_init()
 {
     int i;
 
+    LIST_INIT(&victim_pages);
     LIST_INIT(&free_pages);
     for (i = PAGES_LEN - 1; i >= 0; --i) {
         pages[i].base = (void *) KERNEL_PAGES + i * PAGE_SIZE;
@@ -138,8 +155,8 @@ void mm_init()
     lcr0(rcr0() | 0x80000000);
 }
 
-/* alloc page */
-void *mm_mem_alloc()
+/* alloc pinned page */
+void *mm_mem_alloc_pinned()
 {
     u32_t *start, *end;
     struct page_s *page;
@@ -157,9 +174,21 @@ void *mm_mem_alloc()
     for (; start < end; start++)
         *start = 0;
 
+    page->pinned = 1;
     page->refcount = 1;
 
     return page->base;
+}
+
+/* alloc unpinned page */
+void *mm_mem_alloc()
+{
+    void *page = mm_mem_alloc_pinned();
+
+    LIST_INSERT_HEAD(&victim_pages, &pages[hash_page(page)], status);
+    pages[hash_page(page)].pinned = 0;
+
+    return page;
 }
 
 /* map a page in the PDT */
@@ -193,8 +222,8 @@ void mm_umap_page(mm_page *dir, void *vir)
 mm_page* mm_dir_new()
 {
     u32_t base;
-    mm_page *dirbase   = (mm_page *) mm_mem_alloc();
-    mm_page *tablebase = (mm_page *) mm_mem_alloc();
+    mm_page *dirbase   = (mm_page *) mm_mem_alloc_pinned();
+    mm_page *tablebase = (mm_page *) mm_mem_alloc_pinned();
 
     /* 0111 means present, r/w and user */
     *dirbase = make_mm_entry_addr(tablebase, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
@@ -209,6 +238,11 @@ mm_page* mm_dir_new()
     /* ident map the directory tables (this way they're 'user' and not 'system') */
     mm_map_page(dirbase, dirbase, dirbase);
     mm_map_page(dirbase, tablebase, tablebase);
+
+    /* build user/kernel stack and args pages */
+    mm_build_page(dirbase, (char *) ARG_PAGE);
+    mm_build_page_pinned(dirbase, (char *) KSTACK_PAGE);
+    mm_build_page_pinned(dirbase, (char *) STACK_PAGE);
 
     return dirbase;
 }
@@ -237,10 +271,11 @@ void copy_table_fork(mm_page *to, mm_page *from)
 mm_page *mm_dir_cpy(mm_page *dir)
 {
     int i = 0;
+    void *page;
     mm_page *d, *ret, *end;
     mm_page *dirbase, *tablebase;
 
-    ret = dirbase = tables_mem[i++] = (mm_page *) mm_mem_alloc();
+    ret = dirbase = tables_mem[i++] = (mm_page *) mm_mem_alloc_pinned();
 
     /* XXX HACK!: the minus 1 prevents this from copying the stacks/args,
      * so that we can do it ourselves manually (since they reside in the
@@ -249,7 +284,7 @@ mm_page *mm_dir_cpy(mm_page *dir)
     end = dir + (PAGE_SIZE / sizeof(mm_page *)) - 1;
     for (d = dir; d < end; d++, dirbase++) {
         if (d->attr & MM_ATTR_P) {
-            tables_mem[i++] = tablebase = (mm_page *) mm_mem_alloc();
+            tables_mem[i++] = tablebase = (mm_page *) mm_mem_alloc_pinned();
             copy_table_fork(tablebase, (mm_page *) (d->base << 12));
             *dirbase = make_mm_entry_addr(tablebase, d->attr);
         }
@@ -258,6 +293,16 @@ mm_page *mm_dir_cpy(mm_page *dir)
     /* ident map the directory tables (this way they're 'user' and not 'system') */
     while (--i >= 0)
         mm_map_page(ret, tables_mem[i], tables_mem[i]);
+
+    /* build user/kernel stack and args pages */
+    page = mm_build_page(ret, (char *) ARG_PAGE);
+    mymemcpy(page, (char *) ARG_PAGE, PAGE_SIZE);
+
+    page = mm_build_page_pinned(ret, (char *) KSTACK_PAGE);
+    mymemcpy(page, (char *) KSTACK_PAGE, PAGE_SIZE);
+
+    page = mm_build_page_pinned(ret, (char *) STACK_PAGE);
+    mymemcpy(page, (char *) STACK_PAGE, PAGE_SIZE);
 
     return ret;
 }
@@ -287,15 +332,19 @@ void mm_dir_free(mm_page *d)
     mm_dir_table_free(d, 1);
 }
 
-/* build page and add it to the dirtable; optionally bootstrap */
-void *mm_build_page(mm_page *dir, void *vir, void *boot_page)
+/* build page and add it to the dirtable, making it pinned */
+void *mm_build_page_pinned(mm_page *dir, void *vir)
+{
+    void *page = mm_mem_alloc_pinned();
+    mm_map_page(dir, vir, page);
+    return page;
+}
+
+/* build page and add it to the dirtable */
+void *mm_build_page(mm_page *dir, void *vir)
 {
     void *page = mm_mem_alloc();
-
     mm_map_page(dir, vir, page);
-    if (boot_page)
-        mymemcpy(page, boot_page, PAGE_SIZE);
-
     return page;
 }
 

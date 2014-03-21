@@ -189,11 +189,6 @@ pid_t sys_fork()
     dirbase = mm_dir_cpy(current_process->pages_dir);
     process->pages_dir = dirbase;
 
-    /* create and copy stacks/args */
-    mm_build_page(dirbase, (char *) STACK_PAGE, (char *) STACK_PAGE);
-    mm_build_page(dirbase, (char *) KSTACK_PAGE, (char *) KSTACK_PAGE);
-    mm_build_page(dirbase, (char *) ARG_PAGE, (char *) ARG_PAGE);
-
     /* add to scheduler */
     sched_enqueue(process);
 
@@ -217,9 +212,9 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     int i, j, size, max, ret, len;
     pso_file pso_header;
     mm_page *dirbase;
-    void *page;
     char *code_start, *tmpargv[MAX_ARG];
     struct process_state_s *process;
+    void *page;
 
     /* open target file */
     fd = 0;
@@ -267,7 +262,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     max = pso_header.mem_end_disk - pso_header.mem_start;
     for (i = 0; i < max; i += PAGE_SIZE) {
         /* get new page for code */
-        page = mm_build_page(dirbase, code_start + i, NULL);
+        page = mm_build_page(dirbase, code_start + i);
 
         /* copy file from filesystem to the new page */
         if ( (ret = sys_read(fd, page, PAGE_SIZE)) < 0)
@@ -281,7 +276,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     sys_close(fd);
 
     i = j = 0;
-    page = mm_build_page(dirbase, (char *) ARG_PAGE, NULL);
+    page = mm_translate(dirbase, (char *) ARG_PAGE);
     if (argv != NULL) {
         /* put the arguments in the new page */
         for (i = j = 0; i < MAX_ARG - 1 && argv[i] != NULL; ++i) {
@@ -296,11 +291,8 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         mymemcpy(page + j, (char *) tmpargv, (i + 1) * 4);
     }
 
-    /* build user/kernel stack */
-    page = mm_build_page(dirbase, (char *) KSTACK_PAGE, NULL);
-    page = mm_build_page(dirbase, (char *) STACK_PAGE, NULL);
-
     /* add the values to the stack so that main() can get them */
+    page = mm_translate(dirbase, (char *) STACK_PAGE);
     *((unsigned int *) (page + 0xFFC)) = ARG_PAGE + j;
     *((unsigned int *) (page + 0xFF8)) = i;
 
