@@ -199,7 +199,7 @@ void *mm_mem_alloc_pinned()
     TAILQ_REMOVE(&free_pages, page, status);
 
     start = (u32_t *) page->base;
-    end = start + PAGE_SIZE / 4;
+    end = start + PAGE_SIZE / sizeof(u32_t);
     for (; start < end; start++)
         *start = 0;
 
