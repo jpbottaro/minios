@@ -11,6 +11,7 @@
 extern void _pf_handler();
 
 struct page_s pages[PAGES_LEN];
+mm_page *tables_mem[PAGES_PER_PAGE + 1];
 
 LIST_HEAD(free_pages_t, page_s) free_pages;
 
@@ -218,6 +219,9 @@ mm_page* mm_dir_new()
     return dirbase;
 }
 
+/* XXX we are also copying and referencing the dir tables mappings from the
+ * parent process, which we don't want; we should skip those
+ */
 void copy_table_fork(mm_page *to, mm_page *from)
 {
     mm_page *end = from + (PAGE_SIZE / sizeof(mm_page *));
@@ -238,22 +242,26 @@ void copy_table_fork(mm_page *to, mm_page *from)
 /* copy a page directory table */
 mm_page *mm_dir_cpy(mm_page *dir)
 {
+    int i = 0;
     mm_page *d, *ret, *end;
     mm_page *dirbase, *tablebase;
 
-    ret = dirbase = (mm_page *) mm_mem_alloc();
+    ret = dirbase = tables_mem[i++] = (mm_page *) mm_mem_alloc();
 
     end = dir + (PAGE_SIZE / sizeof(mm_page *));
     for (d = dir; d < end; d++, dirbase++) {
         if (d->attr & MM_ATTR_P) {
-            tablebase = (mm_page *) mm_mem_alloc();
-            mm_map_page(dirbase, tablebase, tablebase);
+            tables_mem[i++] = tablebase = (mm_page *) mm_mem_alloc();
             copy_table_fork(tablebase, (mm_page *) (d->base << 12));
             *dirbase = make_mm_entry_addr(tablebase, d->attr);
         } else {
             *dirbase = make_mm_entry_addr(0, 0);
         }
     }
+
+    /* ident map the directory tables (this way they're 'user' and not 'system') */
+    while (--i >= 0)
+        mm_map_page(ret, tables_mem[i], tables_mem[i]);
 
     /* the stacks are special cases of non-shared pages that we want as RW, and
      * we replicate them manually later */

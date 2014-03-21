@@ -52,7 +52,7 @@
 
 #define PAGE_SIZE    0x1000
 #define KERNEL_PAGES 0x300000
-#define MEM_LIMIT    0x400000
+#define MEM_LIMIT    0x330000
 
 typedef struct str_mm_page {
 	u32_t attr:12;
@@ -66,6 +66,7 @@ typedef struct str_mm_page {
 #include <sys/queue.h>
 #include <minios/const.h>
 
+#define PAGES_PER_PAGE (PAGE_SIZE / sizeof(mm_page))
 #define PAGES_LEN ((MEM_LIMIT - KERNEL_PAGES) / PAGE_SIZE)
 #define hash_page(base) ((((u32_t) (base)) - KERNEL_PAGES) / PAGE_SIZE)
 
