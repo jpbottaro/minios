@@ -52,7 +52,7 @@
 
 #define PAGE_SIZE    0x1000
 #define KERNEL_PAGES 0x300000
-#define MEM_LIMIT    0x330000
+#define MEM_LIMIT    0x350000
 
 typedef struct str_mm_page {
 	u32_t attr:12;

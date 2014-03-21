@@ -188,11 +188,10 @@ pid_t sys_fork()
     dirbase = mm_dir_cpy(current_process->pages_dir);
     process->pages_dir = dirbase;
 
-    /* build user/kernel stack */
-    process->stack =
-        mm_build_page(dirbase, (char *) STACK_PAGE, (char *) STACK_PAGE);
-    process->kstack =
-        mm_build_page(dirbase, (char *) KSTACK_PAGE, (char *) KSTACK_PAGE);
+    /* create and copy stacks/args */
+    mm_build_page(dirbase, (char *) STACK_PAGE, (char *) STACK_PAGE);
+    mm_build_page(dirbase, (char *) KSTACK_PAGE, (char *) KSTACK_PAGE);
+    mm_build_page(dirbase, (char *) ARG_PAGE, (char *) ARG_PAGE);
 
     /* add to scheduler */
     sched_enqueue(process);
@@ -300,27 +299,13 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
             break;
     }
 
-    /* XXX for some reason, the apps dont have their size right in their
-     * headers (much bigger), so skip this test for now
-     */
-    /* 
-    if (len != max)
-        debug_panic("newprocess: coudn't read enough! the program size does not "
-                    "match what the sys_read() call gave us");
-    */
-
     /* close file */
     sys_close(fd);
 
-    /* build user/kernel stack */
-    process->stack = mm_build_page(dirbase, (char *) STACK_PAGE, NULL);
-    process->kstack = mm_build_page(dirbase, (char *) KSTACK_PAGE, NULL);
-
     i = j = 0;
+    page = mm_build_page(dirbase, (char *) ARG_PAGE, NULL);
     if (argv != NULL) {
         /* add argc and argv to the new process (lets hope it only takes 1 page) */
-        page = mm_mem_alloc();
-        mm_map_page(dirbase, (void *) ARG_PAGE, page);
         mm_map_page((mm_page *) rcr3(), 0, page);
 
         /* put the arguments in the new page */
@@ -335,11 +320,14 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
         mymemcpy((char *) j, (char *) tmpargv, (i + 1) * 4);
         mm_umap_page((mm_page *) rcr3(), 0);
     }
+
+    /* build user/kernel stack */
+    page = mm_build_page(dirbase, (char *) KSTACK_PAGE, NULL);
+    page = mm_build_page(dirbase, (char *) STACK_PAGE, NULL);
+
     /* add the values to the stack so that main() can get them */
-    mm_map_page((mm_page *) rcr3(), 0, process->stack);
-    *((unsigned int *) (0xFFC)) = ARG_PAGE + j;
-    *((unsigned int *) (0xFF8)) = i;
-    mm_umap_page((mm_page *) rcr3(), 0);
+    *((unsigned int *) (page + 0xFFC)) = ARG_PAGE + j;
+    *((unsigned int *) (page + 0xFF8)) = i;
 
     /* add to scheduler */
     sched_enqueue(process);

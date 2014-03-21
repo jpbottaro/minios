@@ -6,15 +6,9 @@
   that used blocks aren't, if I create files or folders, it overrides the
   contents of the file "readme" for example.
 
-- The header of the apps have a wrong size, they report much more that they
-  really have.
-
 - Weird behaviour when:
     cp hola.txt a
     rm a
     cp readme a
     cat a
     (now a is missing some text)
-
-- Using fork multiple times results in pages running out (eg. executing 'pipes'
-  repetedly). Somewhere we are leaking memory

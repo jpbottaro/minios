@@ -63,27 +63,21 @@ mm_page *search_page(mm_page *dir, void *vir, int flag)
 void *mm_newpage(mm_page *page)
 {
     mm_page *new_page = mm_mem_alloc();
-    if (new_page != NULL) {
-        *page = make_mm_entry_addr(new_page,
-                MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
-        tlbflush();
-    }
+    *page = make_mm_entry_addr(new_page, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
+    tlbflush();
     return new_page;
 }
 
-void *mm_copy_on_write(void *vir, mm_page *entry)
+void *mm_copy_on_write(mm_page *entry)
 {
     char *old_page = (char *) (entry->base << 12);
 
     if (pages[hash_page(old_page)].refcount > 1) {
         /* create new page to replace old_page */
-        if (mm_newpage(entry) == NULL)
-            return NULL;
+        char *new_page = mm_newpage(entry);
 
         /* copy the contents of old_page to the new page */
-        mm_map_page((void *) rcr3(), 0, old_page);
-        mymemcpy(vir, 0, PAGE_SIZE);
-        mm_umap_page((void *) rcr3(), 0);
+        mymemcpy(new_page, old_page, PAGE_SIZE);
 
         /* decrease refcount of old_page */
         mm_mem_free_reference(old_page);
@@ -91,7 +85,7 @@ void *mm_copy_on_write(void *vir, mm_page *entry)
         entry->attr |= MM_ATTR_RW;
     }
 
-    return vir;
+    return (void *) (entry->base << 12);
 }
 
 /* new handler for page fault to force exit of ring3 tasks who force it */
@@ -113,7 +107,7 @@ void pf_handler()
 
         } else if (!(page->attr & MM_ATTR_RW)) {
             if (!(page->attr & MM_SHARED))
-                res = mm_copy_on_write((void *) rcr2(), page);
+                res = mm_copy_on_write(page);
         }
     }
 
@@ -248,27 +242,22 @@ mm_page *mm_dir_cpy(mm_page *dir)
 
     ret = dirbase = tables_mem[i++] = (mm_page *) mm_mem_alloc();
 
-    end = dir + (PAGE_SIZE / sizeof(mm_page *));
+    /* XXX HACK!: the minus 1 prevents this from copying the stacks/args,
+     * so that we can do it ourselves manually (since they reside in the
+     * last page directory entry)
+     */
+    end = dir + (PAGE_SIZE / sizeof(mm_page *)) - 1;
     for (d = dir; d < end; d++, dirbase++) {
         if (d->attr & MM_ATTR_P) {
             tables_mem[i++] = tablebase = (mm_page *) mm_mem_alloc();
             copy_table_fork(tablebase, (mm_page *) (d->base << 12));
             *dirbase = make_mm_entry_addr(tablebase, d->attr);
-        } else {
-            *dirbase = make_mm_entry_addr(0, 0);
         }
     }
 
     /* ident map the directory tables (this way they're 'user' and not 'system') */
     while (--i >= 0)
         mm_map_page(ret, tables_mem[i], tables_mem[i]);
-
-    /* the stacks are special cases of non-shared pages that we want as RW, and
-     * we replicate them manually later */
-    d = search_page(dir, (char *) STACK_PAGE, MM_NOCREAT);
-    d->attr |= MM_ATTR_RW;
-    d = search_page(dir, (char *) KSTACK_PAGE, MM_NOCREAT);
-    d->attr |= MM_ATTR_RW;
 
     return ret;
 }
@@ -304,11 +293,8 @@ void *mm_build_page(mm_page *dir, void *vir, void *boot_page)
     void *page = mm_mem_alloc();
 
     mm_map_page(dir, vir, page);
-    if (boot_page != NULL) {
-        mm_map_page((void *) rcr3(), 0, page);
-        mymemcpy(0, boot_page, PAGE_SIZE);
-        mm_umap_page((void *) rcr3(), 0);
-    }
+    if (boot_page)
+        mymemcpy(page, boot_page, PAGE_SIZE);
 
     return page;
 }
