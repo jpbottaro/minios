@@ -78,15 +78,17 @@ void vmm_move_references(struct page_s *from, struct page_s *to, int direction)
                     (table_entry->attr & MM_VM) &&
                     (table_entry->base == idx)) {
 
-                    *table_entry = make_mm_entry_addr(to->base,
-                            MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
+                    table_entry->base = (u32_t) to->base >> 12;
+                    table_entry->attr |= MM_ATTR_P;
+                    table_entry->attr &= ~MM_VM;
 
                 } else if ((direction == VMM_SECONDARY) &&
                     (table_entry->attr & MM_ATTR_P) &&
                     ((table_entry->base << 12) == (u32_t) from->base)) {
 
-                    *table_entry = make_mm_entry_addr(idx,
-                            MM_ATTR_RW | MM_ATTR_US | MM_VM);
+                    table_entry->base = idx;
+                    table_entry->attr &= ~MM_ATTR_P;
+                    table_entry->attr |= MM_VM;
                 }
             }
         }
