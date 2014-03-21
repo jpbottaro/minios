@@ -96,7 +96,7 @@ void vmm_move_references(struct page_s *from, struct page_s *to, int direction)
 }
 
 /* alloc virtual page in secondary storage */
-void *vmm_mem_alloc()
+struct page_s *vmm_mem_alloc()
 {
     struct page_s *page;
 
@@ -104,7 +104,7 @@ void *vmm_mem_alloc()
     if (page != NULL) {
         TAILQ_REMOVE(&free_vpages, page, status);
         page->refcount = 1;
-        return page->base;
+        return page;
     }
 
     /* TODO remove panic call */
