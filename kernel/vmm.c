@@ -186,5 +186,5 @@ void *vmm_retrieve(mm_page *entry)
         TAILQ_INSERT_HEAD(&free_vpages, &vpages[i], status);
     }
 
-    return page->base;
+    return page;
 }
