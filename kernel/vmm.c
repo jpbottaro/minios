@@ -74,7 +74,7 @@ void vmm_move_references(struct page_s *from, struct page_s *to, int direction)
             table_entry = (mm_page *) (dir_entry->base << 12);
             table_end = table_entry + PAGE_SIZE / sizeof(mm_page);
             for (; table_entry < table_end; ++table_entry) {
-                /* don't touch non-user pages, this is the identity map */
+                /* don't touch non-user pages (this is the identity map) */
                 if (!(table_entry->attr & MM_ATTR_US))
                     continue;
                 if ((direction == VMM_MAIN) &&
@@ -118,9 +118,7 @@ struct page_s *vmm_mem_alloc()
 /* select next victim to be evicted from main memory */
 struct page_s *vmm_select_victim()
 {
-    struct page_s *page = TAILQ_FIRST(&victim_pages);
-
-    return page;
+    return TAILQ_FIRST(&victim_pages);
 }
 
 /* copy the 'src' page to the secondary device, at the 'offset' possition */
