@@ -1,6 +1,7 @@
 #include <minios/dev.h>
 #include <minios/mm.h>
 #include <minios/pm.h>
+#include <unistd.h>
 #include "debug.h"
 #include "vmm.h"
 #include "pm.h"
@@ -121,14 +122,18 @@ struct page_s *vmm_select_victim()
     return TAILQ_FIRST(&victim_pages);
 }
 
-/* copy the 'src' page to the secondary device, at the 'offset' possition */
+/* copy the 'src' page to the secondary device, at the 'offset' position */
 void vmm_copy_to_device(void *src, u32_t offset)
 {
+    vmm_dev->f_op->lseek(vmm_dev, offset, SEEK_SET);
+    vmm_dev->f_op->write(vmm_dev, src, PAGE_SIZE);
 }
 
 /* copy the page at the 'offset' possition to the src page */
 void vmm_copy_from_device(void *src, u32_t offset)
 {
+    vmm_dev->f_op->lseek(vmm_dev, offset, SEEK_SET);
+    vmm_dev->f_op->read(vmm_dev, src, PAGE_SIZE);
 }
 
 /* evict page to secondary device */
