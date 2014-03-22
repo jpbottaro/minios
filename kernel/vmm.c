@@ -11,23 +11,9 @@ struct file_s *vmm_dev = &vmm_dev_str;
 struct page_s vpages[VPAGES_LEN];
 int vmm_enabled = 0;
 
+struct page_s *mm_mem_alloc();
+
 TAILQ_HEAD(free_vpages_t, page_s) free_vpages;
-
-/* init virtual memory manager */
-void vmm_init(dev_t dev, void *swap_offset)
-{
-    int i;
-
-    vmm_dev->f_op = dev_operations(dev);
-
-    TAILQ_INIT(&free_vpages);
-    for (i = 0; i < VPAGES_LEN; ++i) {
-        vpages[i].base = swap_offset + i * PAGE_SIZE;
-        TAILQ_INSERT_TAIL(&free_vpages, &vpages[i], status);
-    }
-
-    vmm_enabled = 1;
-}
 
 void vmm_mem_add_reference(int i)
 {
@@ -187,4 +173,20 @@ struct page_s *vmm_retrieve(mm_page *entry)
     }
 
     return page;
+}
+
+/* init virtual memory manager */
+void vmm_init(dev_t dev, void *swap_offset)
+{
+    int i;
+
+    vmm_dev->f_op = dev_operations(dev);
+
+    TAILQ_INIT(&free_vpages);
+    for (i = 0; i < VPAGES_LEN; ++i) {
+        vpages[i].base = swap_offset + i * PAGE_SIZE;
+        TAILQ_INSERT_TAIL(&free_vpages, &vpages[i], status);
+    }
+
+    vmm_enabled = 1;
 }

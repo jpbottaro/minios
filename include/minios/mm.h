@@ -87,18 +87,11 @@ struct page_s {
 TAILQ_HEAD(pages_queue_s, page_s);
 
 void mm_init();
-struct page_s *mm_mem_alloc();
-struct page_s *mm_mem_alloc_pinned();
 void *mm_build_page(mm_page *dir, void *vir);
-void *mm_build_page_pinned(mm_page *dir, void *vir);
-void mm_mem_free_reference(void *page);
 
 mm_page *mm_dir_new();
 mm_page *mm_dir_cpy(mm_page *dir);
 void mm_dir_free(mm_page *d);
 void *mm_translate(mm_page *dir, void *vir);
-
-void *sys_palloc();
-int sys_share_page(void *page);
 
 #endif /* _MM_H */

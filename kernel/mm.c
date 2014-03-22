@@ -46,6 +46,42 @@ void mm_mem_free_reference(void *page)
     }
 }
 
+/* alloc pinned page */
+struct page_s *mm_mem_alloc_pinned()
+{
+    u32_t *start, *end;
+    struct page_s *page;
+
+    page = TAILQ_FIRST(&free_pages);
+    if (page == NULL) {
+        page = vmm_free_page();
+        if (page == NULL)
+            debug_panic("mm_mem_alloc: no more free pages");
+    }
+    TAILQ_REMOVE(&free_pages, page, status);
+
+    start = (u32_t *) page->base;
+    end = start + PAGE_SIZE / sizeof(u32_t);
+    for (; start < end; start++)
+        *start = 0;
+
+    page->pinned = 1;
+    page->refcount = 1;
+
+    return page;
+}
+
+/* alloc unpinned page */
+struct page_s *mm_mem_alloc()
+{
+    struct page_s *page = mm_mem_alloc_pinned();
+
+    TAILQ_INSERT_TAIL(&victim_pages, page, status);
+    page->pinned = 0;
+
+    return page;
+}
+
 mm_page *mm_search_page(mm_page *dir, void *vir, int flag)
 {
     mm_page *dir_entry;
@@ -64,6 +100,22 @@ mm_page *mm_search_page(mm_page *dir, void *vir, int flag)
 
     return (mm_page *) (dir_entry->base << 12) +
                        (((u32_t) vir >> 12) & 0x3FF);
+}
+
+/* build page and add it to the dirtable, making it pinned */
+void *mm_build_page_pinned(mm_page *dir, void *vir)
+{
+    struct page_s *page = mm_mem_alloc_pinned();
+    mm_map_page(dir, vir, page->base);
+    return page->base;
+}
+
+/* build page and add it to the dirtable */
+void *mm_build_page(mm_page *dir, void *vir)
+{
+    struct page_s *page = mm_mem_alloc();
+    mm_map_page(dir, vir, page->base);
+    return page->base;
 }
 
 /* map a page in the PDT */
@@ -161,66 +213,6 @@ void pf_handler()
 
     if (res == NULL)
         debug_panic("pf_handler: segmentation fault");
-}
-
-/* init memory manager */
-void mm_init()
-{
-    int i;
-
-    TAILQ_INIT(&free_pages);
-    TAILQ_INIT(&victim_pages);
-    for (i = PAGES_LEN - 1; i >= 0; --i) {
-        pages[i].base = (void *) KERNEL_PAGES + i * PAGE_SIZE;
-        TAILQ_INSERT_HEAD(&free_pages, &pages[i], status);
-    }
-
-    /* register sys calls */
-    SCALL_REGISTER(45, sys_palloc);
-    SCALL_REGISTER(46, sys_share_page);
-
-    /* register page fault handler */
-    idt_register(14, _pf_handler, DEFAULT_PL);
-
-    /* enable paging (kernel is identity mapped from 0x0 to MEM_LIMIT) */
-    lcr3((unsigned int) mm_dir_new());
-    lcr0(rcr0() | 0x80000000);
-}
-
-/* alloc pinned page */
-struct page_s *mm_mem_alloc_pinned()
-{
-    u32_t *start, *end;
-    struct page_s *page;
-
-    page = TAILQ_FIRST(&free_pages);
-    if (page == NULL) {
-        page = vmm_free_page();
-        if (page == NULL)
-            debug_panic("mm_mem_alloc: no more free pages");
-    }
-    TAILQ_REMOVE(&free_pages, page, status);
-
-    start = (u32_t *) page->base;
-    end = start + PAGE_SIZE / sizeof(u32_t);
-    for (; start < end; start++)
-        *start = 0;
-
-    page->pinned = 1;
-    page->refcount = 1;
-
-    return page;
-}
-
-/* alloc unpinned page */
-struct page_s *mm_mem_alloc()
-{
-    struct page_s *page = mm_mem_alloc_pinned();
-
-    TAILQ_INSERT_TAIL(&victim_pages, page, status);
-    page->pinned = 0;
-
-    return page;
 }
 
 /* make page directory table with first 0x0 to MEM_LIMIT ident mapping (kernel) */
@@ -337,22 +329,6 @@ void mm_dir_free(mm_page *d)
     mm_dir_table_free(d, 1);
 }
 
-/* build page and add it to the dirtable, making it pinned */
-void *mm_build_page_pinned(mm_page *dir, void *vir)
-{
-    struct page_s *page = mm_mem_alloc_pinned();
-    mm_map_page(dir, vir, page->base);
-    return page->base;
-}
-
-/* build page and add it to the dirtable */
-void *mm_build_page(mm_page *dir, void *vir)
-{
-    struct page_s *page = mm_mem_alloc();
-    mm_map_page(dir, vir, page->base);
-    return page->base;
-}
-
 /* return a 4kb page to a process (fix this, the last_mem thing sucks) */
 void *sys_palloc()
 {
@@ -380,4 +356,28 @@ int sys_share_page(void *page)
     entry->attr |= MM_SHARED;
 
     return 0;
+}
+
+/* init memory manager */
+void mm_init()
+{
+    int i;
+
+    TAILQ_INIT(&free_pages);
+    TAILQ_INIT(&victim_pages);
+    for (i = PAGES_LEN - 1; i >= 0; --i) {
+        pages[i].base = (void *) KERNEL_PAGES + i * PAGE_SIZE;
+        TAILQ_INSERT_HEAD(&free_pages, &pages[i], status);
+    }
+
+    /* register sys calls */
+    SCALL_REGISTER(45, sys_palloc);
+    SCALL_REGISTER(46, sys_share_page);
+
+    /* register page fault handler */
+    idt_register(14, _pf_handler, DEFAULT_PL);
+
+    /* enable paging (kernel is identity mapped from 0x0 to MEM_LIMIT) */
+    lcr3((unsigned int) mm_dir_new());
+    lcr0(rcr0() | 0x80000000);
 }
