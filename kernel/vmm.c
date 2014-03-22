@@ -183,6 +183,7 @@ void *vmm_retrieve(mm_page *entry)
     if (page != NULL) {
         vmm_copy_from_device(page->base, (u32_t) vpage->base);
         vmm_move_references(vpage, page, VMM_MAIN);
+        TAILQ_INSERT_HEAD(&free_vpages, &vpages[i], status);
     }
 
     return page->base;
