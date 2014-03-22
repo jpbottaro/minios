@@ -56,7 +56,7 @@ mm_page *mm_search_page(mm_page *dir, void *vir, int flag)
     if (!(dir_entry->attr & MM_ATTR_P)) {
         if (flag == MM_NOCREAT)
             return NULL;
-        void *table_page = mm_mem_alloc_pinned();
+        void *table_page = mm_mem_alloc_pinned()->base;
         *dir_entry = make_mm_entry_addr(table_page,
                 MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
         mm_map_page(dir, table_page, table_page);
@@ -105,38 +105,41 @@ void *mm_translate(mm_page *dir, void *vir)
     return ret;
 }
 
-void *mm_newpage(mm_page *entry)
+struct page_s *mm_newpage(mm_page *entry)
 {
-    void *new_page = mm_mem_alloc();
-    *entry = make_mm_entry_addr(new_page, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
+    struct page_s *new_page = mm_mem_alloc();
+    *entry = make_mm_entry_addr(new_page->base, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
     tlbflush();
     return new_page;
 }
 
-void *mm_copy_on_write(mm_page *entry)
+struct page_s *mm_copy_on_write(mm_page *entry)
 {
-    char *old_page = (char *) (entry->base << 12);
+    struct page_s *old_page = &pages[hash_page(entry->base << 12)];
 
-    if (pages[hash_page(old_page)].refcount > 1) {
-        /* create new page to replace old_page */
-        char *new_page = mm_newpage(entry);
+    if (old_page->refcount > 1) {
+        /* create new page to replace old page */
+        struct page_s *new_page = mm_newpage(entry);
 
-        /* copy the contents of old_page to the new page */
-        mymemcpy(new_page, old_page, PAGE_SIZE);
+        /* copy the contents of old page to the new page */
+        mymemcpy(new_page->base, old_page->base, PAGE_SIZE);
 
-        /* decrease refcount of old_page */
-        mm_mem_free_reference(old_page);
-    } else {
-        entry->attr |= MM_ATTR_RW;
+        /* decrease refcount of old page */
+        mm_mem_free_reference(old_page->base);
+
+        return new_page;
     }
 
-    return (void *) (entry->base << 12);
+    entry->attr |= MM_ATTR_RW;
+
+    return old_page;
 }
 
 /* new handler for page fault to force exit of ring3 tasks who force it */
 void pf_handler()
 {
-    mm_page *page, *res;
+    mm_page *page;
+    struct page_s *res;
 
     if (current_process == NULL)
         isr14();
@@ -185,7 +188,7 @@ void mm_init()
 }
 
 /* alloc pinned page */
-void *mm_mem_alloc_pinned()
+struct page_s *mm_mem_alloc_pinned()
 {
     u32_t *start, *end;
     struct page_s *page;
@@ -206,16 +209,16 @@ void *mm_mem_alloc_pinned()
     page->pinned = 1;
     page->refcount = 1;
 
-    return page->base;
+    return page;
 }
 
 /* alloc unpinned page */
-void *mm_mem_alloc()
+struct page_s *mm_mem_alloc()
 {
-    void *page = mm_mem_alloc_pinned();
+    struct page_s *page = mm_mem_alloc_pinned();
 
-    TAILQ_INSERT_TAIL(&victim_pages, &pages[hash_page(page)], status);
-    pages[hash_page(page)].pinned = 0;
+    TAILQ_INSERT_TAIL(&victim_pages, page, status);
+    page->pinned = 0;
 
     return page;
 }
@@ -224,8 +227,8 @@ void *mm_mem_alloc()
 mm_page* mm_dir_new()
 {
     u32_t base;
-    mm_page *dirbase   = (mm_page *) mm_mem_alloc_pinned();
-    mm_page *tablebase = (mm_page *) mm_mem_alloc_pinned();
+    mm_page *dirbase   = (mm_page *) (mm_mem_alloc_pinned()->base);
+    mm_page *tablebase = (mm_page *) (mm_mem_alloc_pinned()->base);
 
     /* 0111 means present, r/w and user */
     *dirbase = make_mm_entry_addr(tablebase, MM_ATTR_P | MM_ATTR_RW | MM_ATTR_US);
@@ -277,7 +280,7 @@ mm_page *mm_dir_cpy(mm_page *dir)
     mm_page *d, *ret, *end;
     mm_page *dirbase, *tablebase;
 
-    ret = dirbase = tables_mem[i++] = (mm_page *) mm_mem_alloc_pinned();
+    ret = dirbase = tables_mem[i++] = (mm_page *) (mm_mem_alloc_pinned()->base);
 
     /* XXX HACK!: the minus 1 prevents this from copying the stacks/args,
      * so that we can do it ourselves manually (since they reside in the
@@ -286,7 +289,7 @@ mm_page *mm_dir_cpy(mm_page *dir)
     end = dir + (PAGE_SIZE / sizeof(mm_page *)) - 1;
     for (d = dir; d < end; d++, dirbase++) {
         if (d->attr & MM_ATTR_P) {
-            tables_mem[i++] = tablebase = (mm_page *) mm_mem_alloc_pinned();
+            tables_mem[i++] = tablebase = (mm_page *) (mm_mem_alloc_pinned()->base);
             copy_table_fork(tablebase, (mm_page *) (d->base << 12));
             *dirbase = make_mm_entry_addr(tablebase, d->attr);
         }
@@ -337,17 +340,17 @@ void mm_dir_free(mm_page *d)
 /* build page and add it to the dirtable, making it pinned */
 void *mm_build_page_pinned(mm_page *dir, void *vir)
 {
-    void *page = mm_mem_alloc_pinned();
-    mm_map_page(dir, vir, page);
-    return page;
+    struct page_s *page = mm_mem_alloc_pinned();
+    mm_map_page(dir, vir, page->base);
+    return page->base;
 }
 
 /* build page and add it to the dirtable */
 void *mm_build_page(mm_page *dir, void *vir)
 {
-    void *page = mm_mem_alloc();
-    mm_map_page(dir, vir, page);
-    return page;
+    struct page_s *page = mm_mem_alloc();
+    mm_map_page(dir, vir, page->base);
+    return page->base;
 }
 
 /* return a 4kb page to a process (fix this, the last_mem thing sucks) */
