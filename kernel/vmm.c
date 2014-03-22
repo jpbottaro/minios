@@ -167,7 +167,7 @@ struct page_s *vmm_free_page()
 }
 
 /* retrieve the ith virtual page from secondary storage and place it in memory */
-void *vmm_retrieve(mm_page *entry)
+struct page_s *vmm_retrieve(mm_page *entry)
 {
     if (!vmm_enabled)
         return NULL;

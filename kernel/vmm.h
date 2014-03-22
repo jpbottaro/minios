@@ -19,7 +19,7 @@ void vmm_init();
 void vmm_mem_add_reference(int i);
 void vmm_mem_free_reference(int i);
 
-void *vmm_retrieve(mm_page *entry);
+struct page_s *vmm_retrieve(mm_page *entry);
 struct page_s *vmm_free_page();
 
 #endif /* __VMM_H__ */
