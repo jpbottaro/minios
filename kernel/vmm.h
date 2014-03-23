@@ -3,7 +3,6 @@
 
 #include <minios/mm.h>
 
-/* TODO set right swap offset/size */
 #define SWAP_OFFSET 0x1000000
 #define SWAP_END    0x2000000
 #define VPAGES_LEN  ((SWAP_END - SWAP_OFFSET) / PAGE_SIZE)
