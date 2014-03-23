@@ -13,15 +13,12 @@
 #include <minios/fs.h>
 #include <sys/types.h>
 
-/* Devices */
-void dev_init(void);
-int dev_register(dev_t major, struct file_operations_s *fops);
-struct file_operations_s *dev_operations(dev_t major);
-
 struct dev_s {
     struct file_operations_s d_op;
 };
 
-extern struct dev_s devices[MAX_DEVICES];
+void dev_init(void);
+int dev_register(dev_t major, struct file_operations_s *fops);
+struct file_operations_s *dev_operations(dev_t major);
 
 #endif /* _DEV_H */

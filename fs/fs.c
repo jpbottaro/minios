@@ -14,38 +14,6 @@ struct file_s *fs_dev = &fs_dev_str;
 static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag);
 static void fill_inode(struct inode_s *ino, int mode);
 
-static struct file_operations_s ops = {
-    .read = fs_read,
-    .write = fs_write,
-    .lseek = fs_lseek
-};
-
-int fs_init(dev_t dev)
-{
-    fs_dev->f_op = dev_operations(dev);
-    read_super();
-    cache_init();
-
-    /* register sys calls */
-    SCALL_REGISTER(3, sys_read);
-    SCALL_REGISTER(4, sys_write);
-    SCALL_REGISTER(5, fs_open);
-    SCALL_REGISTER(6, sys_close);
-    SCALL_REGISTER(10, fs_unlink);
-    SCALL_REGISTER(12, fs_chdir);
-    SCALL_REGISTER(19, sys_lseek);
-    SCALL_REGISTER(38, fs_rename);
-    SCALL_REGISTER(39, fs_mkdir);
-    SCALL_REGISTER(40, fs_rmdir);
-    SCALL_REGISTER(141, fs_getdents);
-    SCALL_REGISTER(200, sys_flush);
-
-    /* register fs device */
-    dev_register(DEV_FS, &ops);
-
-    return OK;
-}
-
 /* fill inode information */
 static void fill_inode(struct inode_s *ino, int mode)
 {
@@ -100,7 +68,7 @@ err:
 }
 
 /* generic close */
-int sys_close(int fd)
+int fs_close(int fd)
 {
     int r = 0;
     struct file_s *flip = get_file(fd);
@@ -124,7 +92,7 @@ int fs_closeall()
     int i;
 
     for (i = 0; i < MAX_FILES; i++)
-        sys_close(i);
+        fs_close(i);
 
     return OK;
 }
@@ -172,6 +140,38 @@ size_t sys_lseek(int fd, off_t offset, int whence)
     return flip->f_op->lseek(flip, offset, whence);
 }
 
+/* read/write (flag) to 'buf' 'n' bytes from position 'pos' of the file 'ino' */
+int copy_file(char *buf, unsigned int n, unsigned int pos, struct inode_s *ino,
+                                                                          int flag)
+{
+    unsigned int size, off;
+    block_t blocknr;
+    struct buf_s *block;
+
+    while (n > 0) {
+        if ( (blocknr = read_map(ino, pos, flag)) == NO_BLOCK)
+            return ERROR;
+        block = get_block(blocknr);
+
+        off = pos % BLOCK_SIZE;
+        size = MIN(n, BLOCK_SIZE - off);
+
+        if (flag == FS_WRITE) {
+            mymemcpy(block->b_buffer + off, buf, size);
+            block->b_dirty = 1;
+        } else {
+            mymemcpy(buf, block->b_buffer + off, size);
+        }
+
+        n -= size;
+        pos += size;
+        buf += size;
+        release_block(block);
+    }
+
+    return pos;
+}
+
 static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag)
 {
     struct inode_s *ino = flip->f_ino;
@@ -205,38 +205,6 @@ static int fs_readwrite(struct file_s *flip, char *buf, unsigned int n, int flag
     flip->f_pos = pos;
 
     return n;
-}
-
-/* read/write (flag) to 'buf' 'n' bytes from position 'pos' of the file 'ino' */
-int copy_file(char *buf, unsigned int n, unsigned int pos, struct inode_s *ino,
-                                                                          int flag)
-{
-    unsigned int size, off;
-    block_t blocknr;
-    struct buf_s *block;
-
-    while (n > 0) {
-        if ( (blocknr = read_map(ino, pos, flag)) == NO_BLOCK)
-            return ERROR;
-        block = get_block(blocknr);
-
-        off = pos % BLOCK_SIZE;
-        size = MIN(n, BLOCK_SIZE - off);
-
-        if (flag == FS_WRITE) {
-            mymemcpy(block->b_buffer + off, buf, size);
-            block->b_dirty = 1;
-        } else {
-            mymemcpy(buf, block->b_buffer + off, size);
-        }
-
-        n -= size;
-        pos += size;
-        buf += size;
-        release_block(block);
-    }
-
-    return pos;
 }
 
 /* read 'n' bytes from a file a put them on buf */
@@ -576,7 +544,34 @@ struct inode_s *get_root()
     return get_inode(1);
 }
 
-int fs_end()
+static struct file_operations_s ops = {
+    .read = fs_read,
+    .write = fs_write,
+    .lseek = fs_lseek
+};
+
+int fs_init(dev_t dev)
 {
-    return 0;
+    fs_dev->f_op = dev_operations(dev);
+    read_super();
+    cache_init();
+
+    /* register sys calls */
+    SCALL_REGISTER(3, sys_read);
+    SCALL_REGISTER(4, sys_write);
+    SCALL_REGISTER(5, fs_open);
+    SCALL_REGISTER(6, fs_close);
+    SCALL_REGISTER(10, fs_unlink);
+    SCALL_REGISTER(12, fs_chdir);
+    SCALL_REGISTER(19, sys_lseek);
+    SCALL_REGISTER(38, fs_rename);
+    SCALL_REGISTER(39, fs_mkdir);
+    SCALL_REGISTER(40, fs_rmdir);
+    SCALL_REGISTER(141, fs_getdents);
+    SCALL_REGISTER(200, sys_flush);
+
+    /* register fs device */
+    dev_register(DEV_FS, &ops);
+
+    return OK;
 }

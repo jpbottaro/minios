@@ -13,6 +13,10 @@
 #define OK 0
 #define ERROR -1
 
+/* flags for copy_file */
+#define FS_READ  0
+#define FS_WRITE 1
+
 struct real_inode_s {
     u16_t i_mode;           /* file type, protection, etc. */
     u16_t i_nlinks;         /* how many links to this file */

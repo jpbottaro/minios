@@ -40,36 +40,6 @@ void add_idle()
     process->ebp = (u32_t) (&KSTACK + KSTACKSIZE - 0x10);
 }
 
-/* initialize process manager, list of processes, tss, and add idle */
-void pm_init()
-{
-    int i;
-    struct process_state_s *process;
-
-    /* init unused process entries list */
-    i = 2;
-    process = &ps[2];
-    LIST_INIT(&unused_list);
-    for (; process < &ps[MAX_PROCESSES]; ++process, ++i) {
-        process->i = i;
-        process->pid = 0;
-        LIST_INSERT_HEAD(&unused_list, process, unused);
-    }
-
-    /* init needed tss */
-    tss_init();
-
-    /* add idle task */
-    add_idle();
-
-    /* register sys calls */
-    SCALL_REGISTER(1, sys_exit);
-    SCALL_REGISTER(2, sys_fork);
-    SCALL_REGISTER(7, sys_waitpid);
-    SCALL_REGISTER(11, sys_newprocess);
-    SCALL_REGISTER(20, sys_getpid);
-}
-
 extern void __pm_switchto(struct process_state_s *);
 
 /* do a context switch to process number 'process_num' */
@@ -273,7 +243,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     }
 
     /* close file */
-    sys_close(fd);
+    fs_close(fd);
 
     i = j = 0;
     page = mm_translate(dirbase, (char *) ARG_PAGE);
@@ -303,7 +273,7 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
 
 err:
     if (fd)
-        sys_close(fd);
+        fs_close(fd);
     return -1;
 }
 
@@ -332,4 +302,34 @@ unsigned int current_pid()
     if (current_process == NULL)
         return 0;
     return current_process->pid;
+}
+
+/* initialize process manager, list of processes, tss, and add idle */
+void pm_init()
+{
+    int i;
+    struct process_state_s *process;
+
+    /* init unused process entries list */
+    i = 2;
+    process = &ps[2];
+    LIST_INIT(&unused_list);
+    for (; process < &ps[MAX_PROCESSES]; ++process, ++i) {
+        process->i = i;
+        process->pid = 0;
+        LIST_INSERT_HEAD(&unused_list, process, unused);
+    }
+
+    /* init needed tss */
+    tss_init();
+
+    /* add idle task */
+    add_idle();
+
+    /* register sys calls */
+    SCALL_REGISTER(1, sys_exit);
+    SCALL_REGISTER(2, sys_fork);
+    SCALL_REGISTER(7, sys_waitpid);
+    SCALL_REGISTER(11, sys_newprocess);
+    SCALL_REGISTER(20, sys_getpid);
 }

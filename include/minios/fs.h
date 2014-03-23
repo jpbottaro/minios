@@ -9,6 +9,22 @@
 #define NR_ZONES  10
 #define BLOCK_SIZE 1024
 
+/* constants for attribute i_mode in inode struct */
+#define I_TYPE           0170000
+#define I_FILE           0100000
+#define I_DIRECTORY      0040000
+#define I_SPECIAL        0020000
+#define I_CHAR           0010000
+#define I_BLOCK          0000000
+#define IS_FILE(mode)    (((mode) & I_TYPE) == I_FILE)
+#define IS_DIR(mode)     (((mode) & I_TYPE) == I_DIRECTORY)
+#define IS_CHAR(mode)    (((mode) & I_TYPE) == I_CHAR)
+#define IS_BLOCK(mode)   (((mode) & I_TYPE) == I_BLOCK)
+#define IS_DEV(mode)     (IS_CHAR(mode) || IS_BLOCK(mode))
+
+#define NO_BLOCK ((block_t) 0)
+#define NO_INODE ((ino_t)   0)
+
 struct inode_s {
     u32_t i_free;
     u32_t i_num;
@@ -57,75 +73,28 @@ struct file_operations_s {
     int     (*close) (struct file_s *);
 };
 
-extern struct inode_s *root;
-
-LIST_HEAD(unused_fd_t, file_s);
+LIST_HEAD(unused_fd_s, file_s);
 
 int fs_init(dev_t dev);
+
 int fs_open(const char *filename, int flags, int mode);
-int sys_close(int fd);
+int fs_close(int fd);
 int fs_closeall();
+
 size_t sys_lseek(int fd, off_t offset, int whence);
-size_t fs_lseek(struct file_s *flip, off_t offset, int whence);
 size_t sys_read(int fd, char *buf, size_t n);
-size_t fs_read(struct file_s *flip, char *buf, size_t n);
 ssize_t sys_write(int fd, char *buf, size_t n);
-ssize_t fs_write(struct file_s *flip, char *buf, size_t n);
-int fs_unlink(const char *pathname);
-int fs_rename(const char *oldpath, const char *newpath);
-int fs_chdir(const char *path);
-int fs_mkdir(const char *pathname, mode_t mode);
-int fs_rmdir(const char *pathname);
-int fs_getdents(int fd, char *buf, size_t n);
 int sys_flush(int fd);
-int fs_end();
 
 void init_fds(unsigned int id);
 int get_fd(struct inode_s *ino, unsigned int pos);
-int release_fd(int fd);
-struct inode_s *current_dir();
-void set_current_dir(struct inode_s *ino);
-
-/* flags for find_inode */
-#define FS_SEARCH_GET     0x0001
-#define FS_SEARCH_ADD     0x0002
-#define FS_SEARCH_CREAT   0x0003
-#define FS_SEARCH_REMOVE  0x0004
-
-struct inode_s *find_inode(struct inode_s *dir, const char *user_path, int flag);
-
-/* flags for copy_file */
-#define FS_READ  0
-#define FS_WRITE 1
-
-int copy_file(char *buf, unsigned int n, unsigned int pos, struct inode_s *ino,
-                                                                         int flag);
-
-#define NO_BLOCK ((block_t) 0)
-#define NO_INODE ((ino_t)   0)
 
 struct inode_s *get_free_inode();
-struct inode_s *get_inode(ino_t num);
-struct buf_s *get_block(zone_t num);
-
+struct inode_s *current_dir();
 void release_inode(struct inode_s *ino);
-void release_block(struct buf_s *buf);
 
 int imayor(struct inode_s *ino);
 int iminor(struct inode_s *ino);
-
-/* constants for attribute i_mode in inode struct */
-#define I_TYPE           0170000
-#define I_FILE           0100000
-#define I_DIRECTORY      0040000
-#define I_SPECIAL        0020000
-#define I_CHAR           0010000
-#define I_BLOCK          0000000
-#define IS_FILE(mode)    (((mode) & I_TYPE) == I_FILE)
-#define IS_DIR(mode)     (((mode) & I_TYPE) == I_DIRECTORY)
-#define IS_CHAR(mode)    (((mode) & I_TYPE) == I_CHAR)
-#define IS_BLOCK(mode)   (((mode) & I_TYPE) == I_BLOCK)
-#define IS_DEV(mode)     (IS_CHAR(mode) || IS_BLOCK(mode))
 
 int fs_make_dev(const char *name, int type, dev_t major, dev_t minor);
 

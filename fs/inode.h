@@ -27,4 +27,17 @@ int next_entry(struct inode_s *dir, unsigned int *p, struct dir_entry_s *dent);
 int search_inode(struct inode_s *dir, const char *name, const ino_t ino_num,
                  struct dir_entry_s *dentry, int flag);
 
+/* flags for find_inode */
+#define FS_SEARCH_GET     0x0001
+#define FS_SEARCH_ADD     0x0002
+#define FS_SEARCH_CREAT   0x0003
+#define FS_SEARCH_REMOVE  0x0004
+
+struct inode_s *find_inode(struct inode_s *dir, const char *user_path, int flag);
+
+struct inode_s *get_inode(ino_t num);
+struct buf_s *get_block(zone_t num);
+void release_block(struct buf_s *buf);
+void release_inode(struct inode_s *ino);
+
 #endif /* __INODE_H__ */

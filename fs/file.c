@@ -12,7 +12,7 @@ void init_fds(unsigned int id)
     int i;
     struct inode_s *ino;
     struct file_s *file, *parent_file;
-    struct unused_fd_t *unused_fd;
+    struct unused_fd_s *unused_fd;
 
     unused_fd = &ps[id].unused_fd;
     LIST_INIT(unused_fd);
