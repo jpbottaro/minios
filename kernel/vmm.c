@@ -97,8 +97,6 @@ struct page_s *vmm_mem_alloc()
         return page;
     }
 
-    /* TODO remove panic call */
-    debug_panic("vmm_mem_alloc: no more free virtual pages");
     return NULL;
 }
 
