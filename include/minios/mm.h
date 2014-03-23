@@ -2,32 +2,20 @@
 #define _MM_H
 
 #include <sys/types.h>
+#include <sys/queue.h>
+#include <minios/const.h>
 
 #define MM_ATTR_P     0x001 // Present
 #define MM_ATTR_RW    0x002 // Read/Write
-#define MM_ATTR_RW_R  0x000 //
-#define MM_ATTR_RW_W  0x002 //
 #define MM_ATTR_US    0x004 // User/Supervisor
-#define MM_ATTR_US_U  0x004 //
-#define MM_ATTR_US_S  0x000 //
 #define MM_ATTR_WT    0x008 // Write-Through
 #define MM_ATTR_CD    0x010 // Cache Disabled
 #define MM_ATTR_A     0x020 // Accessed
 #define MM_ATTR_D     0x040 // Dirty (for Pages)
 #define MM_ATTR_AVL   0x040 // Available (for Directory)
 #define MM_ATTR_PAT   0x080 // Page Table Attribute Index (for Pages)
-#define MM_ATTR_SZ_4K 0x000 // Page Size (for Directory)
-#define MM_ATTR_SZ_4M 0x080 // Page Size (for Directory)
+#define MM_ATTR_SZ    0x080 // Page Size (for Directory)
 #define MM_ATTR_G     0x100 // Global (ignored for Directory)
-
-#define MM_ATTR_USR   0xE00 // bits for kernel
-
-#define MM_NOCREAT 0x0
-#define MM_CREAT   0x1
-
-#define MM_VALID   0x100
-#define MM_SHARED  0x200
-#define MM_VM      0x400
 
 /* Control Register flags */
 #define CR0_PE		0x00000001	// Protection Enable
@@ -50,25 +38,28 @@
 #define CR4_PVI		0x00000002	// Protected-Mode Virtual Interrupts
 #define CR4_VME		0x00000001	// V86 Mode Extensions
 
+#define MM_NOCREAT 0
+#define MM_CREAT   1
+
+#define MM_VALID   0x200
+#define MM_SHARED  0x400
+#define MM_VM      0x800
+
 #define PAGE_SIZE    0x1000
 #define KERNEL_PAGES 0x100000
 #define MEM_LIMIT    0x200000
+#define PAGES_LEN ((MEM_LIMIT - KERNEL_PAGES) / PAGE_SIZE)
 
-typedef struct str_mm_page {
-	u32_t attr:12;
-	u32_t base:20;
-}  __attribute__((__packed__, aligned (4))) mm_page;
+#define hash_page(base) ((((u32_t) (base)) - KERNEL_PAGES) / PAGE_SIZE)
 
 #define make_mm_entry(base, attr) (mm_page){(u32_t) (attr), (u32_t) (base)}
 #define make_mm_entry_addr(addr, attr) (mm_page){(u32_t) (attr), \
                                                  (u32_t) (addr) >> 12}
 
-#include <sys/queue.h>
-#include <minios/const.h>
-
-#define PAGES_PER_PAGE (PAGE_SIZE / sizeof(mm_page))
-#define PAGES_LEN ((MEM_LIMIT - KERNEL_PAGES) / PAGE_SIZE)
-#define hash_page(base) ((((u32_t) (base)) - KERNEL_PAGES) / PAGE_SIZE)
+typedef struct str_mm_page {
+	u32_t attr:12;
+	u32_t base:20;
+}  __attribute__((__packed__, aligned (4))) mm_page;
 
 struct page_s {
     /* starting address */
@@ -82,7 +73,7 @@ struct page_s {
 
     /* free/victim pages queue */
     TAILQ_ENTRY(page_s) status;
-} __attribute__((__packed__));
+};
 
 TAILQ_HEAD(pages_queue_s, page_s);
 
@@ -91,7 +82,7 @@ void *mm_build_page(mm_page *dir, void *vir);
 
 mm_page *mm_dir_new();
 mm_page *mm_dir_cpy(mm_page *dir);
-void mm_dir_free(mm_page *d);
+void mm_dir_free(mm_page *dir);
 void *mm_translate(mm_page *dir, void *vir);
 
 #endif /* _MM_H */

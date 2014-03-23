@@ -11,7 +11,7 @@
 extern void _pf_handler();
 
 struct page_s pages[PAGES_LEN];
-mm_page *tables_mem[PAGES_PER_PAGE + 1];
+mm_page *tables_mem[(PAGE_SIZE / sizeof(mm_page)) + 1];
 
 struct pages_queue_s free_pages;
 struct pages_queue_s victim_pages;
@@ -324,9 +324,9 @@ void mm_dir_table_free(mm_page *d, int recursive)
 }
 
 /* free directory page and all its present tables */
-void mm_dir_free(mm_page *d)
+void mm_dir_free(mm_page *dir)
 {
-    mm_dir_table_free(d, 1);
+    mm_dir_table_free(dir, 1);
 }
 
 /* return a 4kb page to a process (fix this, the last_mem thing sucks) */
@@ -379,5 +379,5 @@ void mm_init()
 
     /* enable paging (kernel is identity mapped from 0x0 to MEM_LIMIT) */
     lcr3((unsigned int) mm_dir_new());
-    lcr0(rcr0() | 0x80000000);
+    lcr0(rcr0() | CR0_PG);
 }
