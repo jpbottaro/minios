@@ -3,6 +3,7 @@
 #include <minios/pm.h>
 #include <unistd.h>
 #include "debug.h"
+#include "clock.h"
 #include "vmm.h"
 #include "pm.h"
 
@@ -28,24 +29,11 @@ void vmm_mem_free_reference(int i)
         TAILQ_INSERT_HEAD(&free_vpages, &vpages[i], status);
 }
 
-/* change all references from a page to another; depending on the direction
- * (from/to main memory), update flags of dir tables accordingly
- */
-void vmm_move_references(struct page_s *from, struct page_s *to, int direction)
+void vmm_walk_page_tables(void (*func)(mm_page *, u32_t, u32_t), u32_t from, u32_t to)
 {
-    /* improve this so that we don't have to go to every dir table of every
-     * process; keeping references for each page (eg. process nr/virtual address)
-     * would make this O(n) with n = references
-     */
-    int i, idx;
+    int i;
     mm_page *dir_entry, *table_entry;
     mm_page *dir_end, *table_end;
-
-    to->refcount = from->refcount;
-    if (direction == VMM_MAIN)
-        idx = from - vpages;
-    else
-        idx = to - vpages;
 
     for (i = 0; i < MAX_PROCESSES; i++) {
         struct process_state_s *p = &ps[i];
@@ -64,24 +52,50 @@ void vmm_move_references(struct page_s *from, struct page_s *to, int direction)
                 /* don't touch non-user pages (this is the identity map) */
                 if (!(table_entry->attr & MM_ATTR_US))
                     continue;
-                if ((direction == VMM_MAIN) &&
-                    (table_entry->attr & MM_VM) &&
-                    (table_entry->base == idx)) {
-
-                    table_entry->base = (u32_t) to->base >> 12;
-                    table_entry->attr |= MM_ATTR_P;
-                    table_entry->attr &= ~MM_VM;
-
-                } else if ((direction == VMM_SECONDARY) &&
-                    (table_entry->attr & MM_ATTR_P) &&
-                    ((table_entry->base << 12) == (u32_t) from->base)) {
-
-                    table_entry->base = idx;
-                    table_entry->attr &= ~MM_ATTR_P;
-                    table_entry->attr |= MM_VM;
-                }
+                func(table_entry, from, to);
             }
         }
+    }
+}
+
+void vmm_update_entry_secondary(mm_page *entry, u32_t from, u32_t to)
+{
+    if ((entry->attr & MM_ATTR_P) && entry->base == from) {
+        entry->base = to;
+        entry->attr &= ~MM_ATTR_P;
+        entry->attr |= MM_VM;
+    }
+}
+
+void vmm_update_entry_main(mm_page *entry, u32_t from, u32_t to)
+{
+    if ((entry->attr & MM_VM) && entry->base == from) {
+        entry->base = to;
+        entry->attr |= MM_ATTR_P;
+        entry->attr &= ~MM_VM;
+    }
+}
+
+/* change all references from a page to another; depending on the direction
+ * (from/to main memory), update flags of dir tables accordingly
+ */
+void vmm_move_references(struct page_s *from_page, struct page_s *to_page, int direction)
+{
+    /* improve this so that we don't have to go to every dir table of every
+     * process; keeping references for each page (eg. process nr/virtual address)
+     * would make this O(n) with n = references
+     */
+    u32_t from, to;
+
+    to_page->refcount = from_page->refcount;
+    if (direction == VMM_MAIN) {
+        from = from_page - vpages;
+        to = (u32_t) to_page->base >> 12;
+        vmm_walk_page_tables(vmm_update_entry_main, from, to);
+    } else {
+        from = (u32_t) from_page->base >> 12;
+        to = to_page - vpages;
+        vmm_walk_page_tables(vmm_update_entry_secondary, from, to);
     }
 }
 
@@ -173,12 +187,34 @@ struct page_s *vmm_retrieve(mm_page *entry)
     return page;
 }
 
+void vmm_lru_crawler(mm_page *entry, u32_t i, u32_t j)
+{
+    struct page_s *page;
+    void *base;
+
+    if (entry->attr & MM_ATTR_A) {
+        entry->attr &= ~MM_ATTR_A;
+        base = (void *) (entry->base << 12);
+        TAILQ_FOREACH(page, &victim_pages, status) {
+            if (page->base == base) {
+                TAILQ_REMOVE(&victim_pages, page, status);
+                TAILQ_INSERT_TAIL(&victim_pages, page, status);
+                return;
+            }
+        }
+    }
+}
+
+/* clock watcher to implement LRU-style algorithm */
+void vmm_lru_watcher()
+{
+    vmm_walk_page_tables(vmm_lru_crawler, 0, 0);
+}
+
 /* init virtual memory manager */
 void vmm_init(dev_t dev, void *swap_offset)
 {
     int i;
-
-    vmm_dev->f_op = dev_operations(dev);
 
     TAILQ_INIT(&free_vpages);
     for (i = 0; i < VPAGES_LEN; ++i) {
@@ -186,5 +222,7 @@ void vmm_init(dev_t dev, void *swap_offset)
         TAILQ_INSERT_TAIL(&free_vpages, &vpages[i], status);
     }
 
+    vmm_dev->f_op = dev_operations(dev);
+    clock_add_watcher(vmm_lru_watcher);
     vmm_enabled = 1;
 }
