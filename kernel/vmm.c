@@ -29,7 +29,8 @@ void vmm_mem_free_reference(int i)
         TAILQ_INSERT_HEAD(&free_vpages, &vpages[i], status);
 }
 
-void vmm_walk_page_tables(void (*func)(mm_page *, u32_t, u32_t), u32_t from, u32_t to)
+void vmm_walk_page_tables(void (*func)(mm_page *, u32_t, u32_t),
+        u32_t from, u32_t to)
 {
     int i;
     mm_page *dir_entry, *table_entry;
@@ -79,7 +80,8 @@ void vmm_update_entry_main(mm_page *entry, u32_t from, u32_t to)
 /* change all references from a page to another; depending on the direction
  * (from/to main memory), update flags of dir tables accordingly
  */
-void vmm_move_references(struct page_s *from_page, struct page_s *to_page, int direction)
+void vmm_move_references(struct page_s *from_page, struct page_s *to_page,
+        int direction)
 {
     /* improve this so that we don't have to go to every dir table of every
      * process; keeping references for each page (eg. process nr/virtual address)
