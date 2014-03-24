@@ -318,7 +318,7 @@ void mm_dir_table_free(mm_page *d, int recursive)
             else if (d->attr & MM_ATTR_US)
                 mm_mem_free_reference(entry);
         } else if (d->attr & MM_VM) {
-            vmm_mem_free_reference(entry->base);
+            vmm_mem_free_reference(d->base);
         }
     }
 }
