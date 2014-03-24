@@ -24,7 +24,7 @@ significa que todas las transmisiones se realizaron a través de los puertos, si
 DMA.
 
 Para lograr la escritura se adaptó parte del código responsable de leer del
-dispositivo. La mayor parte del código es simple, se ponen los valores
+dispositivo. La mayor parte del código es simple, se ubican los valores
 requeridos en los puertos especificados y se lee/escribe lo necesario.
 
 La parte más tumultosa de la implementación tiene que ver con la espera del
@@ -35,6 +35,8 @@ que se descubrió que usar el comando de asm "rep" no era posible, ya que el
 disco no lograba leer lo suficientemente rápido los datos ingresados. Agregando
 un pequeño delay entre cada palabra, y esperando la bajada de la bandera BUSY
 luego de cada sector, se logró soportar la escritura por puertos.
+
+Ver $drivers/hdd$.
 
 \subsection{DevFS}
 
@@ -52,8 +54,11 @@ Esta estrategia es la utilizada originalmente por sistemas como Linux, tomando
 responsabilidad de la creación de estos archivos virtuales. En la actualidad se
 opta por una estrategia más modularizada, exponiendo información de dispositivos
 y dejando que applicaciones de user-space manejen los device nodes (como es el
-caso de udev). Se deja como trabajo a futuro crear directorios como /sys y
-empujar código fuera del kernel hacia aplicaciones comunes.
+caso de udev). Actualmente esto simplemente lista los nodos a crear, se deja como
+trabajo a futuro crear directorios como /sys y empujar código fuera del kernel
+hacia aplicaciones comunes.
+
+Ver $kernel/devfs.c$.
 
 \subsection{Refcounts y Dirty en el FS}
 
@@ -74,16 +79,4 @@ Anteriormente leer un archivo en /a/b/c/hola.txt requería en promedio
 una escritura por cada lectura de inodo/bloque. El uso de dirty eliminó todas
 estas ineficiencias, haciendo que esta operación no escriba nunca en disco.
 
-\subsection{Misc}
-
-El bug más importante encontrado estaba relacionado con el uso de los inodos en
-la cache. La consecuencia era que al apagar el SO y volverlo a encender, algunos
-cambios realizados (como copiar un archivo) parecían desaparecer. Tras
-investigar se encontró que la causa era que el inodo correspondiente a la raiz
-del fs no estaba siendo guardado. La razón era que, por motivos de eficiencia,
-este nodo era referenciado inicialmente y nunca liberado, por lo que su refcount
-nunca llegaba a 0 y no liberado de la memoria.
-
-Algunas funciones fueron reescritas, buscando mejor claridad en el código y/o
-arreglando inconsistencias. Un ejemplo claro es la llamada al sistema "rename"
-en fs.c, que tenía problemas y había sido descartada temporalmente.
+Ver $fs/$ en general, en particular $file.c$.

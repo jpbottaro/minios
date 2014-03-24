@@ -1,0 +1,62 @@
+\section{Trabajo inicial}
+
+Antes de comenzar con el trabajo en el driver de disco y memoria virtual, se
+empezó por realizar limpiezas y refactoreo de mucho código viejo, obsoleto, con
+errores o a medio terminar.
+
+Varios bugs fueron encontrados y arreglados, incluyendo el problema con el
+\textbf{inodo root}, inconvenientes con \textbf{memory leaks}, y el mal
+funcionamiento en ciertas circunstancias de el mecanismo de \textbf{copy on
+write}.
+
+Fueron refactorizados muchos métodos buscando mayor funcionalidad y legibilidad.
+Esto incluye syscall \textbf{rename} y las interfaces de \textbf{file,
+file\_operations, process}, entre otras. El módulo de \textbf{pipes} fue
+factorizado y abstraido en forma de driver.
+
+Por último se revisaron todos los headers de los distintos componentes para
+intentar reducir al mínimo la cantidad de funciones y estructuras exportadas. De
+esta manera logramos archivos más pequeños y faciles de entender.
+
+\subsection{Inodo Root}
+
+El bug más importante encontrado estaba relacionado con el uso de los inodos en
+la cache. La consecuencia era que al apagar el SO y volverlo a encender, algunos
+cambios realizados (como copiar un archivo) parecían desaparecer. Tras
+investigar se encontró que la causa era que el inodo correspondiente a la raiz
+del fs no estaba siendo guardado. La razón era que, por motivos de eficiencia,
+este nodo era referenciado inicialmente y nunca liberado, por lo que su refcount
+nunca llegaba a 0 y no era liberado de la memoria.
+
+Ver $fs/fs.c$ y $fs/inode.c$.
+
+\subsection{Memory leaks}
+
+El sistema padecía de perdidas de memoria que lograban eventualmente agotar
+todas las páginas disponibles. La forma en que se mantenía el ownership de las
+páginas para su posterior liberación era a través de una lista por proceso, con
+todas las páginas en uso.
+
+El problema de estas listas es que eran muy difíciles de mantener, en particular
+al realizar forks y página terminaba siendo utilizada por múltiples
+procesos simultaneamente.
+
+Se optó por un cambio que simplificó mucho el código y eliminó todos los leaks
+restantes. Se eliminaron las listas de páginas, y se utilizó como fuente de
+verdad únicamente el directorio de páginas del proceso, manteniendo un refcount
+preciso por página. De esta manera, cuando es necesario terminar la ejecución de
+un proceso, se recorre todo el directorio y se liberan todas las páginas marcadas
+como presentes (en la realidad se obvian las páginas del identity mapping del
+núcleo).
+
+Ver $mm\_dir\_free()$ en $kernel/mm.c$.
+
+\subsection{Refactoring}
+
+Se hicieron grandes cambios para lograr una base de código más limpia. Esto
+incluyó convertir el módulo de pipes en un driver aparte, reescribir algunas
+syscalls como rename, y limpiar muchos headers y estructuras de entradas
+obsoletas y/o redundantes.
+
+Ver $drivers/pipes$, $fs\_rename()$ en $fs/fs.c$, $include/mm.h-pm.h-fs.h-dev.h$,
+entre otros.
