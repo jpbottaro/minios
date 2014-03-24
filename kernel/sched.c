@@ -1,30 +1,12 @@
 #include <minios/sched.h>
 #include <minios/i386.h>
-#include <minios/idt.h>
 #include <minios/pm.h>
+#include "clock.h"
 
 struct process_state_s *last_process;
 struct process_state_s *current_process;
 
 CIRCLEQ_HEAD(ready_list_s, process_state_s) ready_list;
-
-extern void clock_handler();
-
-/* intialize scheduler, must be called before any function */
-void sched_init()
-{
-    /* init process table, and add idle as the process nr 1 */
-    pm_init();
-
-    /* init scheduler's ready list */
-    CIRCLEQ_INIT(&ready_list);
-
-    /* start with no current process */
-    last_process = current_process = NULL;
-
-    /* register handler for clock */
-    idt_register(32, clock_handler, DEFAULT_PL);
-}
 
 /* unblock process in waiting list (the first if process is NULL) */
 void sched_unblock(struct process_state_s *process, waiting_list_t *list)
@@ -107,4 +89,25 @@ void sched_schedule(int force_sched)
             current_process = CIRCLEQ_NEXT(last_process, ready);
         pm_switchto(current_process->i);
     }
+}
+
+void sched_schedule_simple()
+{
+    sched_schedule(0);
+}
+
+/* intialize scheduler, must be called before any function */
+void sched_init()
+{
+    /* init process table, and add idle as the process nr 1 */
+    pm_init();
+
+    /* init scheduler's ready list */
+    CIRCLEQ_INIT(&ready_list);
+
+    /* start with no current process */
+    last_process = current_process = NULL;
+
+    /* add clock watcher for preemtiveness */
+    clock_add_watcher(sched_schedule_simple);
 }
