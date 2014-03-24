@@ -2,6 +2,7 @@
 #include <minios/idt.h>
 #include <sys/types.h>
 #include "clock.h"
+#include "debug.h"
 
 extern void _clock_handler();
 
@@ -10,7 +11,7 @@ int last_watcher = 0;
 
 void clock_add_watcher(void (*func)(void))
 {
-    if (last_watcher >= MAX_WATCHERS)
+    if (last_watcher >= CLOCK_MAX_WATCHERS)
         debug_panic("clock_add_watcher: not enough room to add watcher");
     watchers[last_watcher++] = func;
 }
