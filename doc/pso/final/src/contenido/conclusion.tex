@@ -1,3 +1,34 @@
 \section{Conclusión}
 
-Conclusion
+El aprendizaje más importante que se puede sacar del proyecto tiene que ver con
+la forma de programar en ambientes como un kernel. Es muy común que uno quiera
+mejorar una parte del sistema, o agregar alguna funcionalidad, y por más chico
+que el sea cambio siempre intoduce problemas. Es por esto que la mejor
+estrategia suele ser introducir muy paulatinamente los cambios, dividir lo más
+posible la funcionalidad y así poder detectar errores tempranamente.
+
+Es casi fundamental tener buenas herramientas para diagnosticar y debuggear el
+comportamiento del núcleo, ya que cambios muy pequeños introducen errores en
+lugares muy distantes que suelen ser muy dificiles de entender y corregir. En
+más de una ocasión multiples errores se cancelaban entre sí haciendo parecer que
+el sistema funcionaba correctamente, y al corregir alguno se manifestaban todo
+el resto. Es muy común estar trabado horas o hasta días con problemas que suelen
+ser ínfimos pero tiran abajo toda la ejecución.
+
+Con respecto a las funcionalidades introducidas, el manejo de dispositivos
+externos suele ser complicado ya que contiene pequeñas sutilezas que de no
+saberlas previamente complican el desarrollo de drivers. Es nuestro caso estos
+problemas ya son muy conocidos por lo que se encuentran bien documentados, pero
+es particularmente frustrante en el caso de dispositivos nuevos.
+
+El manejo de memoria virtual sorpresivamente fue el menos problemático en
+agregar. Diseñarlo de manera que fuese fácil prenderlo o apagarlo fue
+especialmente beneficioso, ya que cuando era necesario cambiar alguna parte del
+resto del kernel, se podía testear con vmm apagado y así evitar agregar
+problemas.
+
+El refactoring de varias partes del código terminó siendo lo más complicado. En
+particular el mantenimiento de refcounts y flags como dirty requerían revisar
+repetidas veces todo el código para buscar errores. Se eliminaron varios 'hacks'
+en busca de interfaces y soluciones más limpias, que requirieron mucho tiempo
+pero resultaron en un código considerablemente más entendible.

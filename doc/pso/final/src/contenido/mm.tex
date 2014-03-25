@@ -1,3 +1,120 @@
 \section{Memoria Virtual}
 
-Agregamos memoria virtual
+Habiendo solucionado todas las perdidas de memoria el SO terminó siendo mucho
+más estable y predecible. Pero la siguiente limitación que se presenta al querer
+utilizarlo es el tope de la memoria. La solución clásica a este problema es
+expandir la memoria con \textbf{memoria virtual}, utilizando otro medio de
+almacenamiento como soporte.
+
+Teniendo el driver de disco rígido completo para lectura/escritura, el siguiente
+paso fue utilizarlo como extensión de la memoria principal.
+
+\subsection{Módulo VMM}
+
+El nuevo módulo de memoria virtual o vmm (virtual memory managment) es el
+encargado de crear la ilusión de tener más memoria de la disponible físicamente.
+La manera en que opera es muy simple: cuando la memoria principal se agota, se
+\textbf{selecciona una página víctima} que será \textbf{desalojada}. Ésta página es
+enviada al almacenamiento secundario (que puede ser cualquier dispositivo de
+bloques, en nuestro caso el dísco rígido), y el marco que la contenía es
+liberado.
+
+En el caso de que algun proceso haga referencía a alguna página que no se
+encuentre en memoria, el módulo va al disco a \textbf{recobrar la página}
+desalojada y la deposita nuevamente en memoria (desalojando otra en caso
+de ser necesario).
+
+El módulo fue programado para que sea opcional. En caso de que se elimine la
+llamada a $vmm\_init()$ de la inicialización del kernel, el sistema funcionará
+perfectamente sin memoria virtual. Aún más, se podría habilitar en el medio de
+la ejecución desde la consola misma de ser necesario (por ejemplo agregando una
+syscall que llame a $vmm\_init()$)
+
+Se agregó la aplicación 'eatmem' al sistema, con la que se pueden pedir
+arbitrariamente páginas al sistema (que son escritas enseguida para evitar que
+nos mienta el copy on write). De esta manera puede verse al módulo en acción,
+cómo se acaba rápidamente la memoria en caso de deshabilitarlo, y la efectividad
+de los distintos algorítmos de selección de víctimas.
+
+Ver $mm\_mem\_alloc()$ y $pf\_handler$ en $kernel/mm.c$ para ver como es usado
+el módulo vmm.
+
+\subsection{Selección de víctimas}
+
+Un paso muy importante en el proceso de memoria virtual es la selección de
+víctimas, refiriendose a qué página desalojar en caso de ser necesario. Una mala
+elección de algoritmo podría resultar en invertir la mayor parte del tiempo en
+desalojar y recobrar páginas, problema conocido como trashing.
+
+Otro punto a tener en cuenta es que algunas páginas son requeridas siempre y es
+necesario (o conveniente) que nunca sean desalojadas. Denominados 'pinned' a las
+páginas que preferimos nunca sean desalojadas, y proveemos una interfaz para
+pedir páginas comunes o 'pinned' según sea necesario. Actualmente las únicas
+páginas que siempre dejamos en memoria son las que conforman el directorio de
+páginas, y las pilas de cada proceso.
+
+Del conjunto de páginas 'non pinned', que incluyen todas las páginas de
+código, datos y páginas pedidas dinámicamente, mantenemos una lista de posibles
+víctimas.
+
+Inicialmente se comenzó con un algoritmo FIFO. A lista de víctimas
+siempre se le agregan elementos al final, y el selector siempre toma el primer
+elemento. Si bien es un acercamiento muy siemple, se logran resultados
+satisfactorios en muchos casos. El problema más grande de esta estrategia es que
+no tiene en cuenta el uso de las páginas, por lo que termina desalojando páginas
+importantes (como las de código del mismo proceso que está pidiendo más
+memoria), que resultan en repetidos fallos de página que pueden ser evitados.
+
+El mecanismo por excelencia de selección es el LRU. Si podemos calcular cuales
+son las páginas más recientemente usadas (para alguna definicion de reciente y
+de usada), podemos seleccionar víctimas más inteligentemente. El objetivo es
+lograr ésto sin sacrificar demaciado tiempo calculando a quien desalojar.
+
+Para esto aprovechamos el bit 'ACCESSED' de los directorios de páginas, que nos
+indica si la página fue accedida desde la última vez que ese bit estuvo en 0. De
+esta manera revisamos periodicamente este bit, y las páginas que se encuentren
+marcadas son movidas al final de la cola de víctimas. Luego a la hora de elegir
+la página a desalojar basta con tomar el primer elemento de dicha lista.
+
+Esta estrategia es bastamente superior a FIFO, evitando tocar páginas
+importantes como las de código en caso de que las mismas estén siendo
+utilizadas.
+
+Ver manejo de $victim\_list$ $kernel/mm.c$, y
+$vmm\_select\_victim()$/$vmm\_lru\_watcher()$ en $kernel/vmm.c$. Para utilizar
+FIFO basta con eliminar el watcher de reloj lru, que es registrado en
+$vmm\_init()$
+
+\subsection{Desalojar y recobrar página}
+
+Una vez elegida la víctima, es necesario enviarla al dispositivo de bloques.
+Mantenemos una estructura casi igual a la de la memoria principal para manejar
+los marcos de página en el espacio de swap. Luego enviar la página solo implica
+tomar un marco vacío y escribirlo.
+
+El paso más complicado del desalojamiento es actualizar todas las referencias a
+la página a desalojar. Ésto implica actualizar todos los directorios de páginas
+de todos los procesos que pudiesen tener esta página, y marcarlos como no
+presentes con una referencia a la página virtual en el nuevo almacenamiento.
+
+El algoritmo actualemente toma la solución más simple ("when in doubt, use
+bruteforce"). Recorre todas los directorios de páginas y actualiza sus
+contenidos. Este mecanismo podría mejorarse manteniendo referencias en cada
+página de los procesos que la usan, y evitar recorrer directorios de más.
+
+Recobrar una página es similar. Cuando un proceso trata de acceder a una página
+que desalojamos, se encontrará con que esta marcada como no presente, lo que
+generará un fallo de página. El handler de esta interrupción usará el bit de
+memoria virtual (un bit disponible en el directorio al que nosotros le dimos
+esta semántica) para decidir si llamar al 'retriever' de páginas virtuales.
+
+Así se lee de disco la página y se deposita en un marco libre de memoria,
+actualizando nuevamente de la misma manera todas las referencias a dicha página
+(sacando el bit de memoria virtual y levantando el de presente, con la dirección
+física correspondiente).
+
+Se tomó suma precaución para mantener actualizado el refcount de todas las
+páginas en memoria y en almacenamiento secundario. De esta manera logramos
+mantener únicamente las páginas en uso, evitando leaks de memoria.
+
+Ver $vmm\_free\_page()$ y $vmm\_retrieve()$ en $kernel/vmm.c$.

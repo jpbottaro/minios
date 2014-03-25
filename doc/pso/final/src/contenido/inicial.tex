@@ -38,7 +38,7 @@ páginas para su posterior liberación era a través de una lista por proceso, c
 todas las páginas en uso.
 
 El problema de estas listas es que eran muy difíciles de mantener, en particular
-al realizar forks y página terminaba siendo utilizada por múltiples
+al realizar forks cuando muchas páginas terminaba siendo utilizada por múltiples
 procesos simultaneamente.
 
 Se optó por un cambio que simplificó mucho el código y eliminó todos los leaks
@@ -54,9 +54,9 @@ Ver $mm\_dir\_free()$ en $kernel/mm.c$.
 \subsection{Refactoring}
 
 Se hicieron grandes cambios para lograr una base de código más limpia. Esto
-incluyó convertir el módulo de pipes en un driver aparte, reescribir algunas
-syscalls como rename, y limpiar muchos headers y estructuras de entradas
-obsoletas y/o redundantes.
+incluyó, entre otras cosas, convertir el módulo de pipes en un driver aparte,
+reescribir algunas syscalls como rename, y limpiar muchos headers y
+estructuras de entradas obsoletas y/o redundantes.
 
 Ver $drivers/pipes$, $fs\_rename()$ en $fs/fs.c$, $include/mm.h-pm.h-fs.h-dev.h$,
 entre otros.

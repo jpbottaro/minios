@@ -75,8 +75,8 @@ El cambio más importante fue el uso del flag "dirty". Siendo cuidadoso de marca
 sucia toda estructura que reciba cambios en su ciclo de vida, es posible reducir
 en un enorme grado la cantidad de escrituras al almacenamiento secundario.
 
-Anteriormente leer un archivo en /a/b/c/hola.txt requería en promedio
+Anteriormente leer un archivo en /a/b/c/hola.txt requería en
 una escritura por cada lectura de inodo/bloque. El uso de dirty eliminó todas
 estas ineficiencias, haciendo que esta operación no escriba nunca en disco.
 
-Ver $fs/$ en general, en particular $file.c$.
+Ver $fs/$ en general, en particular $inode.c$.
