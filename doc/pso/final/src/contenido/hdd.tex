@@ -36,7 +36,7 @@ disco no lograba leer lo suficientemente rápido los datos ingresados. Agregando
 un pequeño delay entre cada palabra, y esperando la bajada de la bandera BUSY
 luego de cada sector, se logró soportar la escritura por puertos.
 
-Ver $drivers/hdd$.
+\textbf{Ver $drivers/hdd$.}
 
 \subsection{DevFS}
 
@@ -58,7 +58,7 @@ caso de udev). Actualmente esto simplemente lista los nodos a crear, se deja com
 trabajo a futuro crear directorios como /sys y empujar código fuera del kernel
 hacia aplicaciones comunes.
 
-Ver $kernel/devfs.c$.
+\textbf{Ver $kernel/devfs.c$.}
 
 \subsection{Refcounts y Dirty en el FS}
 
@@ -81,4 +81,4 @@ aleatorias a disco (1 bloque y 1 inodo por archivo/carpeta, más el root).
 El uso de dirty eliminó todas estas ineficiencias, haciendo que esta
 operación no escriba nunca en disco.
 
-Ver $fs/$ en general, en particular $inode.c$.
+\textbf{Ver $fs/$ en general, en particular $inode.c$.}

@@ -36,8 +36,8 @@ nos mienta el copy on write). De esta manera puede verse al módulo en acción,
 cómo se acaba rápidamente la memoria en caso de deshabilitarlo, y la efectividad
 de los distintos algorítmos de selección de víctimas.
 
-Ver $mm\_mem\_alloc()$ y $pf\_handler$ en $kernel/mm.c$ para ver como es usado
-el módulo vmm.
+\textbf{Ver $mm\_mem\_alloc()$ y $pf\_handler$ en $kernel/mm.c$ para ver como es
+    usado el módulo vmm.}
 
 \subsection{Selección de víctimas}
 
@@ -80,10 +80,11 @@ Esta estrategia es bastamente superior a FIFO, evitando tocar páginas
 importantes como las de código en caso de que las mismas estén siendo
 utilizadas.
 
-Ver manejo de $victim\_list$ $kernel/mm.c$, y
-$vmm\_select\_victim()$/$vmm\_lru\_watcher()$ en $kernel/vmm.c$. Para utilizar
-FIFO basta con eliminar el watcher de reloj lru, que es registrado en
-$vmm\_init()$
+Para utilizar FIFO basta con eliminar el watcher de reloj LRU, que es registrado
+en $vmm\_init()$
+
+\textbf{Ver manejo de $victim\_list$ en $kernel/mm.c$, y
+$vmm\_select\_victim()$/$vmm\_lru\_watcher()$ en $kernel/vmm.c$.}
 
 \subsection{Desalojar y recobrar página}
 
@@ -117,4 +118,4 @@ Se tomó suma precaución para mantener actualizado el refcount de todas las
 páginas en memoria y en almacenamiento secundario. De esta manera logramos
 mantener únicamente las páginas en uso, evitando leaks de memoria.
 
-Ver $vmm\_free\_page()$ y $vmm\_retrieve()$ en $kernel/vmm.c$.
+\textbf{Ver $vmm\_free\_page()$ y $vmm\_retrieve()$ en $kernel/vmm.c$.}

@@ -28,7 +28,7 @@ del fs no estaba siendo guardado. La razón era que, por motivos de eficiencia,
 este nodo era referenciado inicialmente y nunca liberado, por lo que su refcount
 nunca llegaba a 0 y no era liberado de la memoria.
 
-Ver $fs/fs.c$ y $fs/inode.c$.
+\textbf{Ver $fs/fs.c$ y $fs/inode.c$.}
 
 \subsection{Memory leaks}
 
@@ -49,7 +49,7 @@ un proceso, se recorre todo el directorio y se liberan todas las páginas marcad
 como presentes (en la realidad se obvian las páginas del identity mapping del
 núcleo).
 
-Ver $mm\_dir\_free()$ en $kernel/mm.c$.
+\textbf{Ver $mm\_dir\_free()$ en $kernel/mm.c$.}
 
 \subsection{Refactoring}
 
@@ -58,5 +58,5 @@ incluyó, entre otras cosas, convertir el módulo de pipes en un driver aparte,
 reescribir algunas syscalls como rename, y limpiar muchos headers y
 estructuras de entradas obsoletas y/o redundantes.
 
-Ver $drivers/pipes$, $fs\_rename()$ en $fs/fs.c$, $include/mm.h-pm.h-fs.h-dev.h$,
-entre otros.
+\textbf{Ver $drivers/pipes$, $fs\_rename()$ en $fs/fs.c$,
+    $include/mm.h-pm.h-fs.h-dev.h$, entre otros.}
