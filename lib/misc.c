@@ -58,31 +58,9 @@ char *myitoa(unsigned int i, char *to, int base)
     char *p = to;
     char *q = to;
 
-    if (i >= 0) {
-        do {
-            *q++ = symb[i % base];
-        } while (i /= base);
-    }
-    /*
-    else if (-1 % 2 < 0) {
-        *q++ = '-';
-        p++;
-
-        do {
-            *q++ = symb[i % base];
-        } while (i /= base);
-    } else {
-        *q++ = '-';
-        p++;
-
-        do {
-            int d = i % base;
-            i = i / base;
-            if (d) { i++; d = base - d; }
-            *q++ = symb[d];
-        } while (i);
-    }
-    */
+    do {
+        *q++ = symb[i % base];
+    } while (i /= base);
 
     for (*q = 0; p < --q; p++) {
         char c = *p;

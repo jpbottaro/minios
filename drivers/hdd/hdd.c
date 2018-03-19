@@ -351,7 +351,7 @@ static struct file_operations_s ops = {
     .flush = hdd_flush
 };
 
-int hdd_test()
+int hdd_test(struct ide_device *ide)
 {
     if (hdd_pio_read(&drive, 0, 1, temp))
         debug_panic("hdd_test: error in read");

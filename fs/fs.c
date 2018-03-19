@@ -324,6 +324,8 @@ int fs_rename(const char *oldpath, const char *newpath)
     struct inode_s *dir, *last_dir, *ino;
     char path[MAX_PATH], name[MAX_NAME];
 
+    dir = last_dir = ino = NULL;
+
     /* get last component of path */
     process_path(newpath, path, name);
     if (name[0] == '\0') {
