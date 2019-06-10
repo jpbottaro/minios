@@ -29,7 +29,7 @@ KERNEL_SYM=kernel.sym
 all: $(IMG_FLOPPY)
 
 test:
-	make clean && make && bochs -q
+	make clean && make && qemu-system-i386 -fda floppy.img -hda hdimage
 
 $(ODIR)/%.o: $(SRC)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $^

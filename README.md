@@ -12,7 +12,7 @@ Simple and minimal x86 OS.
 
 ### Test
 
-* bochs-sdl
+* qemu
 
 ## Compilation - Use
 
