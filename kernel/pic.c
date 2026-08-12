@@ -26,10 +26,19 @@ void reset_pic() {
 }
 
 extern void handler_void();
+extern void handler_ignore();
 
 void enable_pic() {
+	int i;
+
 	outb(PIC1_PORT+1, 0x00);
 	outb(PIC2_PORT+1, 0x00);
+
+    /* every hw interrupt gets acknowledged and ignored by default; drivers
+     * override their own vector later (a stray irq through an empty idt
+     * gate raises a #GP; qemu's ata controller raises irq14 at boot) */
+    for (i = 0x20; i < 0x30; i++)
+        idt_register(i, handler_ignore, DEFAULT_PL);
 
     /* Ignore the 0x27 interrupt, its just the PIC being an asshole */
     idt_register(0x27, handler_void, DEFAULT_PL);
