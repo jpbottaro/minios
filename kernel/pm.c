@@ -179,7 +179,7 @@ pid_t sys_fork()
 pid_t sys_newprocess(const char *filename, char *const argv[])
 {
     int fd;
-    int i, j, size, max, ret, len;
+    int i, j, size, max, ret;
     pso_file pso_header;
     mm_page *dirbase;
     char *code_start, *tmpargv[MAX_ARG];
@@ -196,13 +196,9 @@ pid_t sys_newprocess(const char *filename, char *const argv[])
     if (process == NULL)
         debug_panic("newprocess: No space for new process in ps array!");
 
-    /* how much did read */
-    len = 0;
-
     /* get header */
     if ( (ret = sys_read(fd, (char *) &pso_header, PSO_SIZE)) != PSO_SIZE)
         goto err;
-    len += ret;
 
     if (mystrncmp((char *) pso_header.signature, "PSO", 3) != 0)
         goto err;

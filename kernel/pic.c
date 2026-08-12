@@ -6,8 +6,9 @@
 #define PIC2_PORT 0xA0
 
 
-__inline __attribute__((always_inline)) void reset_intr_pic1(void) { outb(0x20, 0x20); } 
-__inline __attribute__((always_inline)) void reset_intr_pic2(void) { outb(0x20, 0x20); outb(0xA0, 0x20); } 
+/* called from asm interrupt stubs, so they need real symbols */
+void reset_intr_pic1(void) { outb(0x20, 0x20); }
+void reset_intr_pic2(void) { outb(0x20, 0x20); outb(0xA0, 0x20); }
 
 
 void reset_pic() {

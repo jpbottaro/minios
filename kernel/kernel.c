@@ -36,7 +36,7 @@ void kernel_init()
     fs_init(DEV_HDD);
 
     /* virtual memory */
-    vmm_init(DEV_HDD, SWAP_OFFSET);
+    vmm_init(DEV_HDD, (void *) SWAP_OFFSET);
 
     /* create device nodes (in /dev) */
     devfs_init();

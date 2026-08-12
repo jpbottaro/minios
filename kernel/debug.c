@@ -6,7 +6,7 @@
 #define OPCODE_CALL_REL  0xE8
 #define OPCODE_CALL_ADDR 0xFF
 
-inline int is_user_mode()
+static inline int is_user_mode(void)
 {
     return (rcr3() & 0x3) == 0x3;
 }
